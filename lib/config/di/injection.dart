@@ -1,0 +1,75 @@
+import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/network/api_client.dart';
+import '../../core/network/socket/socket_manager.dart';
+import '../../features/attendance/data/datasources/attendance_remote_datasource.dart';
+import '../../features/attendance/data/repositories/attendance_repository_impl.dart';
+import '../../features/attendance/domain/repositories/attendance_repository.dart';
+import '../../features/attendance/presentation/bloc/attendance_bloc.dart';
+import '../../features/auth/data/datasources/auth_remote_datasource.dart';
+import '../../features/auth/data/repositories/auth_repository_impl.dart';
+import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/login_usecase.dart';
+import '../../features/auth/domain/usecases/logout_usecase.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/documents/data/datasources/documents_remote_datasource.dart';
+import '../../features/documents/data/repositories/documents_repository_impl.dart';
+import '../../features/documents/domain/repositories/documents_repository.dart';
+import '../../features/documents/presentation/bloc/documents_bloc.dart';
+import '../../features/earnings/data/datasources/earnings_remote_datasource.dart';
+import '../../features/earnings/data/repositories/earnings_repository_impl.dart';
+import '../../features/earnings/domain/repositories/earnings_repository.dart';
+import '../../features/earnings/presentation/bloc/earnings_bloc.dart';
+import '../../features/profile/data/datasources/profile_remote_datasource.dart';
+import '../../features/profile/data/repositories/profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/profile_repository.dart';
+import '../../features/profile/presentation/bloc/profile_bloc.dart';
+import '../../features/tasks/data/datasources/tasks_remote_datasource.dart';
+import '../../features/tasks/data/repositories/tasks_repository_impl.dart';
+import '../../features/tasks/domain/repositories/tasks_repository.dart';
+import '../../features/tasks/presentation/bloc/tasks_bloc.dart';
+
+final getIt = GetIt.instance;
+
+Future<void> setupDependencies() async {
+  final prefs = await SharedPreferences.getInstance();
+  getIt.registerSingleton<SharedPreferences>(prefs);
+
+  // Network
+  getIt.registerLazySingleton<ApiClient>(() => ApiClient(getIt()));
+
+  // Socket
+  SocketManager.instance.init();
+
+  // Auth
+  getIt.registerLazySingleton<AuthRemoteDatasource>(() => AuthRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(getIt(), getIt()));
+  getIt.registerLazySingleton(() => LoginUseCase(getIt()));
+  getIt.registerLazySingleton(() => LogoutUseCase(getIt()));
+  getIt.registerFactory(() => AuthBloc(loginUseCase: getIt(), logoutUseCase: getIt(), authRepository: getIt()));
+
+  // Attendance
+  getIt.registerLazySingleton(() => AttendanceRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<AttendanceRepository>(() => AttendanceRepositoryImpl(getIt()));
+  getIt.registerFactory(() => AttendanceBloc(getIt()));
+
+  // Tasks
+  getIt.registerLazySingleton(() => TasksRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<TasksRepository>(() => TasksRepositoryImpl(getIt()));
+  getIt.registerFactory(() => TasksBloc(getIt()));
+
+  // Earnings
+  getIt.registerLazySingleton(() => EarningsRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<EarningsRepository>(() => EarningsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => EarningsBloc(getIt()));
+
+  // Documents
+  getIt.registerLazySingleton(() => DocumentsRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<DocumentsRepository>(() => DocumentsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => DocumentsBloc(getIt()));
+
+  // Profile
+  getIt.registerLazySingleton(() => ProfileRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl(getIt()));
+  getIt.registerFactory(() => ProfileBloc(getIt()));
+}
