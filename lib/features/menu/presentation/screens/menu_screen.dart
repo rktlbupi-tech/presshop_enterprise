@@ -16,6 +16,11 @@ import '../../../sos/presentation/widgets/sos_dialog.dart';
 import '../../../team_chat/presentation/screens/team_chat_screen.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
+import '../../../../features/settings/presentation/screens/faq_screen.dart';
+import '../../../../features/settings/presentation/screens/term_check_screen.dart';
+import '../../../../features/settings/presentation/screens/contact_us_screen.dart';
+import '../../../../features/settings/presentation/screens/change_password_screen.dart';
+import '../../../../features/settings/presentation/screens/account_settings_screen.dart';
 
 const _iconsPath = 'assets/icons/';
 
@@ -432,8 +437,11 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_faq.png',
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'FAQs', icon: Icons.help_outline)),
+                onTap: () => _open(const FAQScreen(
+                  priceTipsSelected: false,
+                  type: 'faq',
+                  index: 0,
+                )),
               ),
               _MenuGroupItem(
                 name: 'Legal T&Cs',
@@ -441,8 +449,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF3B82F6),
                 iconBgColor: const Color(0xFFEFF6FF),
                 iconSize: size.width * 0.062,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Legal T&Cs', icon: Icons.gavel_outlined)),
+                onTap: () => _open(const TermCheckScreen(type: 'legal')),
               ),
               _MenuGroupItem(
                 name: 'Privacy policy',
@@ -450,9 +457,31 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 iconSize: size.width * 0.068,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Privacy policy',
-                    icon: Icons.privacy_tip_outlined)),
+                onTap: () => _open(const TermCheckScreen(type: 'privacy_policy')),
+              ),
+              _MenuGroupItem(
+                name: 'Contact Us',
+                iconPath: '${_iconsPath}ic_contact_us.png',
+                iconColor: const Color(0xFF3B82F6),
+                iconBgColor: const Color(0xFFEFF6FF),
+                iconSize: size.width * 0.062,
+                onTap: () => _open(const ContactUsScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Change password',
+                iconPath: '${_iconsPath}ic_key.png',
+                iconColor: const Color(0xFFF59E0B),
+                iconBgColor: const Color(0xFFFEF3C7),
+                iconSize: size.width * 0.055,
+                onTap: () => _open(const ChangePasswordScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Account settings',
+                iconPath: '${_iconsPath}ic_alert.png',
+                iconColor: const Color(0xFF10B981),
+                iconBgColor: const Color(0xFFD1FAE5),
+                iconSize: size.width * 0.055,
+                onTap: () => _open(const AccountSettingsScreen()),
               ),
               _MenuGroupItem(
                 name: 'Logout',

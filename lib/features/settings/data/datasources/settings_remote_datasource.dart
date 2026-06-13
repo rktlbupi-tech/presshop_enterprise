@@ -1,3 +1,5 @@
+import 'package:presshop_enterprise/core/network/api_endpoints.dart';
+
 import '../../../../core/network/api_client.dart';
 
 class SettingsRemoteDatasource {
@@ -5,12 +7,12 @@ class SettingsRemoteDatasource {
   SettingsRemoteDatasource(this._client);
 
   Future<bool> deleteAccount(Map<String, String> reason) async {
-    final res = await _client.post('hopper/verifyAndDeleteAccount', data: reason);
+    final res = await _client.post(ApiEndpoints.deleteAccount, data: reason);
     return res.data['success'] == true || res.data['code'] == 200;
   }
 
   Future<bool> contactUs(Map<String, String> data) async {
-    final res = await _client.post('hopper/Addcontact_us', data: data);
+    final res = await _client.post(ApiEndpoints.contactUs, data: data);
     return res.data['success'] == true || res.data['code'] == 200;
   }
 
@@ -20,12 +22,51 @@ class SettingsRemoteDatasource {
   }
 
   Future<String?> fetchLegalTerms(String type) async {
-    final res = await _client.get('hopper/legalTerms', queryParameters: {'type': type});
-    return res.data['data']?.toString();
+    final res = await _client.get(
+      ApiEndpoints.getGeneralMgmtApp,
+      queryParameters: {'type': type, 'role': 'enterprise'},
+    );
+    if (res.data['status'] != null &&
+        res.data['status']['description'] != null) {
+      return res.data['status']['description']?.toString();
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCategories(String type) async {
+    final res = await _client.get(
+      ApiEndpoints.getCategory,
+      queryParameters: {'type': type, 'role': 'enterprise'},
+    );
+    if (res.data['categories'] != null) {
+      return List<Map<String, dynamic>>.from(res.data['categories']);
+    }
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFaqs(
+    String type,
+    String category,
+    int offset,
+  ) async {
+    final res = await _client.get(
+      ApiEndpoints.getGeneralMgmtApp,
+      queryParameters: {
+        'type': type,
+        'category': category,
+        'offset': offset,
+        'limit': 10,
+        'role': 'enterprise',
+      },
+    );
+    if (res.data['status'] != null) {
+      return List<Map<String, dynamic>>.from(res.data['status']);
+    }
+    return [];
   }
 
   Future<bool> changePassword(Map<String, String> data) async {
-    final res = await _client.post('auth/changePassword', data: data);
+    final res = await _client.post(ApiEndpoints.changePassword, data: data);
     return res.data['success'] == true || res.data['code'] == 200;
   }
 }

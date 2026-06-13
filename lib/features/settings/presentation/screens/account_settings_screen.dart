@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../utils/CommonAppBar.dart';
-import '../../../../../utils/CommonWigdets.dart';
-import '../../../../../utils/Common.dart';
 import 'account_delete_screen.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
@@ -11,45 +8,37 @@ class AccountSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
     return Scaffold(
-      appBar: CommonAppBar(
+      appBar: AppBar(
         elevation: 0,
-        hideLeading: false,
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           "Account settings",
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
-            fontSize: size.width * appBarHeadingFontSize,
+            fontSize: size.width * 0.05,
           ),
         ),
-        centerTitle: false,
-        titleSpacing: 0,
-        size: size,
-        showActions: true,
-        leadingFxn: () {
-          Navigator.pop(context);
-        },
-        actionWidget: const [],
       ),
       body: ListView(
         padding: EdgeInsets.symmetric(
-          horizontal: size.width * numD01,
-          vertical: size.height * numD015,
+          horizontal: size.width * 0.04,
+          vertical: size.height * 0.02,
         ),
         children: [
           ListTile(
             title: Text(
               "Delete Account",
-              style: commonTextStyle(
-                size: size,
-                fontSize: size.width * numD04,
+              style: TextStyle(
+                fontSize: size.width * 0.04,
                 color: Colors.red,
                 fontWeight: FontWeight.w600,
               ),
             ),
             trailing: Icon(
               Icons.arrow_forward_ios,
-              size: size.width * numD05,
+              size: size.width * 0.05,
               color: Colors.red,
             ),
             onTap: () {

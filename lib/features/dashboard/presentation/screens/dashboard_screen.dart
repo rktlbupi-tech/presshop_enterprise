@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import '../../../map/presentation/screens/team_map_screen.dart';
+import '../../../map/presentation/bloc/map_cubit.dart';
+import '../../../map/presentation/bloc/employee_map_cubit.dart';
 import '../../../menu/presentation/screens/menu_screen.dart';
 
 /// Employee dashboard shell — 1:1 with the old app's bottom navigation:
@@ -25,7 +28,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     const EvidenceScreen(hideLeading: true),
     const TaskScheduleScreen(),
     const EmployeeCameraScreen(),
-    const TeamMapScreen(),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => MapCubit()),
+        BlocProvider(create: (_) => EmployeeMapCubit()),
+      ],
+      child: const TeamMapScreen(),
+    ),
     const MenuScreen(),
   ];
 

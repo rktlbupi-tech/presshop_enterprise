@@ -142,22 +142,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   SizedBox(height: imageOnTop ? size.width * 0.04 : 0),
 
                   // Title line 1 with the pink marker highlight behind it.
-                  Container(
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(_titleBg),
-                        fit: BoxFit.fitWidth,
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        top: size.width * 0.04,
+                        child: Image.asset(
+                          _titleBg,
+                          fit: BoxFit.fill,
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      item.title1,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'AirbnbCereal',
-                        fontSize: size.width * 0.07,
+                      Text(
+                        item.title1,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'AirbnbCereal',
+                          fontSize: size.width * 0.07,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                   Text(
                     item.title2,
@@ -193,10 +200,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   SizedBox(height: size.width * 0.04),
 
                   // Skip / pill button / Next row.
-                  Row(
-                    children: [
-                      index == 0
-                          ? InkWell(
+                  SizedBox(
+                    height: size.width * 0.12,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (index == 0)
+                          Positioned(
+                            left: 0,
+                            child: InkWell(
                               onTap: _finish,
                               splashColor: Colors.grey.shade300,
                               child: Padding(
@@ -214,67 +226,68 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ),
                                 ),
                               ),
-                            )
-                          : const SizedBox.shrink(),
-                      const Spacer(),
-                      item.showButton
-                          ? ElevatedButton(
-                              onPressed: _finish,
-                              style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: size.width * 0.012,
-                                  horizontal: size.width * 0.04,
+                            ),
+                          ),
+                        if (item.showButton)
+                          ElevatedButton(
+                            onPressed: _finish,
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                vertical: size.width * 0.012,
+                                horizontal: size.width * 0.04,
+                              ),
+                              backgroundColor: AppColors.employeeBlue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  size.width * 0.05,
                                 ),
-                                backgroundColor: AppColors.employeeBlue,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    size.width * 0.05,
-                                  ),
-                                ),
-                                elevation: 0,
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              item.buttonText,
+                              style: TextStyle(
+                                fontSize: size.width * 0.035,
+                                color: Colors.white,
+                                fontFamily: 'AirbnbCereal',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        Positioned(
+                          right: 0,
+                          child: InkWell(
+                            onTap: () {
+                              if (index == walkthroughList.length - 1) {
+                                _finish();
+                              } else {
+                                controller.animateToPage(
+                                  index + 1,
+                                  duration: const Duration(milliseconds: 100),
+                                  curve: Curves.linear,
+                                );
+                              }
+                            },
+                            splashColor: Colors.grey.shade300,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: size.width * 0.02,
+                                vertical: size.width * 0.03,
                               ),
                               child: Text(
-                                item.buttonText,
+                                'Next',
                                 style: TextStyle(
-                                  fontSize: size.width * 0.035,
-                                  color: Colors.white,
+                                  color: Colors.black,
+                                  fontSize: size.width * 0.03,
+                                  fontWeight: FontWeight.normal,
                                   fontFamily: 'AirbnbCereal',
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            )
-                          : const SizedBox.shrink(),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () {
-                          if (index == walkthroughList.length - 1) {
-                            _finish();
-                          } else {
-                            controller.animateToPage(
-                              index + 1,
-                              duration: const Duration(milliseconds: 100),
-                              curve: Curves.linear,
-                            );
-                          }
-                        },
-                        splashColor: Colors.grey.shade300,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: size.width * 0.02,
-                            vertical: size.width * 0.03,
-                          ),
-                          child: Text(
-                            'Next',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: size.width * 0.03,
-                              fontWeight: FontWeight.normal,
-                              fontFamily: 'AirbnbCereal',
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   SizedBox(height: size.width * 0.03),
                 ],

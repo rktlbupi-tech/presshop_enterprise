@@ -1,275 +1,211 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../data/datasources/settings_remote_datasource.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../../../config/di/injection.dart';
-import '../../../../../utils/CommonAppBar.dart';
-import '../../../../../utils/CommonExtensions.dart';
-import '../../../../../utils/CommonTextField.dart';
-import '../../../../../utils/CommonWigdets.dart';
-import '../../../../../utils/Common.dart';
-import '../../../../../utils/my_common.dart';
-import '../../../../../view/employee/controller/role_controller.dart';
-import '../bloc/settings_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-class ContactUsScreen extends StatelessWidget {
+class ContactUsScreen extends StatefulWidget {
   const ContactUsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<SettingsBloc>()..add(const FetchAdminDetails()),
-      child: const _ContactUsScreenContent(),
-    );
-  }
+  State<ContactUsScreen> createState() => _ContactUsScreenState();
 }
 
-class _ContactUsScreenContent extends ConsumerStatefulWidget {
-  const _ContactUsScreenContent();
+class _ContactUsScreenState extends State<ContactUsScreen> {
+  final formKey = GlobalKey<FormState>();
 
-  @override
-  ConsumerState<_ContactUsScreenContent> createState() => _ContactUsScreenContentState();
-}
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController subjectController = TextEditingController();
+  final TextEditingController textController = TextEditingController();
 
-class _ContactUsScreenContentState extends ConsumerState<_ContactUsScreenContent> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController phoneNumberController = TextEditingController();
-  final TextEditingController emailAddressController = TextEditingController();
-  final TextEditingController messageController = TextEditingController();
-  String adminEmail = "";
-  final contactUsKey = GlobalKey<FormState>();
+  final SettingsRemoteDatasource _datasource = getIt<SettingsRemoteDatasource>();
+  bool isLoading = false;
 
-  bool isRequiredVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    initialData();
+  Future<void> submitContactUs() async {
+    if (!formKey.currentState!.validate()) return;
+    
+    setState(() => isLoading = true);
+    try {
+      await _datasource.contactUs({
+        "phone": phoneController.text.trim(),
+        "email": emailController.text.trim(),
+        "subject": subjectController.text.trim(),
+        "text": textController.text.trim(),
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request submitted successfully"), backgroundColor: AppColors.success));
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
-  void initialData() {
-    final prefs = getIt<SharedPreferences>();
-    nameController.text = "\${prefs.get(firstNameKey) ?? ''} \${prefs.get(lastNameKey) ?? ''}";
-    phoneNumberController.text = prefs.get(phoneKey)?.toString() ?? '';
-    emailAddressController.text = prefs.get(emailKey)?.toString() ?? '';
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  @override
+  void dispose() {
+    phoneController.dispose();
+    emailController.dispose();
+    subjectController.dispose();
+    textController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
-    return BlocListener<SettingsBloc, SettingsState>(
-      listener: (context, state) {
-        if (state is AdminDetailsLoaded) {
-          // Assuming admin details API returns email
-          adminEmail = state.details;
-        } else if (state is SettingsSuccess) {
-          messageController.clear();
-          showSnackBar('PressHope', 'ContactUS Request sent successfully', Colors.black);
-        } else if (state is SettingsError) {
-          showSnackBar("Error", state.message, Colors.red);
-        }
-      },
-      child: Scaffold(
-        appBar: CommonAppBar(
-          elevation: 0,
-          hideLeading: false,
-          title: Text(
-            "\$contactText \${usText.toTitleCase()}",
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: size.width * appBarHeadingFontSize,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          centerTitle: false,
-          titleSpacing: 0,
-          size: size,
-          showActions: true,
-          leadingFxn: () => Navigator.pop(context),
-          actionWidget: const [],
+    final themeColor = AppColors.primary;
+
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.black),
+        title: Text(
+          "Contact us",
+          style: TextStyle(color: Colors.black, fontSize: size.width * 0.05, fontWeight: FontWeight.bold),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: size.width * numD06),
-              child: Form(
-                key: contactUsKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      body: SafeArea(
+        child: Form(
+          key: formKey,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.symmetric(horizontal: size.width * 0.05),
                   children: [
-                    SizedBox(height: size.width * numD05),
+                    SizedBox(height: size.width * 0.02),
                     Text(
-                      "We’d love to hear from you!",
-                      style: commonTextStyle(
-                        size: size,
-                        fontSize: size.width * numD05,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      "Your contact number",
+                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
                     ),
-                    SizedBox(height: size.width * numD01),
-                    Text(
-                      "Our helpful teams are available 24x7 to assist, and answer your questions. All communication with us will remain discreet and secure",
-                      style: commonTextStyle(size: size, fontSize: size.width * numD034, color: Colors.black, fontWeight: FontWeight.w300),
-                    ),
-                    SizedBox(height: size.width * numD06),
-
-                    Text(nameText.toTitleCase(), style: commonTextStyle(size: size, fontSize: size.width * numD033, color: Colors.black, fontWeight: FontWeight.normal)),
-                    SizedBox(height: size.width * numD02),
-                    CommonTextField(
-                      size: size,
-                      maxLines: 1,
-                      textInputFormatters: null,
-                      borderColor: colorTextFieldBorder,
-                      controller: nameController,
-                      hintText: "Enter name",
-                      prefixIcon: null,
-                      prefixIconHeight: size.width * numD06,
-                      suffixIconIconHeight: 0,
-                      suffixIcon: null,
-                      hidePassword: false,
-                      keyboardType: TextInputType.text,
-                      validator: checkRequiredValidator,
-                      enableValidations: true,
-                      autofocus: false,
-                      filled: false,
-                      filledColor: colorLightGrey,
-                    ),
-
-                    SizedBox(height: size.width * numD06),
-                    Text(emailAddressText, style: commonTextStyle(size: size, fontSize: size.width * numD035, color: Colors.black, fontWeight: FontWeight.normal)),
-                    SizedBox(height: size.width * numD02),
-                    CommonTextField(
-                      size: size,
-                      maxLines: 1,
-                      textInputFormatters: null,
-                      borderColor: colorTextFieldBorder,
-                      controller: emailAddressController,
-                      hintText: emailAddressHintText,
-                      prefixIcon: null,
-                      prefixIconHeight: size.width * numD06,
-                      suffixIconIconHeight: 0,
-                      suffixIcon: null,
-                      hidePassword: false,
-                      autofocus: false,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: checkEmailValidator,
-                      enableValidations: true,
-                      filled: false,
-                      filledColor: colorLightGrey,
-                    ),
-
-                    SizedBox(height: size.width * numD06),
-                    Text("\${phoneText.toTitleCase()} \$numberText", style: commonTextStyle(size: size, fontSize: size.width * numD035, color: Colors.black, fontWeight: FontWeight.normal)),
-                    SizedBox(height: size.width * numD02),
-                    CommonTextField(
-                      controller: phoneNumberController,
-                      size: size,
-                      textInputFormatters: null,
-                      borderColor: colorTextFieldBorder,
-                      hintText: phoneHintText,
-                      prefixIcon: null,
-                      prefixIconHeight: size.width * numD06,
-                      suffixIconIconHeight: 0,
-                      suffixIcon: null,
-                      hidePassword: false,
-                      autofocus: false,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: true),
-                      validator: checkRequiredValidator,
-                      enableValidations: true,
-                      filled: false,
-                      filledColor: colorLightGrey,
-                      maxLines: 1,
-                    ),
-
-                    SizedBox(height: size.width * numD06),
-                    Text(messageText.toTitleCase(), style: commonTextStyle(size: size, fontSize: size.width * numD035, color: Colors.black, fontWeight: FontWeight.normal)),
-                    SizedBox(height: size.width * numD02),
+                    SizedBox(height: size.width * 0.02),
                     TextFormField(
-                      maxLines: 5,
-                      controller: messageController,
-                      cursorColor: colorTextFieldIcon,
-                      style: TextStyle(color: Colors.black, fontSize: size.width * numD032, fontFamily: 'AirbnbCereal_W_Md'),
-                      onChanged: (v) => setState(() => isRequiredVisible = v.isEmpty),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        fillColor: Colors.white,
-                        hintText: "\${enterText.toTitleCase()} \$messageText",
-                        hintStyle: TextStyle(color: colorHint, fontSize: size.width * numD035, fontFamily: 'AirbnbCereal_W_Md'),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(size.width * 0.03), borderSide: const BorderSide(width: 1, color: colorTextFieldBorder)),
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        hintText: "Enter contact number",
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
                       ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
                     ),
+                    SizedBox(height: size.width * 0.06),
 
-                    SizedBox(height: size.width * numD15),
-                    
-                    BlocBuilder<SettingsBloc, SettingsState>(
-                      builder: (context, state) {
-                        return Container(
-                          width: size.width,
-                          height: size.width * numD14,
-                          padding: EdgeInsets.symmetric(horizontal: size.width * numD08),
-                          child: state is SettingsLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : commonElevatedButton(
-                              "Submit",
-                              size,
-                              commonTextStyle(size: size, fontSize: size.width * numD035, color: Colors.white, fontWeight: FontWeight.w700),
-                              commonButtonStyle(size, ref.watch(userRoleProvider).activeColor),
-                              () {
-                                if (contactUsKey.currentState!.validate() && messageController.text.isNotEmpty) {
-                                  context.read<SettingsBloc>().add(ContactUs({
-                                    "full_name": nameController.text,
-                                    "email": emailAddressController.text,
-                                    "contact_number": phoneNumberController.text,
-                                    "content": messageController.text,
-                                    "country_code": getIt<SharedPreferences>().getString(countryCodeKey) ?? '',
-                                  }));
-                                }
-                              },
-                            ),
-                        );
-                      },
+                    Text(
+                      "Your Email id",
+                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
                     ),
+                    SizedBox(height: size.width * 0.02),
+                    TextFormField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: "Enter email id",
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                    ),
+                    SizedBox(height: size.width * 0.06),
 
-                    SizedBox(height: size.width * numD04),
+                    Text(
+                      "Subject",
+                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                    ),
+                    SizedBox(height: size.width * 0.02),
+                    TextFormField(
+                      controller: subjectController,
+                      decoration: const InputDecoration(
+                        hintText: "Enter subject",
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                    ),
+                    SizedBox(height: size.width * 0.06),
+
+                    Text(
+                      "Leave a message for us",
+                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                    ),
+                    SizedBox(height: size.width * 0.02),
+                    TextFormField(
+                      controller: textController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: "Write a message here...",
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(size.width * 0.03),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                    ),
+                    SizedBox(height: size.width * 0.1),
+
                     Container(
                       width: size.width,
-                      height: size.width * numD14,
-                      padding: EdgeInsets.symmetric(horizontal: size.width * numD08),
-                      child: commonElevatedButton(
-                        emailUsText,
-                        size,
-                        commonTextStyle(size: size, fontSize: size.width * numD035, color: Colors.white, fontWeight: FontWeight.w700),
-                        commonButtonStyle(size, Colors.black),
-                        () async {
-                          final Uri emailURL = Uri(
-                            scheme: 'mailto',
-                            path: adminEmail.isNotEmpty ? adminEmail : 'support@presshop.com',
-                            queryParameters: {
-                              'subject': 'Please contact me',
-                              'body': messageController.text.trim(),
-                            },
-                          );
-                          try {
-                            if (!await launchUrl(emailURL, mode: LaunchMode.externalApplication)) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not open email client")));
-                              }
-                            }
-                          } catch (e) {
-                            debugPrint('Error launching email: \$e');
-                          }
-                        },
+                      height: size.width * 0.13,
+                      margin: EdgeInsets.symmetric(horizontal: size.width * 0.02),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(size.width * 0.03)),
+                        ),
+                        onPressed: isLoading ? null : submitContactUs,
+                        child: isLoading 
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text("Submit", style: TextStyle(color: Colors.white, fontSize: size.width * 0.035, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    SizedBox(height: size.width * numD08),
+                    SizedBox(height: size.width * 0.1),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildSocialIcon("assets/icons/ic_twitter.png", "https://twitter.com/presshop", size),
+                        SizedBox(width: size.width * 0.04),
+                        _buildSocialIcon("assets/icons/ic_linkdin.png", "https://linkedin.com/company/presshop", size),
+                        SizedBox(width: size.width * 0.04),
+                        _buildSocialIcon("assets/icons/ic_instagram.png", "https://instagram.com/presshop", size),
+                        SizedBox(width: size.width * 0.04),
+                        _buildSocialIcon("assets/icons/ic_facebook.png", "https://facebook.com/presshop", size),
+                      ],
+                    ),
+                    SizedBox(height: size.width * 0.05),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSocialIcon(String asset, String url, Size size) {
+    return InkWell(
+      onTap: () => _launchUrl(url),
+      child: Container(
+        padding: EdgeInsets.all(size.width * 0.03),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          shape: BoxShape.circle,
+        ),
+        child: Image.asset(asset, width: size.width * 0.06, height: size.width * 0.06),
       ),
     );
   }

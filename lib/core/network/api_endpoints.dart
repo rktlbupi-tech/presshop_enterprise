@@ -10,6 +10,8 @@ class ApiEndpoints {
   static const String verifyOtp = 'hopper/verifyEmailOTP';
   static const String forgotPassword = 'auth/forgotPassword';
   static const String resetPassword = 'auth/resetPassword';
+  static const String changePassword = 'users/changePassword';
+  static const String deleteAccount = 'hopper/verifyAndDeleteAccount';
 
   // ── Profile ──────────────────────────────────────────────
   static const String getProfile = 'hopper/getEnterpriseUserProfile';
@@ -50,4 +52,10 @@ class ApiEndpoints {
   // ── Deep Links ───────────────────────────────────────────
   static const String resolveDeepLink = 'api/deep-links/';
   static const String matchDevice = 'api/deep-links/match-device';
+
+  // ── Settings & CMS ───────────────────────────────────────
+  static const String getGeneralMgmtApp = 'hopper/getGenralMgmtApp';
+  static const String getCategory = 'hopper/getCategory';
+  static const String contactUs = 'hopper/Addcontact_us';
+  // static const String deleteAccount = 'hopper/verifyAndDeleteAccount';
 }
