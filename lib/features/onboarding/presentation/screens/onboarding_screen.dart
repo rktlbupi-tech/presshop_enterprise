@@ -121,22 +121,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             final item = walkthroughList[index];
             final bool imageOnTop = index % 2 == 0;
             return Padding(
+              key: ValueKey('walk_$index'),
               padding: EdgeInsets.symmetric(horizontal: size.width * 0.06),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: size.width * 0.02),
-                  if (imageOnTop)
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(size.width * 0.1),
-                        child: Image.asset(
-                          item.image,
-                          fit: BoxFit.cover,
-                          width: size.width,
-                        ),
-                      ),
-                    ),
+                  imageOnTop
+                      ? Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(size.width * 0.1),
+                            child: Image.asset(
+                              item.image,
+                              fit: BoxFit.cover,
+                              width: size.width,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                   SizedBox(height: imageOnTop ? size.width * 0.04 : 0),
 
                   // Title line 1 with the pink marker highlight behind it.
@@ -176,69 +178,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   SizedBox(height: imageOnTop ? 0 : size.width * 0.04),
 
-                  if (!imageOnTop)
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(size.width * 0.1),
-                        child: Image.asset(
-                          item.image,
-                          fit: BoxFit.cover,
-                          width: size.width,
-                        ),
-                      ),
-                    ),
+                  !imageOnTop
+                      ? Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(size.width * 0.1),
+                            child: Image.asset(
+                              item.image,
+                              fit: BoxFit.cover,
+                              width: size.width,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
                   SizedBox(height: size.width * 0.04),
 
                   // Skip / pill button / Next row.
                   Row(
                     children: [
-                      if (index == 0)
-                        InkWell(
-                          onTap: _finish,
-                          splashColor: Colors.grey.shade300,
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: size.width * 0.02,
-                              vertical: size.width * 0.03,
-                            ),
-                            child: Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.normal,
-                                fontFamily: 'AirbnbCereal',
-                                fontSize: size.width * 0.03,
+                      index == 0
+                          ? InkWell(
+                              onTap: _finish,
+                              splashColor: Colors.grey.shade300,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: size.width * 0.02,
+                                  vertical: size.width * 0.03,
+                                ),
+                                child: Text(
+                                  'Skip',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.normal,
+                                    fontFamily: 'AirbnbCereal',
+                                    fontSize: size.width * 0.03,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
+                            )
+                          : const SizedBox.shrink(),
                       const Spacer(),
-                      if (item.showButton)
-                        ElevatedButton(
-                          onPressed: _finish,
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: size.width * 0.012,
-                              horizontal: size.width * 0.04,
-                            ),
-                            backgroundColor: AppColors.employeeBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                size.width * 0.05,
+                      item.showButton
+                          ? ElevatedButton(
+                              onPressed: _finish,
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: size.width * 0.012,
+                                  horizontal: size.width * 0.04,
+                                ),
+                                backgroundColor: AppColors.employeeBlue,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    size.width * 0.05,
+                                  ),
+                                ),
+                                elevation: 0,
                               ),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            item.buttonText,
-                            style: TextStyle(
-                              fontSize: size.width * 0.035,
-                              color: Colors.white,
-                              fontFamily: 'AirbnbCereal',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                              child: Text(
+                                item.buttonText,
+                                style: TextStyle(
+                                  fontSize: size.width * 0.035,
+                                  color: Colors.white,
+                                  fontFamily: 'AirbnbCereal',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                       const Spacer(),
                       InkWell(
                         onTap: () {

@@ -48,8 +48,14 @@ class _LoginViewState extends State<_LoginView> {
   }
 
   void _submit(BuildContext context) {
-    // Bypass for testing
-    context.go(AppRoutes.dashboard);
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(
+        LoginSubmitted(
+          _emailController.text.trim(),
+          _passwordController.text,
+        ),
+      );
+    }
   }
 
   @override
@@ -110,7 +116,6 @@ class _LoginViewState extends State<_LoginView> {
                     validator: (v) {
                       if (v == null || v.isEmpty)
                         return AppStrings.fieldRequired;
-                      if (!v.contains('@')) return AppStrings.invalidEmail;
                       return null;
                     },
                   ),

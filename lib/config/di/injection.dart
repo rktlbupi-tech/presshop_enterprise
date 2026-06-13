@@ -28,6 +28,10 @@ import '../../features/tasks/data/datasources/tasks_remote_datasource.dart';
 import '../../features/tasks/data/repositories/tasks_repository_impl.dart';
 import '../../features/tasks/domain/repositories/tasks_repository.dart';
 import '../../features/tasks/presentation/bloc/tasks_bloc.dart';
+import '../../features/settings/data/datasources/settings_remote_datasource.dart';
+import '../../features/settings/data/repositories/settings_repository_impl.dart';
+import '../../features/settings/domain/repositories/settings_repository.dart';
+import '../../features/settings/presentation/bloc/settings_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -72,4 +76,9 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => ProfileRemoteDatasource(getIt()));
   getIt.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl(getIt()));
   getIt.registerFactory(() => ProfileBloc(getIt()));
+
+  // Settings
+  getIt.registerLazySingleton(() => SettingsRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => SettingsBloc(getIt()));
 }

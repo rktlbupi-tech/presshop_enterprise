@@ -1,180 +1,250 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
-import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/empty_state.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
-import '../bloc/tasks_bloc.dart';
 import 'task_details_screen.dart';
 
-class TasksScreen extends StatelessWidget {
+class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<TasksBloc>()..add(const FetchTasks()),
-      child: const _TasksView(),
-    );
-  }
+  State<TasksScreen> createState() => _TasksScreenState();
 }
 
-class _TasksView extends StatefulWidget {
-  const _TasksView();
-  @override State<_TasksView> createState() => _TasksViewState();
-}
-
-class _TasksViewState extends State<_TasksView> {
-  String _activeFilter = 'All';
-  final _filters = ['All', 'Pending', 'In Progress', 'Completed'];
-
-  String _toStatusKey(String f) => switch (f) {
-        'In Progress' => 'in-progress',
-        'Completed' => 'completed',
-        'Pending' => 'pending',
-        _ => '',
-      };
-
-  Color _priorityColor(String p) => switch (p.toLowerCase()) {
-        'high' => AppColors.error,
-        'medium' => AppColors.warning,
-        _ => AppColors.info,
-      };
-
-  Color _statusColor(String s) => switch (s) {
-        'completed' => AppColors.success,
-        'in-progress' => AppColors.info,
-        _ => AppColors.warning,
-      };
+class _TasksScreenState extends State<TasksScreen> {
+  final List<_DummyScheduleTask> _tasks = [
+    _DummyScheduleTask(
+      id: "1",
+      title: "Cover local protest",
+      startTime: "10:00",
+      endTime: "14:00",
+      location: "City Centre",
+      color: Colors.red,
+      mediaHouseLogo: "https://picsum.photos/100",
+    ),
+    _DummyScheduleTask(
+      id: "2",
+      title: "Interview Mayor",
+      startTime: "15:00",
+      endTime: "16:30",
+      location: "City Hall",
+      color: Colors.orange,
+      mediaHouseLogo: "https://picsum.photos/101",
+    ),
+    _DummyScheduleTask(
+      id: "3",
+      title: "Weather report footage",
+      startTime: "17:00",
+      endTime: "18:00",
+      location: "River Side",
+      color: Colors.blue,
+      mediaHouseLogo: "https://picsum.photos/102",
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppAppBar(title: 'My Tasks'),
-      body: BlocBuilder<TasksBloc, TasksState>(
-        builder: (context, state) {
-          return Column(
+      body: Column(
+        children: [
+          // Header (similar to integrated list header)
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Container(
+                  width: 4.w,
+                  height: 20.h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF007AFF),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Text(
+                  "Today's Tasks", // Dummy title
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              itemCount: _tasks.length,
+              itemBuilder: (context, index) {
+                return _TimelineTaskCard(task: _tasks[index]);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimelineTaskCard extends StatelessWidget {
+  final _DummyScheduleTask task;
+
+  const _TimelineTaskCard({required this.task});
+
+  String _to12HourFormat(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        int hour = int.parse(parts[0]);
+        int minute = int.parse(parts[1]);
+        String ampm = hour >= 12 ? 'PM' : 'AM';
+        int displayHour = hour % 12;
+        if (displayHour == 0) displayHour = 12;
+        String hourStr = displayHour.toString().padLeft(2, '0');
+        String minuteStr = minute.toString().padLeft(2, '0');
+        return "$hourStr:$minuteStr $ampm";
+      }
+    } catch (_) {}
+    return timeStr;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor = task.color.withValues(alpha: 0.05);
+    Color accentColor = task.color;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailsScreen(taskId: task.id),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        margin: EdgeInsets.only(bottom: 10.h),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
             children: [
-              // filter chips
               Container(
-                color: AppColors.surface,
-                padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 16.w),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _filters.map((f) {
-                      final sel = _activeFilter == f;
-                      return Padding(
-                        padding: EdgeInsets.only(right: 8.w),
-                        child: FilterChip(
-                          label: Text(f), selected: sel,
-                          showCheckmark: false,
-                          selectedColor: AppColors.primary,
-                          backgroundColor: AppColors.background,
-                          labelStyle: AppTextStyles.labelMedium.copyWith(
-                              color: sel ? AppColors.textOnPrimary : AppColors.textSecondary),
-                          side: BorderSide(color: sel ? AppColors.primary : AppColors.border),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-                          onSelected: (_) {
-                            setState(() => _activeFilter = f);
-                            final key = _toStatusKey(f);
-                            context.read<TasksBloc>().add(FilterTasksByStatus(key.isEmpty ? null : key));
-                          },
-                        ),
-                      );
-                    }).toList(),
+                width: 4.5.w,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16.r),
+                    bottomLeft: Radius.circular(16.r),
                   ),
                 ),
               ),
-              Expanded(child: _buildBody(context, state)),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildBody(BuildContext context, TasksState state) {
-    if (state is TasksLoading) return const LoadingWidget();
-    if (state is TasksError) {
-      return EmptyState(
-        icon: Icons.error_outline, title: state.message,
-        buttonLabel: 'Retry', onButtonTap: () => context.read<TasksBloc>().add(const FetchTasks()),
-      );
-    }
-    final tasks = state is TasksLoaded ? state.filteredTasks : [];
-    if (tasks.isEmpty) return const EmptyState(icon: Icons.task_outlined, title: 'No tasks found', subtitle: 'Tasks assigned to you will appear here.');
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: () async => context.read<TasksBloc>().add(const RefreshTasks()),
-      child: ListView.separated(
-        padding: EdgeInsets.all(16.r),
-        itemCount: tasks.length,
-        separatorBuilder: (ctx, i) => SizedBox(height: 12.h),
-        itemBuilder: (_, i) {
-          final task = tasks[i];
-          return GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => BlocProvider.value(
-                value: context.read<TasksBloc>(),
-                child: TaskDetailsScreen(taskId: task.id),
-              ),
-            )),
-            child: Container(
-              padding: EdgeInsets.all(16.r),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(child: Text(task.title, style: AppTextStyles.labelLarge, maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  SizedBox(width: 8.w),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                    decoration: BoxDecoration(
-                      color: _priorityColor(task.priority).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6.r),
-                    ),
-                    child: Text(task.displayPriority,
-                        style: AppTextStyles.labelSmall.copyWith(color: _priorityColor(task.priority))),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.sp,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        "${_to12HourFormat(task.startTime)} - ${_to12HourFormat(task.endTime)}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      SizedBox(height: 5.h),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 12.sp, color: Colors.grey.shade500),
+                          SizedBox(width: 4.w),
+                          Expanded(
+                            child: Text(
+                              task.location,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12.sp,
+                                color: Colors.grey.shade500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ]),
-                SizedBox(height: 8.h),
-                Row(children: [
-                  if (task.deadline != null) ...[
-                    Icon(Icons.calendar_today_outlined, size: 12.sp, color: AppColors.textSecondary),
-                    SizedBox(width: 4.w),
-                    Text(DateFormat('dd MMM yyyy').format(task.deadline!), style: AppTextStyles.caption),
-                    SizedBox(width: 12.w),
-                  ],
-                  if (task.assignedBy != null) ...[
-                    Icon(Icons.person_outline, size: 12.sp, color: AppColors.textSecondary),
-                    SizedBox(width: 4.w),
-                    Text(task.assignedBy!, style: AppTextStyles.caption),
-                  ],
-                ]),
-                SizedBox(height: 10.h),
-                Align(alignment: Alignment.centerRight, child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(right: 18.w),
+                child: Container(
+                  width: 42.w,
+                  height: 42.w,
                   decoration: BoxDecoration(
-                    color: _statusColor(task.status).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20.r),
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: Text(task.displayStatus,
-                      style: AppTextStyles.labelSmall.copyWith(color: _statusColor(task.status))),
-                )),
-              ]),
-            ),
-          );
-        },
+                  child: ClipOval(
+                    child: task.mediaHouseLogo.isNotEmpty
+                        ? Image.network(
+                            task.mediaHouseLogo,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 20, color: Colors.grey),
+                          )
+                        : const Icon(Icons.business, size: 20, color: Colors.grey),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
+
+class _DummyScheduleTask {
+  final String id;
+  final String title;
+  final String startTime;
+  final String endTime;
+  final String location;
+  final Color color;
+  final String mediaHouseLogo;
+
+  _DummyScheduleTask({
+    required this.id,
+    required this.title,
+    required this.startTime,
+    required this.endTime,
+    required this.location,
+    required this.color,
+    required this.mediaHouseLogo,
+  });
 }

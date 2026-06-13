@@ -1,123 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
-import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../../presentation/widgets/app_app_bar.dart';
+import 'task_details_screen.dart';
 
-/// Port of the old EmployeeTaskScheduleScreen — month header, weekday row,
-/// a calendar grid, and the selected day's task list below.
 class TaskScheduleScreen extends StatefulWidget {
-  final bool hideLeading;
-  const TaskScheduleScreen({super.key, this.hideLeading = true});
+  const TaskScheduleScreen({super.key});
 
   @override
   State<TaskScheduleScreen> createState() => _TaskScheduleScreenState();
 }
 
 class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
-  late DateTime _visibleMonth;
-  late DateTime _selectedDay;
+  final List<String> _weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  static const _weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  static const _months = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July',
-    'August', 'September', 'October', 'November', 'December'
+  final List<_DummyScheduleTask> _tasks = [
+    _DummyScheduleTask(
+      id: "1",
+      title: "Cover local protest",
+      startTime: "10:00",
+      endTime: "14:00",
+      location: "City Centre",
+      color: Colors.red,
+      mediaHouseLogo: "https://picsum.photos/100",
+    ),
   ];
-
-  // Sample tasks keyed by day-of-month.
-  final Map<int, List<_Task>> _tasks = {};
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _visibleMonth = DateTime(now.year, now.month);
-    _selectedDay = DateTime(now.year, now.month, now.day);
-    _tasks[now.day] = [
-      _Task('09:00', 'Morning briefing', 'Newsroom', AppColors.primary),
-      _Task('13:30', 'Cover city council', 'Town Hall', AppColors.accent),
-    ];
-    final tomorrow = now.day + 1;
-    _tasks[tomorrow] = [
-      _Task('10:00', 'Interview — local MP', 'Constituency office',
-          AppColors.warning),
-    ];
-  }
-
-  void _changeMonth(int delta) {
-    setState(() {
-      _visibleMonth =
-          DateTime(_visibleMonth.year, _visibleMonth.month + delta);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: widget.hideLeading
-          ? const EmployeeAppBar()
-          : AppBar(
-              title: const Text('View Task'),
-              backgroundColor: AppColors.surface,
-              foregroundColor: AppColors.textPrimary,
-              elevation: 0.5,
-            ),
+      backgroundColor: Colors.white,
+      appBar: AppAppBar(title: 'View Task'),
       body: Column(
         children: [
-          _monthHeader(),
-          _weekDayRow(),
-          const Divider(height: 1, thickness: 0.5, color: AppColors.border),
-          _calendarGrid(),
-          _taskListHeader(),
-          Expanded(child: _taskList()),
+          _buildMonthHeader(),
+          _buildWeekDayRow(),
+          const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0)),
+          _buildCalendarGrid(),
+          _buildTaskListHeader(),
+          Expanded(child: _buildTaskList()),
         ],
       ),
     );
   }
 
-  Widget _monthHeader() {
+  Widget _buildMonthHeader() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${_months[_visibleMonth.month - 1]} ${_visibleMonth.year}',
-            style: AppTextStyles.h4,
+          IconButton(
+            icon: Icon(Icons.chevron_left, color: Colors.black, size: 28.sp),
+            onPressed: () {},
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.chevron_left, size: 24.sp),
-                onPressed: () => _changeMonth(-1),
-              ),
-              IconButton(
-                icon: Icon(Icons.chevron_right, size: 24.sp),
-                onPressed: () => _changeMonth(1),
-              ),
-            ],
+          Text(
+            "June 2026",
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.chevron_right, color: Colors.black, size: 28.sp),
+            onPressed: () {},
           ),
         ],
       ),
     );
   }
 
-  Widget _weekDayRow() {
+  Widget _buildWeekDayRow() {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6.h),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
-        children: _weekDays.map((d) {
-          final weekend = d == 'Sat' || d == 'Sun';
-          return Expanded(
-            child: Center(
-              child: Text(
-                d,
-                style: AppTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: weekend ? AppColors.textHint : AppColors.textSecondary,
-                ),
-              ),
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: _weekDays.map((day) {
+          final isWeekend = day == 'Sat' || day == 'Sun';
+          return Text(
+            day,
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+              color: isWeekend ? Colors.grey.shade400 : Colors.grey.shade600,
             ),
           );
         }).toList(),
@@ -125,189 +90,251 @@ class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
     );
   }
 
-  Widget _calendarGrid() {
-    final firstOfMonth = DateTime(_visibleMonth.year, _visibleMonth.month, 1);
-    final daysInMonth =
-        DateTime(_visibleMonth.year, _visibleMonth.month + 1, 0).day;
-    // Monday = 1 ... Sunday = 7 → leading blanks before day 1.
-    final leading = firstOfMonth.weekday - 1;
-    final cells = leading + daysInMonth;
-    final rows = (cells / 7).ceil();
+  Widget _buildCalendarGrid() {
+    return SizedBox(
+      height: 250.h,
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.all(16.w),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 7,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+        ),
+        itemCount: 30, // Dummy month days
+        itemBuilder: (context, index) {
+          final day = index + 1;
+          final isSelected = day == 13; // dummy selected day
+          final hasTask = day == 13 || day == 15 || day == 20;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-      child: Column(
-        children: List.generate(rows, (r) {
-          return Row(
-            children: List.generate(7, (c) {
-              final index = r * 7 + c;
-              final dayNum = index - leading + 1;
-              if (dayNum < 1 || dayNum > daysInMonth) {
-                return const Expanded(child: SizedBox(height: 44));
-              }
-              final isSelected = _selectedDay.year == _visibleMonth.year &&
-                  _selectedDay.month == _visibleMonth.month &&
-                  _selectedDay.day == dayNum;
-              final hasTasks = (_tasks[dayNum]?.isNotEmpty ?? false) &&
-                  _visibleMonth.month == DateTime.now().month;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedDay = DateTime(
-                      _visibleMonth.year, _visibleMonth.month, dayNum)),
-                  child: Container(
-                    height: 44.h,
-                    margin: EdgeInsets.all(2.r),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$dayNum',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: isSelected
-                                ? AppColors.textOnPrimary
-                                : AppColors.textPrimary,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w400,
-                          ),
-                        ),
-                        if (hasTasks) ...[
-                          SizedBox(height: 2.h),
-                          Container(
-                            width: 5.w,
-                            height: 5.w,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.textOnPrimary
-                                  : AppColors.accent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+          return Container(
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF2D83E6) : Colors.transparent,
+              shape: BoxShape.circle,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  day.toString(),
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? Colors.white : Colors.black87,
                   ),
                 ),
-              );
-            }),
+                if (hasTask && !isSelected)
+                  Container(
+                    margin: EdgeInsets.only(top: 2.h),
+                    width: 4.w,
+                    height: 4.w,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
+            ),
           );
-        }),
+        },
       ),
     );
   }
 
-  Widget _taskListHeader() {
+  Widget _buildTaskListHeader() {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
+      color: Colors.white,
       child: Row(
         children: [
           Container(
             width: 4.w,
             height: 20.h,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: const Color(0xFF007AFF),
               borderRadius: BorderRadius.circular(2.r),
             ),
           ),
           SizedBox(width: 12.w),
           Text(
-            '${_selectedDay.day} ${_months[_selectedDay.month - 1]} ${_selectedDay.year}',
-            style: AppTextStyles.labelLarge,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _taskList() {
-    final showForCurrentMonth =
-        _visibleMonth.month == DateTime.now().month &&
-            _visibleMonth.year == DateTime.now().year;
-    final tasks = showForCurrentMonth
-        ? (_tasks[_selectedDay.day] ?? const [])
-        : const <_Task>[];
-
-    if (tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 48.sp, color: AppColors.textHint),
-            SizedBox(height: 12.h),
-            Text('No tasks scheduled for this day',
-                style: AppTextStyles.bodyMedium
-                    .copyWith(color: AppColors.textSecondary)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      itemCount: tasks.length,
-      itemBuilder: (context, i) => _taskCard(tasks[i]),
-    );
-  }
-
-  Widget _taskCard(_Task t) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(14.r),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4.w,
-            height: 44.h,
-            decoration: BoxDecoration(
-              color: t.color,
-              borderRadius: BorderRadius.circular(2.r),
+            "Sat, 13 June 2026",
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
             ),
           ),
-          SizedBox(width: 14.w),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(t.time,
-                  style: AppTextStyles.caption
-                      .copyWith(color: t.color, fontWeight: FontWeight.w700)),
-              SizedBox(height: 2.h),
-              Text(t.title, style: AppTextStyles.labelLarge),
-            ],
-          ),
-          const Spacer(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Icon(Icons.location_on_outlined,
-                  size: 16.sp, color: AppColors.textHint),
-              SizedBox(height: 2.h),
-              Text(t.place,
-                  style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
-            ],
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTaskList() {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      itemCount: _tasks.length,
+      itemBuilder: (context, index) {
+        return _TimelineTaskCard(task: _tasks[index]);
+      },
+    );
+  }
+}
+
+class _TimelineTaskCard extends StatelessWidget {
+  final _DummyScheduleTask task;
+
+  const _TimelineTaskCard({required this.task});
+
+  String _to12HourFormat(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length >= 2) {
+        int hour = int.parse(parts[0]);
+        int minute = int.parse(parts[1]);
+        String ampm = hour >= 12 ? 'PM' : 'AM';
+        int displayHour = hour % 12;
+        if (displayHour == 0) displayHour = 12;
+        String hourStr = displayHour.toString().padLeft(2, '0');
+        String minuteStr = minute.toString().padLeft(2, '0');
+        return "$hourStr:$minuteStr $ampm";
+      }
+    } catch (_) {}
+    return timeStr;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor = task.color.withValues(alpha: 0.05);
+    Color accentColor = task.color;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaskDetailsScreen(taskId: task.id),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        margin: EdgeInsets.only(bottom: 10.h),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              Container(
+                width: 4.5.w,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16.r),
+                    bottomLeft: Radius.circular(16.r),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.sp,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        "${_to12HourFormat(task.startTime)} - ${_to12HourFormat(task.endTime)}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      SizedBox(height: 5.h),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 12.sp, color: Colors.grey.shade500),
+                          SizedBox(width: 4.w),
+                          Expanded(
+                            child: Text(
+                              task.location,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12.sp,
+                                color: Colors.grey.shade500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(right: 18.w),
+                child: Container(
+                  width: 42.w,
+                  height: 42.w,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: task.mediaHouseLogo.isNotEmpty
+                        ? Image.network(
+                            task.mediaHouseLogo,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 20, color: Colors.grey),
+                          )
+                        : const Icon(Icons.business, size: 20, color: Colors.grey),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _Task {
-  final String time;
+class _DummyScheduleTask {
+  final String id;
   final String title;
-  final String place;
+  final String startTime;
+  final String endTime;
+  final String location;
   final Color color;
-  const _Task(this.time, this.title, this.place, this.color);
+  final String mediaHouseLogo;
+
+  _DummyScheduleTask({
+    required this.id,
+    required this.title,
+    required this.startTime,
+    required this.endTime,
+    required this.location,
+    required this.color,
+    required this.mediaHouseLogo,
+  });
 }

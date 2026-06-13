@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../presentation/widgets/coming_soon_screen.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
 import '../../../attendance/presentation/screens/attendance_screen.dart';
@@ -18,8 +17,8 @@ import '../../../team_chat/presentation/screens/team_chat_screen.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
 
-/// Port of the old app's MenuScreen — the "hub" tab that links to every
-/// employee page, grouped into sections, with a duty/online toggle on top.
+const _iconsPath = 'assets/icons/';
+
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
 
@@ -29,6 +28,8 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   bool _onDuty = false;
+  // ignore: prefer_final_fields
+  int _notificationCount = 0;
 
   void _open(Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
@@ -41,218 +42,583 @@ class _MenuScreenState extends State<MenuScreen> {
     context.go(AppRoutes.login);
   }
 
+  void _logoutDialog() {
+    final size = MediaQuery.of(context).size;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        contentPadding: EdgeInsets.zero,
+        insetPadding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+        content: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(size.width * 0.045),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: size.width * 0.04),
+                child: Row(
+                  children: [
+                    Text(
+                      "You'll be missed!",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: size.width * 0.05,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: Icon(Icons.close,
+                          color: Colors.black, size: size.width * 0.06),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+                child: const Divider(color: Colors.black, thickness: 0.5),
+              ),
+              SizedBox(height: size.width * 0.02),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+                child: Text(
+                  'Are you sure you want to logout? We hope to see you back soon.',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: size.width * 0.035,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'AirbnbCereal',
+                  ),
+                ),
+              ),
+              SizedBox(height: size.width * 0.04),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.04,
+                  vertical: size.width * 0.04,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: size.width * 0.12,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(size.width * 0.03)),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _logout();
+                          },
+                          child: Text(
+                            'Logout',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: size.width * 0.038,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: size.width * 0.04),
+                    Expanded(
+                      child: SizedBox(
+                        height: size.width * 0.12,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(size.width * 0.03)),
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            'Stay logged in',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: size.width * 0.038,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: EmployeeAppBar(
         isOnline: _onDuty,
         onProfileTap: () => _open(const ProfileScreen()),
       ),
       body: ListView(
-        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 32.h),
+        padding: EdgeInsets.symmetric(
+          horizontal: size.width * 0.04,
+          vertical: size.width * 0.012,
+        ),
         children: [
-          _dutyCard(),
-          SizedBox(height: 20.h),
-          _section('MY ACCOUNT', [
-            _MenuItem('My profile', Icons.person_outline,
-                const Color(0xFF4A80F0), const Color(0xFFEEF2FF),
-                () => _open(const ProfileScreen())),
-            _MenuItem('Digital ID', Icons.badge_outlined,
-                const Color(0xFF2DC78A), const Color(0xFFE6F9F2),
-                () => _open(const ComingSoonScreen(
-                    title: 'Digital ID', icon: Icons.badge_outlined))),
-            _MenuItem('Notifications', Icons.notifications_none,
-                const Color(0xFFF59E0B), const Color(0xFFFFF8EC),
-                () => _open(const NotificationsScreen())),
-          ]),
-          _section('WORK HUB', [
-            _MenuItem('View tasks', Icons.event_note_outlined,
-                const Color(0xFF4A80F0), const Color(0xFFEEF2FF),
-                () => _open(const TaskScheduleScreen())),
-            _MenuItem('Evidence', Icons.collections_outlined,
-                const Color(0xFF2DC78A), const Color(0xFFE6F9F2),
-                () => _open(const EvidenceScreen())),
-            _MenuItem('Submit forms', Icons.description_outlined,
-                const Color(0xFF7B61FF), const Color(0xFFF0EEFF),
-                () => _open(const ComingSoonScreen(
-                    title: 'Submit forms', icon: Icons.description_outlined))),
-            _MenuItem('Track mileage', Icons.route_outlined,
-                const Color(0xFFF59E0B), const Color(0xFFFFF8EC),
-                () => _open(const ComingSoonScreen(
-                    title: 'Track mileage', icon: Icons.route_outlined))),
-            _MenuItem('Claim expenses', Icons.receipt_long_outlined,
-                const Color(0xFF10B981), const Color(0xFFD1FAE5),
-                () => _open(const ComingSoonScreen(
-                    title: 'Claim expenses',
-                    icon: Icons.receipt_long_outlined))),
-          ]),
-          _section('PAY HUB', [
-            _MenuItem('Duties', Icons.work_outline,
-                const Color(0xFF3B82F6), const Color(0xFFEFF6FF),
-                () => _open(const ComingSoonScreen(
-                    title: 'Duties', icon: Icons.work_outline))),
-            _MenuItem('Attendance log', Icons.fact_check_outlined,
-                const Color(0xFFE11D48), const Color(0xFFFFE4E6),
-                () => _open(const AttendanceScreen())),
-            _MenuItem('Payslip', Icons.savings_outlined,
-                const Color(0xFF10B981), const Color(0xFFD1FAE5),
-                () => _open(const ComingSoonScreen(
-                    title: 'Payslip', icon: Icons.savings_outlined))),
-            _MenuItem('View earnings', Icons.account_balance_wallet_outlined,
-                const Color(0xFFF59E0B), const Color(0xFFFEF3C7),
-                () => _open(const EarningsScreen())),
-            _MenuItem('My documents', Icons.folder_open_outlined,
-                const Color(0xFF6366F1), const Color(0xFFE0E7FF),
-                () => _open(const DocumentsScreen())),
-          ]),
-          _section('SAFETY & SUPPORT', [
-            _MenuItem('Share alert', Icons.campaign_outlined,
-                const Color(0xFFF59E0B), const Color(0xFFFFF8EC),
-                () => _open(const ComingSoonScreen(
-                    title: 'Share alert', icon: Icons.campaign_outlined))),
-            _MenuItem('SOS', Icons.sos_outlined, const Color(0xFFEF4444),
-                const Color(0xFFFFEEEE), () => SosDialog.show(context)),
-            _MenuItem('Chat', Icons.chat_bubble_outline,
-                const Color(0xFF4A80F0), const Color(0xFFEEF2FF),
-                () => _open(const TeamChatScreen(
-                    roomId: 'general', roomName: 'Team Chat'))),
-          ]),
-          _section('MORE', [
-            _MenuItem('FAQs', Icons.help_outline, const Color(0xFF7B61FF),
-                const Color(0xFFF0EEFF),
-                () => _open(const ComingSoonScreen(
-                    title: 'FAQs', icon: Icons.help_outline))),
-            _MenuItem('Settings', Icons.settings_outlined,
-                const Color(0xFF64748B), const Color(0xFFF1F5F9),
-                () => _open(const ComingSoonScreen(
-                    title: 'Settings', icon: Icons.settings_outlined))),
-            _MenuItem('Logout', Icons.logout, const Color(0xFFEF4444),
-                const Color(0xFFFFEEEE), _logout),
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _dutyCard() {
-    return Container(
-      padding: EdgeInsets.all(16.r),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44.w,
-            height: 44.w,
-            decoration: BoxDecoration(
-              color: (_onDuty ? AppColors.accent : Colors.grey)
-                  .withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _onDuty ? Icons.location_on : Icons.location_off_outlined,
-              color: _onDuty ? AppColors.accent : Colors.grey,
-              size: 22.sp,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Duty toggle ──────────────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: size.width * 0.013),
+            child: Row(
               children: [
-                Text(_onDuty ? 'On Duty' : 'Off Duty',
-                    style: AppTextStyles.labelLarge),
-                SizedBox(height: 2.h),
-                Text(
-                  _onDuty ? 'Online — sharing location' : 'Toggle to go on duty',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
+                ImageIcon(
+                  const AssetImage('assets/icons/ic_location.png'),
+                  size: size.width * 0.06,
+                  color: Colors.black,
+                ),
+                SizedBox(width: size.width * 0.03),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: size.width * 0.036,
+                              color: Colors.black87,
+                              fontFamily: 'AirbnbCereal',
+                              fontWeight: FontWeight.w400,
+                            ),
+                            children: [
+                              const TextSpan(text: 'Toggle to go '),
+                              TextSpan(
+                                text: _onDuty ? 'Off Duty' : 'On Duty',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: 4, right: 2),
+                            child: Text(
+                              _onDuty ? 'Online' : 'Offline',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: size.width * 0.026,
+                                color: Colors.grey.shade500,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                            ),
+                          ),
+                          Switch(
+                            value: _onDuty,
+                            activeThumbColor: AppColors.primary,
+                            activeTrackColor:
+                                AppColors.primary.withValues(alpha: 0.4),
+                            inactiveTrackColor: Colors.grey.shade300,
+                            onChanged: (v) => setState(() => _onDuty = v),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          Switch(
-            value: _onDuty,
-            activeColor: AppColors.accent,
-            onChanged: (v) => setState(() => _onDuty = v),
+          const Divider(thickness: 1.5, color: Color(0xFFF5F5F5)),
+          SizedBox(height: size.width * 0.01),
+
+          // ── MY ACCOUNT ───────────────────────────────────────────────────
+          _buildGroupSection(
+            title: 'MY ACCOUNT',
+            size: size,
+            items: [
+              _MenuGroupItem(
+                name: 'My profile',
+                iconPath: '${_iconsPath}ic_my_profile.svg',
+                iconColor: const Color(0xFF4A80F0),
+                iconBgColor: const Color(0xFFEEF2FF),
+                onTap: () => _open(const ProfileScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Digital ID',
+                iconPath: '${_iconsPath}ic_digital_id.svg',
+                iconColor: const Color(0xFF2DC78A),
+                iconBgColor: const Color(0xFFE6F9F2),
+                iconSize: size.width * 0.069,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Digital ID', icon: Icons.badge_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'Notifications',
+                iconPath: '${_iconsPath}ic_feed.png',
+                iconColor: AppColors.primary,
+                iconBgColor: const Color(0xFFFFF8EC),
+                badgeCount: _notificationCount,
+                onTap: () => _open(const NotificationsScreen()),
+              ),
+            ],
           ),
+
+          SizedBox(height: size.width * 0.012),
+
+          // ── WORK HUB ─────────────────────────────────────────────────────
+          _buildGroupSection(
+            title: 'WORK HUB',
+            size: size,
+            items: [
+              _MenuGroupItem(
+                name: 'View tasks',
+                iconPath: '${_iconsPath}ic_task1.png',
+                iconColor: const Color(0xFF4A80F0),
+                iconBgColor: const Color(0xFFEEF2FF),
+                onTap: () => _open(const TaskScheduleScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Evidence',
+                iconPath: '${_iconsPath}ic_content1.png',
+                iconColor: const Color(0xFF2DC78A),
+                iconBgColor: const Color(0xFFE6F9F2),
+                onTap: () => _open(const EvidenceScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Submit forms',
+                iconPath: '${_iconsPath}ic_form_icon1.svg',
+                iconColor: const Color(0xFF7B61FF),
+                iconBgColor: const Color(0xFFF0EEFF),
+                iconSize: size.width * 0.078,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Submit forms',
+                    icon: Icons.description_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'Track mileage',
+                iconPath: '${_iconsPath}ic_mileage.png',
+                iconColor: const Color(0xFFF59E0B),
+                iconBgColor: const Color(0xFFFFF8EC),
+                iconSize: size.width * 0.068,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Track mileage', icon: Icons.route_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'Claim expenses',
+                iconPath: '${_iconsPath}ic_expenses.png',
+                iconColor: const Color(0xFF10B981),
+                iconBgColor: const Color(0xFFD1FAE5),
+                iconSize: size.width * 0.070,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Claim expenses',
+                    icon: Icons.receipt_long_outlined)),
+              ),
+            ],
+          ),
+
+          SizedBox(height: size.width * 0.012),
+
+          // ── PAY HUB ──────────────────────────────────────────────────────
+          _buildGroupSection(
+            title: 'PAY HUB',
+            size: size,
+            items: [
+              _MenuGroupItem(
+                name: 'Duties',
+                iconPath: '${_iconsPath}ic_duties.svg',
+                iconColor: const Color(0xFF3B82F6),
+                iconBgColor: const Color(0xFFEFF6FF),
+                iconSize: size.width * 0.058,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Duties', icon: Icons.work_outline)),
+              ),
+              _MenuGroupItem(
+                name: 'Attendance log',
+                iconPath: '${_iconsPath}ic_attendance_log.svg',
+                iconColor: const Color(0xFFE11D48),
+                iconBgColor: const Color(0xFFFFE4E6),
+                onTap: () => _open(const AttendanceScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'Payslip',
+                iconPath: '${_iconsPath}ic_piggy.png',
+                iconColor: const Color(0xFF10B981),
+                iconBgColor: const Color(0xFFD1FAE5),
+                iconSize: size.width * 0.076,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Payslip', icon: Icons.savings_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'View earnings',
+                iconPath: '${_iconsPath}ic_view_earnings.svg',
+                iconColor: const Color(0xFFF59E0B),
+                iconBgColor: const Color(0xFFFEF3C7),
+                onTap: () => _open(const EarningsScreen()),
+              ),
+              _MenuGroupItem(
+                name: 'My documents',
+                iconPath: '${_iconsPath}ic_upload_documents.png',
+                iconColor: const Color(0xFF6366F1),
+                iconBgColor: const Color(0xFFE0E7FF),
+                iconSize: size.width * 0.064,
+                onTap: () => _open(const DocumentsScreen()),
+              ),
+            ],
+          ),
+
+          SizedBox(height: size.width * 0.012),
+
+          // ── SAFETY & SUPPORT ─────────────────────────────────────────────
+          _buildGroupSection(
+            title: 'SAFETY & SUPPORT',
+            size: size,
+            items: [
+              _MenuGroupItem(
+                name: 'Share alert',
+                iconPath: '${_iconsPath}ic_alert2.png',
+                iconColor: const Color(0xFFF59E0B),
+                iconBgColor: const Color(0xFFFFF8EC),
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Share alert', icon: Icons.campaign_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'SOS',
+                iconPath: '${_iconsPath}ic_alert.png',
+                iconColor: const Color(0xFFEF4444),
+                iconBgColor: const Color(0xFFFFEEEE),
+                iconSize: size.width * 0.074,
+                onTap: () => SosDialog.show(context),
+              ),
+              _MenuGroupItem(
+                name: 'Chat',
+                iconPath: '${_iconsPath}ic_chat.png',
+                iconColor: const Color(0xFF4A80F0),
+                iconBgColor: const Color(0xFFEEF2FF),
+                onTap: () => _open(const TeamChatScreen(
+                    roomId: 'general', roomName: 'Team Chat')),
+              ),
+            ],
+          ),
+
+          SizedBox(height: size.width * 0.012),
+
+          // ── MORE ─────────────────────────────────────────────────────────
+          _buildGroupSection(
+            title: 'MORE',
+            size: size,
+            items: [
+              _MenuGroupItem(
+                name: 'FAQs',
+                iconPath: '${_iconsPath}ic_faq.png',
+                iconColor: const Color(0xFF7B61FF),
+                iconBgColor: const Color(0xFFF0EEFF),
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'FAQs', icon: Icons.help_outline)),
+              ),
+              _MenuGroupItem(
+                name: 'Legal T&Cs',
+                iconPath: '${_iconsPath}ic_legal.svg',
+                iconColor: const Color(0xFF3B82F6),
+                iconBgColor: const Color(0xFFEFF6FF),
+                iconSize: size.width * 0.062,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Legal T&Cs', icon: Icons.gavel_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'Privacy policy',
+                iconPath: '${_iconsPath}ic_privacy.svg',
+                iconColor: const Color(0xFF7B61FF),
+                iconBgColor: const Color(0xFFF0EEFF),
+                iconSize: size.width * 0.068,
+                onTap: () => _open(const ComingSoonScreen(
+                    title: 'Privacy policy',
+                    icon: Icons.privacy_tip_outlined)),
+              ),
+              _MenuGroupItem(
+                name: 'Logout',
+                iconPath: '${_iconsPath}ic_logout.png',
+                iconColor: const Color(0xFFEF4444),
+                iconBgColor: const Color(0xFFFFEEEE),
+                iconSize: size.width * 0.068,
+                onTap: _logoutDialog,
+              ),
+            ],
+          ),
+
+          SizedBox(height: size.width * 0.22),
         ],
       ),
     );
   }
 
-  Widget _section(String title, List<_MenuItem> items) {
+  Widget _buildGroupSection({
+    required String title,
+    required Size size,
+    required List<_MenuGroupItem> items,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(4.w, 16.h, 4.w, 8.h),
+          padding: EdgeInsets.only(left: 4, bottom: size.width * 0.01),
           child: Text(
             title,
-            style: AppTextStyles.overline.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+            style: TextStyle(
+              fontSize: size.width * 0.028,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade500,
+              fontFamily: 'AirbnbCereal',
+              letterSpacing: 0.5,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
-            children: List.generate(items.length, (i) {
-              final item = items[i];
+            children: items.asMap().entries.map((entry) {
+              final i = entry.key;
+              final item = entry.value;
+              final isLast = i == items.length - 1;
               return Column(
                 children: [
-                  ListTile(
+                  InkWell(
                     onTap: item.onTap,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
-                    leading: Container(
-                      width: 40.w,
-                      height: 40.w,
-                      decoration: BoxDecoration(
-                        color: item.bg,
-                        borderRadius: BorderRadius.circular(10.r),
-                      ),
-                      child: Icon(item.icon, color: item.color, size: 20.sp),
+                    borderRadius: BorderRadius.vertical(
+                      top: i == 0 ? const Radius.circular(16) : Radius.zero,
+                      bottom:
+                          isLast ? const Radius.circular(16) : Radius.zero,
                     ),
-                    title: Text(item.label, style: AppTextStyles.bodyMedium),
-                    trailing: Icon(Icons.chevron_right,
-                        color: AppColors.textHint, size: 20.sp),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: size.width * 0.022,
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: size.width * 0.085,
+                            height: size.width * 0.085,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                _buildIcon(item, size),
+                                if (item.badgeCount > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(1.5),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: CircleAvatar(
+                                        backgroundColor: item.iconColor,
+                                        radius: size.width * 0.018,
+                                        child: Text(
+                                          item.badgeCount.toString(),
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: size.width * 0.02,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: size.width * 0.025),
+                          Text(
+                            item.name,
+                            style: TextStyle(
+                              fontSize: size.width * 0.035,
+                              color: Colors.black,
+                              fontFamily: 'AirbnbCereal',
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.black,
+                            size: size.width * 0.04,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  if (i != items.length - 1)
-                    Padding(
-                      padding: EdgeInsets.only(left: 64.w),
-                      child: Divider(
-                          height: 1, color: AppColors.divider),
+                  if (!isLast)
+                    const Divider(
+                      height: 1,
+                      thickness: 2,
+                      color: Color(0xFFF5F5F5),
                     ),
                 ],
               );
-            }),
+            }).toList(),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildIcon(_MenuGroupItem item, Size size) {
+    final double iconSize = item.iconSize ?? (size.width * 0.06);
+    if (item.iconPath.endsWith('.svg')) {
+      return SvgPicture.asset(
+        item.iconPath,
+        width: iconSize,
+        height: iconSize,
+        colorFilter: ColorFilter.mode(item.iconColor, BlendMode.srcIn),
+      );
+    }
+    return ImageIcon(
+      AssetImage(item.iconPath),
+      size: iconSize,
+      color: item.iconColor,
+    );
+  }
 }
 
-class _MenuItem {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color bg;
+class _MenuGroupItem {
+  final String name;
+  final String iconPath;
+  final Color iconColor;
+  final Color iconBgColor;
+  final int badgeCount;
   final VoidCallback onTap;
+  final double? iconSize;
 
-  _MenuItem(this.label, this.icon, this.color, this.bg, this.onTap);
+  const _MenuGroupItem({
+    required this.name,
+    required this.iconPath,
+    required this.iconColor,
+    required this.iconBgColor,
+    this.badgeCount = 0,
+    required this.onTap,
+    this.iconSize,
+  });
 }

@@ -23,7 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   late final List<Widget> _screens = [
     const EvidenceScreen(hideLeading: true),
-    const TaskScheduleScreen(hideLeading: true),
+    const TaskScheduleScreen(),
     const EmployeeCameraScreen(),
     const TeamMapScreen(),
     const MenuScreen(),
@@ -60,8 +60,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         items: [
           _navItem('${_iconsPath}ic_content1.png', 'Evidence', 0, iconSize),
           _navItem('${_iconsPath}ic_task1.png', 'Task', 1, iconSize),
-          _navItem('${_iconsPath}ic_camera1.png', 'Camera', 2, iconSize,
-              scale: 1.3),
+          _navItem(
+            '${_iconsPath}ic_camera1.png',
+            'Camera',
+            2,
+            iconSize,
+            scale: 1.3,
+          ),
           _navItem('${_iconsPath}ic_teams2.png', 'Team', 3, iconSize),
           _navItem('${_iconsPath}menu3.png', 'Menu', 4, iconSize, scale: 1.2),
         ],
