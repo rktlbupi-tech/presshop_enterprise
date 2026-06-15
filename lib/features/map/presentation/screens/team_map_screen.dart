@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/map/presentation/screens/location_error_screen_map_news.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/team_chat_list_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_lucide/flutter_lucide.dart';
@@ -39,7 +40,6 @@ import 'package:presshop_enterprise/features/map/data/services/marker_service.da
 import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:presshop_enterprise/features/map/presentation/screens/LocationErrorScreenMapNews.dart';
 
 class TeamMapScreen extends StatefulWidget {
   final bool isScreenActive;

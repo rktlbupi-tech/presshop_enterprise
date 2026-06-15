@@ -76,13 +76,39 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final themeColor = AppColors.primary;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.black),
+        centerTitle: false,
+        titleSpacing: 0,
+        backgroundColor: Colors.white,
+        leading: InkWell(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: EdgeInsets.only(
+              left: 0,
+              top: size.width * 0.01,
+            ),
+            padding: EdgeInsets.all(
+              size.width * 0.043,
+            ),
+            child: Image.asset(
+              "assets/icons/ic_arrow_left.png",
+              height: size.width * 0.025,
+              width: size.width * 0.025,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        leadingWidth: size.width * 0.14,
         title: Text(
           "Change password",
-          style: TextStyle(color: Colors.black, fontSize: size.width * 0.05, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: size.width * 0.045,
+            fontFamily: 'AirbnbCereal',
+          ),
         ),
       ),
       body: SafeArea(
@@ -97,7 +123,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   padding: EdgeInsets.only(left: size.width * 0.02, right: size.width * 0.1),
                   child: Text(
                     "Your password must be at least 8 characters and should include a combination of numbers, letters and special characters",
-                    style: TextStyle(color: Colors.black, fontSize: size.width * 0.033),
+                    style: TextStyle(color: Colors.black, fontSize: size.width * 0.033, fontFamily: 'AirbnbCereal', fontWeight: FontWeight.w400),
                   ),
                 ),
                 SizedBox(height: size.width * 0.06),
@@ -107,14 +133,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       // Current Password
                       Text(
                         "Current Password",
-                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400, fontFamily: 'AirbnbCereal'),
                       ),
                       SizedBox(height: size.width * 0.02),
                       TextFormField(
                         controller: _currentPasswordController,
                         obscureText: hideCurrentPassword,
+                        style: const TextStyle(fontFamily: 'AirbnbCereal'),
                         decoration: InputDecoration(
                           hintText: "Enter current password",
+                          hintStyle: const TextStyle(fontFamily: 'AirbnbCereal'),
                           prefixIcon: Padding(
                             padding: EdgeInsets.all(size.width * 0.03),
                             child: const ImageIcon(AssetImage("assets/icons/ic_key.png")),
@@ -135,15 +163,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       // New Password
                       Text(
                         "New password",
-                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400, fontFamily: 'AirbnbCereal'),
                       ),
                       SizedBox(height: size.width * 0.02),
                       TextFormField(
                         controller: _newPasswordController,
                         obscureText: hideNewPassword,
                         onChanged: _onNewPasswordChanged,
+                        style: const TextStyle(fontFamily: 'AirbnbCereal'),
                         decoration: InputDecoration(
                           hintText: "Enter new password",
+                          hintStyle: const TextStyle(fontFamily: 'AirbnbCereal'),
                           prefixIcon: Padding(
                             padding: EdgeInsets.all(size.width * 0.03),
                             child: const ImageIcon(AssetImage("assets/icons/ic_key.png")),
@@ -170,7 +200,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Minimum password requirement", style: TextStyle(color: Colors.black, fontSize: size.width * 0.035)),
+                          Text("Minimum password requirement", style: TextStyle(color: Colors.black, fontSize: size.width * 0.035, fontFamily: 'AirbnbCereal')),
                           SizedBox(height: size.width * 0.02),
                           _buildRequirementRow("Contains at least 01 lowercase character", showLowercase, size),
                           _buildRequirementRow("Contains at least 01 special character", showSpecialcase, size),
@@ -184,14 +214,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       // Confirm Password
                       Text(
                         "Confirm new password",
-                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                        style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400, fontFamily: 'AirbnbCereal'),
                       ),
                       SizedBox(height: size.width * 0.02),
                       TextFormField(
                         controller: _confirmNewPasswordController,
                         obscureText: hideConfirmPassword,
+                        style: const TextStyle(fontFamily: 'AirbnbCereal'),
                         decoration: InputDecoration(
                           hintText: "Re-enter new password",
+                          hintStyle: const TextStyle(fontFamily: 'AirbnbCereal'),
                           prefixIcon: Padding(
                             padding: EdgeInsets.all(size.width * 0.03),
                             child: const ImageIcon(AssetImage("assets/icons/ic_key.png")),
@@ -226,7 +258,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           onPressed: isLoading ? null : changePasswordApi,
                           child: isLoading 
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : Text("Submit", style: TextStyle(color: Colors.white, fontSize: size.width * 0.035, fontWeight: FontWeight.bold)),
+                            : Text("Submit", style: TextStyle(color: Colors.white, fontSize: size.width * 0.035, fontWeight: FontWeight.bold, fontFamily: 'AirbnbCereal')),
                         ),
                       ),
                       SizedBox(height: size.width * 0.03),
@@ -250,7 +282,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           const SizedBox(width: 5),
           Text(
             text,
-            style: TextStyle(color: isValid ? Colors.green : Colors.red, fontSize: size.width * 0.03, fontWeight: FontWeight.w500),
+            style: TextStyle(color: isValid ? Colors.green : Colors.red, fontSize: size.width * 0.03, fontWeight: FontWeight.w500, fontFamily: 'AirbnbCereal'),
           )
         ],
       ),

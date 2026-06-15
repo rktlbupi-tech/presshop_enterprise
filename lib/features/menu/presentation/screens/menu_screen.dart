@@ -20,7 +20,7 @@ import '../../../../features/settings/presentation/screens/faq_screen.dart';
 import '../../../../features/settings/presentation/screens/term_check_screen.dart';
 import '../../../../features/settings/presentation/screens/contact_us_screen.dart';
 import '../../../../features/settings/presentation/screens/change_password_screen.dart';
-import '../../../../features/settings/presentation/screens/account_settings_screen.dart';
+import '../../../../features/settings/presentation/screens/account_delete_screen.dart';
 
 const _iconsPath = 'assets/icons/';
 
@@ -93,14 +93,37 @@ class _MenuScreenState extends State<MenuScreen> {
               SizedBox(height: size.width * 0.02),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
-                child: Text(
-                  'Are you sure you want to logout? We hope to see you back soon.',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: size.width * 0.035,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'AirbnbCereal',
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        child: Image.asset(
+                          'assets/rabbits/logout_rabbit.png',
+                          height: size.width * 0.30,
+                          width: size.width * 0.35,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: size.width * 0.04),
+                    Expanded(
+                      child: Text(
+                        'Are you sure you want to logout? We hope to see you back soon.',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: size.width * 0.04),
@@ -481,7 +504,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF10B981),
                 iconBgColor: const Color(0xFFD1FAE5),
                 iconSize: size.width * 0.055,
-                onTap: () => _open(const AccountSettingsScreen()),
+                onTap: () => _open(const AccountDeleteScreen()),
               ),
               _MenuGroupItem(
                 name: 'Logout',

@@ -95,6 +95,7 @@ flutter:
     - assets/markers/gifs/
     - assets/markers/bg-removed/
     - assets/markers/marker-icons/
+    - assets/rabbits/
 
   fonts:
     - family: Poppins
