@@ -130,7 +130,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   imageOnTop
                       ? Expanded(
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(size.width * 0.1),
+                            borderRadius: BorderRadius.circular(
+                              size.width * 0.1,
+                            ),
                             child: Image.asset(
                               item.image,
                               fit: BoxFit.cover,
@@ -152,6 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         top: size.width * 0.04,
                         child: Image.asset(
                           _titleBg,
+                          color: AppColors.primary,
                           fit: BoxFit.fill,
                         ),
                       ),
@@ -188,7 +191,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   !imageOnTop
                       ? Expanded(
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(size.width * 0.1),
+                            borderRadius: BorderRadius.circular(
+                              size.width * 0.1,
+                            ),
                             child: Image.asset(
                               item.image,
                               fit: BoxFit.cover,

@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/location_error_screen_map_news.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/team_chat_list_page.dart';
@@ -1459,12 +1460,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
           ),
         ],
       ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        MediaQuery.of(context).padding.bottom + 16,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1836,43 +1832,15 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         : kToolbarHeight;
     final searchBarTop = MediaQuery.of(context).padding.top + appBarHeight + 10;
     final double bottomBarHeight =
-        responsiveWidth * 0.122 +
-        (responsiveWidth * numD01 * 2).toDouble() +
-        MediaQuery.of(context).padding.bottom +
-        8;
+        responsiveWidth * 0.122 + (responsiveWidth * numD01 * 2).toDouble() + 8;
     final bool isNavigating = context.watch<MapCubit>().state.isNavigating;
+    final double bottomOffset =
+        kBottomNavigationBarHeight + MediaQuery.of(context).viewPadding.bottom;
     final double zoomPanelBottom = isNavigating
-        ? 110.0 + MediaQuery.of(context).padding.bottom
-        : bottomBarHeight;
+        ? 110.0 + bottomOffset
+        : bottomBarHeight + 62.h + bottomOffset;
     final mapState = context.watch<EmployeeMapCubit>().state;
     final employeeMapNotifier = BlocProvider.of<EmployeeMapCubit>(context);
-
-    /* Removed listener 1 
-      if (!mounted || _isDisposed) return;
-      if (!widget.isScreenActive) return;
-      if (previous?.workers != next.workers ||
-          previous?.alertMarkers != next.alertMarkers) {
-        _filterAndRenderMapData();
-        _updateMyLocationMarker();
-      }
-      if (next.newlyCreatedAlert != previous?.newlyCreatedAlert &&
-          next.newlyCreatedAlert != null) {
-        _addBurst(
-            next.newlyCreatedAlert!.position, next.newlyCreatedAlert!.type);
-      }
-      if (previous?.isGetDirectionOpen == true &&
-          next.isGetDirectionOpen == false) {
-        if (mounted && !_isDisposed) {
-          final isNavigating = context.read<MapCubit>().state.isNavigating;
-          if (!isNavigating) {
-            setState(() => _destinationMarker = null);
-            context.read<MapCubit>().clearMapSelectedLocation();
-          }
-        }
-      }
-     */
-
-    /* Removed listener 2 entirely */
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -2158,11 +2126,10 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                         ),
                       ),
 
-                      // Navigation overlay (shown during navigation)
                       Positioned(
                         left: 0,
                         right: 0,
-                        bottom: 0,
+                        bottom: bottomOffset,
                         child: _buildNavigationBar(size),
                       ),
 
@@ -2170,7 +2137,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                       Positioned(
                         left: 0,
                         right: 0,
-                        bottom: responsiveWidth * numD02,
+                        bottom: bottomOffset + 50.h,
                         child: IgnorePointer(
                           ignoring: context
                               .watch<MapCubit>()
@@ -2227,14 +2194,11 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                                         spacing: 8,
                                         children: [
                                           Expanded(
-                                            child: Align(
-                                              alignment: Alignment.centerLeft,
-                                              child: GestureDetector(
-                                                onTap: employeeMapNotifier
-                                                    .toggleAlertPanel,
-                                                child:
-                                                    const AlertButtonMapForEmployee(),
-                                              ),
+                                            child: GestureDetector(
+                                              onTap: employeeMapNotifier
+                                                  .toggleAlertPanel,
+                                              child:
+                                                  const AlertButtonMapForEmployee(),
                                             ),
                                           ),
                                           SosButton(
@@ -2253,21 +2217,18 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                                             },
                                           ),
                                           Expanded(
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          const TeamChatListPage(),
-                                                    ),
-                                                  );
-                                                },
-                                                child:
-                                                    const MessageButtonForMap(),
-                                              ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const TeamChatListPage(),
+                                                  ),
+                                                );
+                                              },
+                                              child:
+                                                  const MessageButtonForMap(),
                                             ),
                                           ),
                                         ],

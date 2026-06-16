@@ -35,7 +35,7 @@ class ContentSubmittedScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: size.width * 0.07,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
+                  fontFamily: 'AirbnbCereal',
                   color: Colors.black,
                 ),
               ),
@@ -46,7 +46,7 @@ class ContentSubmittedScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: size.width * 0.035,
                   color: Colors.grey[600],
-                  fontFamily: 'Poppins',
+                  fontFamily: 'AirbnbCereal',
                 ),
               ),
               SizedBox(height: size.width * 0.1),
@@ -71,7 +71,7 @@ class ContentSubmittedScreen extends StatelessWidget {
                       color: Colors.white,
                       fontSize: size.width * 0.04,
                       fontWeight: FontWeight.w700,
-                      fontFamily: 'Poppins',
+                      fontFamily: 'AirbnbCereal',
                     ),
                   ),
                 ),

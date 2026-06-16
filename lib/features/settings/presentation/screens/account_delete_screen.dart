@@ -61,7 +61,7 @@ class _AccountDeleteScreenContentState
                 backgroundColor: Colors.green,
               ),
             );
-            context.go(AppRoutes.login);
+            context.go(AppRoutes.onboarding);
           }
         } else if (state is SettingsError) {
           ScaffoldMessenger.of(context).showSnackBar(

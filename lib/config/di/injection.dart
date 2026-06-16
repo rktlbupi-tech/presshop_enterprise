@@ -32,6 +32,10 @@ import '../../features/settings/data/datasources/settings_remote_datasource.dart
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../../features/settings/presentation/bloc/settings_bloc.dart';
+import '../../features/notifications/data/datasources/notifications_remote_datasource.dart';
+import '../../features/notifications/data/repositories/notifications_repository_impl.dart';
+import '../../features/notifications/domain/repositories/notifications_repository.dart';
+import '../../features/notifications/presentation/bloc/notifications_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -74,11 +78,16 @@ Future<void> setupDependencies() async {
 
   // Profile
   getIt.registerLazySingleton(() => ProfileRemoteDatasource(getIt()));
-  getIt.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl(getIt()));
+  getIt.registerLazySingleton<ProfileRepository>(() => ProfileRepositoryImpl(getIt(), getIt()));
   getIt.registerFactory(() => ProfileBloc(getIt()));
 
   // Settings
   getIt.registerLazySingleton(() => SettingsRemoteDatasource(getIt()));
   getIt.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl(getIt()));
   getIt.registerFactory(() => SettingsBloc(getIt()));
+
+  // Notifications
+  getIt.registerLazySingleton(() => NotificationsRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<NotificationsRepository>(() => NotificationsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => NotificationsBloc(getIt()));
 }

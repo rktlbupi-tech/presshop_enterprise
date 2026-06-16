@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_endpoints.dart';
+import '../../data/models/enterprise_feed_model.dart';
+import '../../../tasks/data/models/employee_task_model.dart';
+import '../../../tasks/presentation/screens/task_chat_screen.dart';
 
 class EvidenceScreen extends StatefulWidget {
   final bool hideLeading;
@@ -13,42 +20,12 @@ class EvidenceScreen extends StatefulWidget {
 }
 
 class _EvidenceScreenState extends State<EvidenceScreen> {
-  // Using same dummy logic, but UI exactly like EmployeeAllContentPage
-  final List<_DummyFeed> feedList = [
-    _DummyFeed(
-      title: 'City centre incident',
-      description:
-          'Filmed the ongoing protest at the city centre with multiple angles.',
-      capturedAt: '2023-10-15T10:30:00Z',
-      location: '123 City Centre, London',
-      imageUrl: 'https://picsum.photos/400/300?random=1',
-      mediaCount: 3,
-    ),
-    _DummyFeed(
-      title: 'Road closure footage',
-      description: '',
-      capturedAt: '2023-10-14T14:45:00Z',
-      location: 'M4 Highway, near Exit 12',
-      imageUrl: 'https://picsum.photos/400/300?random=2',
-      mediaCount: 1,
-    ),
-    _DummyFeed(
-      title: 'Market interview',
-      description: 'Interviewed local vendors about the new regulations.',
-      capturedAt: '2023-10-13T09:15:00Z',
-      location: 'Borough Market, London',
-      imageUrl: 'https://picsum.photos/400/300?random=3',
-      mediaCount: 5,
-    ),
-    _DummyFeed(
-      title: 'Weather damage clip',
-      description: 'Severe flooding near the residential area.',
-      capturedAt: '2023-10-12T16:20:00Z',
-      location: 'Riverside Walk, London',
-      imageUrl: '', // test placeholder
-      mediaCount: 2,
-    ),
-  ];
+  final ScrollController _scrollController = ScrollController();
+  List<EnterpriseFeedItem> _feedList = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  int _page = 1;
+  static const int _limit = 20;
 
   String _selectedSort = "Newest First";
 
@@ -68,6 +45,103 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
     name: "Custom Date Range",
     icon: "ic_yearly_calendar.png",
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    _loadFeed(refresh: true);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoading && _hasMore) {
+        _loadFeed();
+      }
+    }
+  }
+
+  Future<void> _loadFeed({bool refresh = false}) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      if (refresh) {
+        _page = 1;
+        _hasMore = true;
+      }
+    });
+
+    try {
+      final apiClient = getIt<ApiClient>();
+      
+      // Build query parameters
+      final Map<String, dynamic> queryParams = {
+        'page': _page,
+        'limit': _limit,
+        'sortBy': 'createdAt',
+        'sortOrder': _selectedSort == "Newest First" ? 'desc' : 'asc',
+      };
+
+      // Priority Filter
+      final selectedPriorities = _priorityFilters
+          .where((f) => f.isSelected)
+          .map((f) => f.name.toLowerCase().replaceAll(' priority', ''))
+          .toList();
+      if (selectedPriorities.isNotEmpty) {
+        queryParams['priority'] = selectedPriorities.join(',');
+      }
+
+      // Status Filter
+      final selectedStatuses = _statusFilters
+          .where((f) => f.isSelected)
+          .map((f) => f.name.toLowerCase())
+          .toList();
+      if (selectedStatuses.isNotEmpty) {
+        queryParams['status'] = selectedStatuses.join(',');
+      }
+
+      // Date Range Filter
+      if (_dateFilter.fromDate != null) {
+        queryParams['startDate'] = _dateFilter.fromDate;
+      }
+      if (_dateFilter.toDate != null) {
+        queryParams['endDate'] = _dateFilter.toDate;
+      }
+
+      final response = await apiClient.get(
+        ApiEndpoints.feed,
+        queryParameters: queryParams,
+      );
+
+      if (response.statusCode == 200) {
+        final feedResponse = EnterpriseFeedResponse.fromJson(response.data);
+        setState(() {
+          if (refresh) {
+            _feedList = feedResponse.data;
+          } else {
+            _feedList.addAll(feedResponse.data);
+          }
+          _page++;
+          if (feedResponse.data.length < _limit) {
+            _hasMore = false;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading feed: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _showFilterBottomSheet() {
     showModalBottomSheet(
@@ -345,6 +419,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
+                              _loadFeed(refresh: true);
                             },
                             child: Text(
                               "Apply Filters",
@@ -413,6 +488,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
               backgroundColor: Colors.white,
               foregroundColor: Colors.black,
               elevation: 0,
+              actions: const [CompanyLogoAction()],
             ),
       body: SafeArea(
         child: Column(
@@ -420,48 +496,68 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             SizedBox(height: 8.h),
             const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0)),
             Expanded(
-              child: feedList.isNotEmpty
-                  ? RefreshIndicator(
-                      onRefresh: () async {
-                        await Future.delayed(const Duration(seconds: 1));
-                      },
-                      child: GridView.builder(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 16.h,
-                        ),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.72,
-                          mainAxisSpacing: 16.w,
-                          crossAxisSpacing: 16.w,
-                        ),
-                        itemCount: feedList.length,
-                        itemBuilder: (context, index) {
-                          return InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => _EvidenceDetailsScreen(
-                                    item: feedList[index],
-                                  ),
-                                ),
+              child: _feedList.isEmpty && _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _feedList.isNotEmpty
+                      ? RefreshIndicator(
+                          onRefresh: () => _loadFeed(refresh: true),
+                          child: GridView.builder(
+                            controller: _scrollController,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 16.h,
+                            ),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.72,
+                              mainAxisSpacing: 16.w,
+                              crossAxisSpacing: 16.w,
+                            ),
+                            itemCount: _feedList.length,
+                            itemBuilder: (context, index) {
+                              return InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => _EvidenceDetailsScreen(
+                                        item: _feedList[index],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: _feedCard(_feedList[index]),
                               );
                             },
-                            child: _feedCard(feedList[index]),
-                          );
-                        },
-                      ),
-                    )
-                  : const Center(child: Text("No Content Found")),
+                          ),
+                        )
+                      : const Center(child: Text("No Content Found")),
             ),
+            if (_isLoading && _feedList.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.all(8.r),
+                child: const CircularProgressIndicator(),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _feedCard(_DummyFeed item) {
+  Widget _feedCard(EnterpriseFeedItem item) {
+    final firstContent = item.content.isNotEmpty ? item.content.first : null;
+    final imageUrl = firstContent?.previewUrl ?? '';
+    final location = (firstContent?.captureAddressLine1 != null &&
+            firstContent!.captureAddressLine1.isNotEmpty)
+        ? firstContent.captureAddressLine1
+        : 'Location Not Captured';
+    final capturedAt = (firstContent?.capturedAt != null &&
+            firstContent!.capturedAt.isNotEmpty)
+        ? firstContent.capturedAt
+        : (firstContent?.createdAt ?? item.task.createdAt);
+    final description = item.task.description.isNotEmpty
+        ? item.task.description
+        : (firstContent?.description ?? '');
+
     return Container(
       padding: EdgeInsets.only(left: 12.w, right: 12.w, top: 12.w),
       decoration: BoxDecoration(
@@ -478,10 +574,10 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _feedThumbnail(item),
+          _feedThumbnail(imageUrl, item.content),
           SizedBox(height: 8.h),
           Text(
-            item.title,
+            item.task.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -490,10 +586,10 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          if (item.description.isNotEmpty) ...[
+          if (description.isNotEmpty) ...[
             SizedBox(height: 4.h),
             Text(
-              item.description,
+              description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -504,7 +600,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             ),
           ],
           const Spacer(),
-          if (item.capturedAt.isNotEmpty)
+          if (capturedAt.isNotEmpty)
             Row(
               children: [
                 Image.asset(
@@ -514,7 +610,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                 ),
                 SizedBox(width: 4.w),
                 Text(
-                  _formatTime(item.capturedAt),
+                  _formatTime(capturedAt),
                   style: TextStyle(
                     fontSize: 9.sp,
                     color: Colors.grey[600],
@@ -529,7 +625,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                 ),
                 SizedBox(width: 4.w),
                 Text(
-                  _formatDate(item.capturedAt),
+                  _formatDate(capturedAt),
                   style: TextStyle(
                     fontSize: 9.sp,
                     color: Colors.grey[600],
@@ -539,7 +635,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
               ],
             ),
           SizedBox(height: 4.h),
-          if (item.location.isNotEmpty)
+          if (location.isNotEmpty)
             Row(
               children: [
                 Image.asset(
@@ -550,7 +646,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                 SizedBox(width: 4.w),
                 Expanded(
                   child: Text(
-                    item.location,
+                    location,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -568,21 +664,23 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
     );
   }
 
-  Widget _feedThumbnail(_DummyFeed item) {
+  Widget _feedThumbnail(String imageUrl, List<EnterpriseFeedContent> contentList) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.r),
       child: Stack(
         children: [
-          item.imageUrl.isNotEmpty
+          imageUrl.isNotEmpty
               ? Image.network(
-                  item.imageUrl,
+                  imageUrl,
                   height: 110.w,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                  errorBuilder: (_, __, ___) => _imagePlaceholder(
+                      contentList.isNotEmpty ? contentList.first.evidenceType : "image"),
                 )
-              : _imagePlaceholder(),
-          if (item.imageUrl.isNotEmpty)
+              : _imagePlaceholder(
+                  contentList.isNotEmpty ? contentList.first.evidenceType : "image"),
+          if (imageUrl.isNotEmpty)
             Image.asset(
               "assets/images/watermark1.png",
               height: 110.w,
@@ -595,12 +693,12 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.8),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: Center(
                 child: Text(
-                  "${item.mediaCount}",
+                  "${contentList.length}",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15.sp,
@@ -616,13 +714,17 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
     );
   }
 
-  Widget _imagePlaceholder() {
+  Widget _imagePlaceholder(String type) {
     return Container(
       height: 110.w,
       width: double.infinity,
       color: Colors.grey[300],
       child: Center(
-        child: Icon(Icons.image_outlined, size: 40.w, color: Colors.grey),
+        child: Icon(
+          type.toLowerCase() == 'video' ? Icons.videocam_outlined : Icons.image_outlined,
+          size: 40.w,
+          color: Colors.grey,
+        ),
       ),
     );
   }
@@ -646,28 +748,6 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 }
 
-// ---------------------------------------------------------
-// DUMMY MODELS
-// ---------------------------------------------------------
-
-class _DummyFeed {
-  final String title;
-  final String description;
-  final String capturedAt;
-  final String location;
-  final String imageUrl;
-  final int mediaCount;
-
-  _DummyFeed({
-    required this.title,
-    required this.description,
-    required this.capturedAt,
-    required this.location,
-    required this.imageUrl,
-    required this.mediaCount,
-  });
-}
-
 class _FeedFilterModel {
   String name;
   String icon;
@@ -684,17 +764,27 @@ class _FeedFilterModel {
   });
 }
 
-// ---------------------------------------------------------
-// DUMMY DETAILS SCREEN
-// ---------------------------------------------------------
-
 class _EvidenceDetailsScreen extends StatelessWidget {
-  final _DummyFeed item;
+  final EnterpriseFeedItem item;
 
   const _EvidenceDetailsScreen({required this.item});
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final firstContent = item.content.isNotEmpty ? item.content.first : null;
+    final location = (firstContent?.captureAddressLine1 != null &&
+            firstContent!.captureAddressLine1.isNotEmpty)
+        ? firstContent.captureAddressLine1
+        : 'Location Not Captured';
+    final capturedAt = (firstContent?.capturedAt != null &&
+            firstContent!.capturedAt.isNotEmpty)
+        ? firstContent.capturedAt
+        : (firstContent?.createdAt ?? item.task.createdAt);
+    final description = item.task.description.isNotEmpty
+        ? item.task.description
+        : (firstContent?.description ?? '');
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -713,6 +803,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
           ),
         ),
         centerTitle: false,
+        actions: const [CompanyLogoAction()],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -726,7 +817,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      item.task.title,
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -734,7 +825,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 8.h),
-                    if (item.capturedAt.isNotEmpty)
+                    if (capturedAt.isNotEmpty)
                       Row(
                         children: [
                           SizedBox(
@@ -750,7 +841,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            _fmt('hh:mm a', item.capturedAt),
+                            _fmt('hh:mm a', capturedAt),
                             style: TextStyle(
                               fontSize: 11.sp,
                               color: Colors.grey[600],
@@ -771,7 +862,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            _fmt('dd MMM yyyy', item.capturedAt),
+                            _fmt('dd MMM yyyy', capturedAt),
                             style: TextStyle(
                               fontSize: 11.sp,
                               color: Colors.grey[600],
@@ -781,7 +872,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                         ],
                       ),
                     SizedBox(height: 8.h),
-                    if (item.location.isNotEmpty)
+                    if (location.isNotEmpty)
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -799,7 +890,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                           SizedBox(width: 4.w),
                           Expanded(
                             child: Text(
-                              item.location,
+                              location,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11.sp,
@@ -813,9 +904,9 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                     SizedBox(height: 12.h),
                     const Divider(color: Color(0xFFE0E0E0)),
                     SizedBox(height: 8.h),
-                    if (item.description.isNotEmpty)
+                    if (description.isNotEmpty)
                       Text(
-                        item.description,
+                        description,
                         textAlign: TextAlign.justify,
                         style: TextStyle(
                           fontSize: 12.sp,
@@ -836,7 +927,56 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () async {
+                        // show loading dialog
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                        try {
+                          final response = await getIt<ApiClient>().get(
+                            'enterprise/tasks/${item.task.id}',
+                          );
+                          if (context.mounted) {
+                            Navigator.pop(context); // dismiss loading
+                          }
+                          if (response.statusCode == 200 && response.data != null) {
+                            final raw = response.data;
+                            final data = (raw['data'] is Map<String, dynamic>)
+                                ? raw['data'] as Map<String, dynamic>
+                                : raw as Map<String, dynamic>;
+                            final task = EmployeeTaskModel.fromJson(data);
+                            
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TaskChatScreen(
+                                    taskDetail: task,
+                                    roomId: task.id,
+                                  ),
+                                ),
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Failed to load task details')),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            Navigator.pop(context); // dismiss loading
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        }
+                      },
                       child: Text(
                         "Manage Task",
                         style: TextStyle(
@@ -867,22 +1007,39 @@ class _EvidenceDetailsScreen extends StatelessWidget {
   }
 
   Widget _imageSlideshow() {
+    if (item.content.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: Container(
+          height: 200.w,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: const Center(
+            child: Icon(Icons.image_outlined, size: 40, color: Colors.grey),
+          ),
+        ),
+      );
+    }
     return Column(
       children: [
         SizedBox(
           height: 200.w,
           child: PageView.builder(
-            itemCount: 1,
+            itemCount: item.content.length,
             itemBuilder: (_, i) {
+              final contentItem = item.content[i];
+              final imageUrl = contentItem.previewUrl;
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16.r),
                   child: Stack(
                     children: [
-                      item.imageUrl.isNotEmpty
+                      imageUrl.isNotEmpty
                           ? Image.network(
-                              item.imageUrl,
+                              imageUrl,
                               width: double.infinity,
                               height: 200.w,
                               fit: BoxFit.cover,
@@ -890,7 +1047,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                                   Container(color: Colors.grey[300]),
                             )
                           : Container(color: Colors.grey[300]),
-                      if (item.imageUrl.isNotEmpty)
+                      if (imageUrl.isNotEmpty)
                         Image.asset(
                           "assets/images/watermark1.png",
                           width: double.infinity,
@@ -912,13 +1069,15 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.image,
+                                contentItem.evidenceType.toLowerCase() == 'video'
+                                    ? Icons.videocam
+                                    : Icons.image,
                                 color: Colors.white,
                                 size: 14.sp,
                               ),
                               SizedBox(width: 4.w),
                               Text(
-                                "${item.mediaCount}",
+                                "${i + 1}/${item.content.length}",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12.sp,

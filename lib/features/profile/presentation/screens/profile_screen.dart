@@ -1,22 +1,51 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/config/app_config.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../presentation/widgets/loading_widget.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../documents/presentation/screens/documents_screen.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
+import '../../domain/entities/profile_entity.dart';
 import '../bloc/profile_bloc.dart';
-import 'edit_profile_screen.dart';
+import '../../../map/core/map_constants.dart' show googleMapAPiKey;
+
+const String iconsPath = "assets/icons/";
+const String commonImagePath = "assets/images/";
+
+const double numD01 = 0.01;
+const double numD02 = 0.02;
+const double numD03 = 0.03;
+const double numD04 = 0.04;
+const double numD05 = 0.05;
+const double numD06 = 0.06;
+const double numD12 = 0.12;
+const double numD13 = 0.13;
+const double numD20 = 0.20;
+const double numD25 = 0.25;
+const double numD35 = 0.35;
+const double numD37 = 0.37;
+const double numD015 = 0.015;
+const double numD032 = 0.032;
+const double numD035 = 0.035;
+const double numD028 = 0.028;
+
+const Color colorLightGrey = Color(0xFFF5F5F5);
+const Color colorTextFieldBorder = Color(0xFF858585);
+const Color colorHint = Color(0xFFBDBDBD);
+const Color colorTextFieldIcon = Color(0xFF757575);
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -25,7 +54,9 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => getIt<ProfileBloc>()..add(const FetchProfile())),
+        BlocProvider(
+          create: (_) => getIt<ProfileBloc>()..add(const FetchProfile()),
+        ),
         BlocProvider(create: (_) => getIt<AuthBloc>()),
       ],
       child: BlocListener<AuthBloc, AuthState>(
@@ -38,212 +69,1322 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _ProfileView extends StatelessWidget {
+class _ProfileView extends StatefulWidget {
   const _ProfileView();
 
   @override
+  State<_ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<_ProfileView> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _postCodeController = TextEditingController();
+  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _currentLocationController =
+      TextEditingController();
+
+  bool _isEditMode = false;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+  String _latitude = "", _longitude = "";
+  List<EmergencyContact> _emergencyContacts = [];
+  bool _initialized = false;
+
+  Future<void> _pickImage() async {
+    if (!_isEditMode) return;
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _imageFile = File(image.path);
+      });
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+        String fullAddress = [
+          if (place.street?.isNotEmpty ?? false) place.street,
+          if (place.locality?.isNotEmpty ?? false) place.locality,
+          if (place.administrativeArea?.isNotEmpty ?? false)
+            place.administrativeArea,
+          if (place.country?.isNotEmpty ?? false) place.country,
+        ].whereType<String>().join(", ");
+        setState(() {
+          _cityController.text = place.locality ?? '';
+          _countryController.text = place.country ?? '';
+          _postCodeController.text = place.postalCode ?? '';
+          _currentLocationController.text = fullAddress;
+          _latitude = position.latitude.toString();
+          _longitude = position.longitude.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _postCodeController.dispose();
+    _countryController.dispose();
+    _currentLocationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    String? uploadedImageUrl;
+
+    if (_imageFile != null) {
+      try {
+        String fileName = path.basename(_imageFile!.path);
+        FormData uploadFormData = FormData.fromMap({
+          "media": await MultipartFile.fromFile(
+            _imageFile!.path,
+            filename: fileName,
+          ),
+          "path": "user",
+        });
+
+        var dio = Dio();
+        final prefs = getIt<SharedPreferences>();
+        final token = prefs.getString('auth_token') ?? '';
+        dio.options.headers["Authorization"] = "Bearer $token";
+
+        var response = await dio.post(
+          "${AppConfig.apiBaseUrl}hopper/uploadUserMedia",
+          data: uploadFormData,
+        );
+
+        if (response.statusCode == 200) {
+          var responseData = response.data;
+          uploadedImageUrl =
+              responseData['mediaurl'] ?? responseData['mediaUrl'];
+          if (uploadedImageUrl == null && responseData['fileName'] != null) {
+            uploadedImageUrl = AppConfig.apiBaseUrl + responseData['fileName'];
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Failed to upload profile image")),
+          );
+          return;
+        }
+      } catch (e) {
+        debugPrint("Error uploading image: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error uploading profile image")),
+        );
+        return;
+      }
+    }
+
+    final Map<String, dynamic> updateData = {
+      'first_name': _firstNameController.text.trim(),
+      'last_name': _lastNameController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'email': _emailController.text.trim(),
+      'profile_city': _cityController.text.trim(),
+      'profile_country': _countryController.text.trim(),
+      'profile_post_code': _postCodeController.text.trim(),
+      'address': _addressController.text.trim(),
+      'latitude': _latitude,
+      'longitude': _longitude,
+      'current_location': _currentLocationController.text.trim(),
+      'emergency_contacts': _emergencyContacts.map((c) => c.toJson()).toList(),
+    };
+
+    if (uploadedImageUrl != null) {
+      updateData['profile_image'] = uploadedImageUrl;
+    } else {
+      final profileState = context.read<ProfileBloc>().state;
+      if (profileState is ProfileLoaded &&
+          profileState.profile.profileImage != null) {
+        String existingImg = profileState.profile.profileImage!;
+        if (!existingImg.startsWith("file:///")) {
+          updateData['profile_image'] = existingImg;
+        }
+      }
+    }
+
+    context.read<ProfileBloc>().add(UpdateProfile(updateData));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppAppBar(title: 'My Profile'),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "My Profile",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: size.width * numD05,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'AirbnbCereal',
+          ),
+        ),
+        centerTitle: false,
+        titleSpacing: 0,
+        actions: [
+          BlocBuilder<ProfileBloc, ProfileState>(
+            builder: (context, state) {
+              final companyLogo = state is ProfileLoaded
+                  ? state.profile.companyLogo
+                  : null;
+              return Padding(
+                padding: EdgeInsets.only(right: size.width * numD04),
+                child: emilyLogoWidgetForPagesForEmployee(
+                  size.width > 600 ? 500 : size.width,
+                  companyLogo,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      body: BlocConsumer<ProfileBloc, ProfileState>(
+        listener: (context, state) {
+          if (state is ProfileUpdateSuccess) {
+            final profileState = context.read<ProfileBloc>().state;
+            if (profileState is ProfileLoaded) {
+              final profile = profileState.profile;
+              final prefs = getIt<SharedPreferences>();
+              prefs.setString(
+                'user_first_name',
+                _firstNameController.text.trim(),
+              );
+              prefs.setString(
+                'user_last_name',
+                _lastNameController.text.trim(),
+              );
+              if (profile.profileImage != null) {
+                prefs.setString('user_avatar', profile.profileImage!);
+              }
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Profile updated successfully")),
+            );
+            setState(() {
+              _isEditMode = false;
+              _imageFile = null;
+              _initialized = false;
+            });
+          }
+        },
         builder: (context, state) {
-          if (state is ProfileLoading || state is ProfileInitial) return const LoadingWidget();
+          if (state is ProfileLoading && !_initialized)
+            return const LoadingWidget();
           if (state is ProfileError) {
             return Center(
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(state.message, style: AppTextStyles.bodyMedium),
-                SizedBox(height: 12.h),
-                ElevatedButton(
-                  onPressed: () => context.read<ProfileBloc>().add(const FetchProfile()),
-                  child: const Text('Retry'),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Error: ${state.message}",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () =>
+                          context.read<ProfileBloc>().add(const FetchProfile()),
+                      child: const Text("Retry"),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             );
           }
+
           final profile = state is ProfileLoaded ? state.profile : null;
-          if (profile == null) return const LoadingWidget();
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Gradient header
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 32.h),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Column(children: [
-                    profile.profileImage != null
-                        ? CircleAvatar(
-                            radius: 44.r,
-                            backgroundImage: NetworkImage(AppConfig.avatarImage(profile.profileImage!)),
-                          )
-                        : CircleAvatar(
-                            radius: 44.r,
-                            backgroundColor: AppColors.accent,
-                            child: Text(
-                              profile.firstName.isNotEmpty ? profile.firstName[0].toUpperCase() : '?',
-                              style: AppTextStyles.h1.copyWith(color: AppColors.textOnPrimary),
+          if (profile == null && !_initialized) return const LoadingWidget();
+
+          if (profile != null && !_isEditMode && !_initialized) {
+            _firstNameController.text = profile.firstName;
+            _lastNameController.text = profile.lastName;
+            _phoneController.text = profile.phone ?? '';
+            _emailController.text = profile.email;
+            _addressController.text =
+                profile.profileAddress ?? profile.address ?? '';
+            _cityController.text = profile.profileCity ?? profile.city ?? '';
+            _postCodeController.text = profile.profilePostCode ?? '';
+            _countryController.text =
+                profile.profileCountry ?? profile.country ?? '';
+            _currentLocationController.text = profile.currentLocation ?? '';
+            _latitude = profile.latitude ?? '';
+            _longitude = profile.longitude ?? '';
+            _emergencyContacts = List.from(profile.emergencyContacts);
+            _initialized = true;
+          }
+
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * numD06),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    // Top Profile Widget (Hopper Style)
+                    Container(
+                      height: size.width * numD35,
+                      decoration: BoxDecoration(
+                        color: colorLightGrey,
+                        borderRadius: BorderRadius.circular(
+                          size.width * numD04,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: _pickImage,
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(
+                                      size.width * numD04,
+                                    ),
+                                    bottomLeft: Radius.circular(
+                                      size.width * numD04,
+                                    ),
+                                  ),
+                                  child: _imageFile != null
+                                      ? Image.file(
+                                          _imageFile!,
+                                          fit: BoxFit.cover,
+                                          width: size.width * numD37,
+                                          height: size.width * numD35,
+                                        )
+                                      : () {
+                                          String userProfileImage =
+                                              profile?.profileImage ?? "";
+                                          if (userProfileImage.startsWith(
+                                            "https://dev-api.presshop.news:5019/",
+                                          )) {
+                                            userProfileImage = userProfileImage
+                                                .replaceFirst(
+                                                  "https://dev-api.presshop.news:5019/",
+                                                  "https://dev-cdn.presshop.news/public/user/",
+                                                );
+                                          } else if (userProfileImage.startsWith(
+                                            "http://dev-api.presshop.news:5019/",
+                                          )) {
+                                            userProfileImage = userProfileImage
+                                                .replaceFirst(
+                                                  "http://dev-api.presshop.news:5019/",
+                                                  "https://dev-cdn.presshop.news/public/user/",
+                                                );
+                                          }
+                                          if (userProfileImage.startsWith(
+                                            "file:///",
+                                          )) {
+                                            userProfileImage = "";
+                                          }
+                                          return Image.network(
+                                            userProfileImage.isEmpty
+                                                ? "https://dev-cdn.presshop.news/public/avatarImages/default.png"
+                                                : userProfileImage,
+                                            errorBuilder:
+                                                (
+                                                  context,
+                                                  error,
+                                                  stackTrace,
+                                                ) => Padding(
+                                                  padding: EdgeInsets.all(
+                                                    size.width * numD04,
+                                                  ),
+                                                  child: Image.asset(
+                                                    "assets/images/app_logo.png",
+                                                    fit: BoxFit.contain,
+                                                    width: size.width * numD35,
+                                                    height: size.width * numD35,
+                                                  ),
+                                                ),
+                                            fit: BoxFit.cover,
+                                            width: size.width * numD37,
+                                            height: size.width * numD35,
+                                          );
+                                        }(),
+                                ),
+                                if (_isEditMode)
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: EdgeInsets.all(
+                                        size.width * 0.005,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Container(
+                                        padding: EdgeInsets.all(
+                                          size.width * 0.005,
+                                        ),
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          color: Colors.white,
+                                          size: size.width * numD04,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                    SizedBox(height: 12.h),
-                    Text(profile.fullName, style: AppTextStyles.h3.copyWith(color: AppColors.textOnPrimary)),
-                    SizedBox(height: 4.h),
-                    if (profile.designation != null)
-                      Text(profile.designation!, style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
-                    SizedBox(height: 4.h),
-                    if (profile.companyName != null)
-                      Text(profile.companyName!, style: AppTextStyles.caption.copyWith(color: Colors.white60)),
-                    SizedBox(height: 16.h),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textOnPrimary,
-                        side: const BorderSide(color: Colors.white54),
-                        minimumSize: Size(0, 36.h),
-                        padding: EdgeInsets.symmetric(horizontal: 20.w),
-                      ),
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<ProfileBloc>(),
-                          child: EditProfileScreen(profile: profile),
-                        ),
-                      )),
-                      icon: Icon(Icons.edit_outlined, size: 16.sp),
-                      label: const Text('Edit Profile'),
-                    ),
-                  ]),
-                ),
-                SizedBox(height: 16.h),
-                _InfoSection(title: 'Personal Info', items: [
-                  _InfoItem(icon: Icons.email_outlined, label: 'Email', value: profile.email),
-                  if (profile.phone != null) _InfoItem(icon: Icons.phone_outlined, label: 'Phone', value: profile.phone!),
-                  if (profile.address != null) _InfoItem(icon: Icons.location_on_outlined, label: 'Location', value: profile.address!),
-                ]),
-                SizedBox(height: 12.h),
-                _InfoSection(title: 'Work Info', items: [
-                  if (profile.employeeId != null) _InfoItem(icon: Icons.badge_outlined, label: 'Employee ID', value: profile.employeeId!),
-                  if (profile.department != null) _InfoItem(icon: Icons.work_outline, label: 'Department', value: profile.department!),
-                  if (profile.joinedAt != null) _InfoItem(icon: Icons.calendar_today_outlined, label: 'Joined', value: DateFormat('dd MMM yyyy').format(profile.joinedAt!)),
-                ]),
-                SizedBox(height: 12.h),
-                _MenuSection(items: [
-                  _MenuItem(icon: Icons.folder_outlined, label: 'My Documents',
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()))),
-                  _MenuItem(icon: Icons.notifications_outlined, label: 'Notifications',
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
-                  _MenuItem(icon: Icons.lock_outline, label: 'Change Password', onTap: () {}),
-                  _MenuItem(icon: Icons.help_outline, label: 'Help & Support', onTap: () {}),
-                ]),
-                SizedBox(height: 12.h),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: const BorderSide(color: AppColors.error),
-                      minimumSize: Size(double.infinity, 52.h),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                    ),
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text('Logout'),
-                        content: const Text('Are you sure you want to logout?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              context.read<AuthBloc>().add(const LogoutRequested());
-                            },
-                            child: Text('Logout', style: TextStyle(color: AppColors.error)),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        profile != null
+                                            ? "${profile.firstName} ${profile.lastName}"
+                                            : "",
+                                        style: commonTextStyle(
+                                          size: size,
+                                          fontSize: size.width * numD04,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        if (profile?.verified == true)
+                                          Transform.translate(
+                                            offset: const Offset(2, -1),
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                left: size.width * numD01,
+                                              ),
+                                              child: Image.asset(
+                                                "${iconsPath}verified_badge.png",
+                                                height: size.width * numD04,
+                                                width: size.width * numD04,
+                                              ),
+                                            ),
+                                          ),
+                                        if (profile?.verified == true)
+                                          Positioned(
+                                            top: -size.width * numD02,
+                                            left: size.width * numD06,
+                                            child: Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: size.width * numD01,
+                                                vertical: size.width * 0.005,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF2D7ADE),
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      size.width * numD01,
+                                                    ),
+                                              ),
+                                              child: Text(
+                                                "Verified",
+                                                style: commonTextStyle(
+                                                  size: size,
+                                                  fontSize: size.width * numD02,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  "Joined - ${profile?.joinedAt != null ? profile!.joinedAt.toString().substring(0, 10) : 'N/A'}",
+                                  style: commonTextStyle(
+                                    size: size,
+                                    fontSize: size.width * numD035,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                                if (profile?.city != null ||
+                                    profile?.country != null)
+                                  Text(
+                                    "${profile?.city ?? ''}${profile?.city != null && profile?.country != null ? ', ' : ''}${profile?.country ?? ''}",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: commonTextStyle(
+                                      size: size,
+                                      fontSize: size.width * numD032,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    icon: Icon(Icons.logout, size: 18.sp),
-                    label: const Text('Logout'),
-                  ),
+                    const SizedBox(height: 30),
+
+                    // Fields (Hopper Style)
+                    _buildFieldLabel(size, "First Name"),
+                    _buildTextField(
+                      size: size,
+                      controller: _firstNameController,
+                      hint: "Enter First Name",
+                      icon: "ic_user.png",
+                      readOnly: !_isEditMode,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Last Name"),
+                    _buildTextField(
+                      size: size,
+                      controller: _lastNameController,
+                      hint: "Enter Last Name",
+                      icon: "ic_user.png",
+                      readOnly: !_isEditMode,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Phone Number"),
+                    _buildTextField(
+                      size: size,
+                      controller: _phoneController,
+                      hint: "Enter Phone Number",
+                      icon: "ic_phone.png",
+                      readOnly: !_isEditMode,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Email Address"),
+                    _buildTextField(
+                      size: size,
+                      controller: _emailController,
+                      hint: "Enter Email Address",
+                      icon: "ic_email.png",
+                      readOnly: true,
+                      scale: 0.9,
+                    ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "City"),
+                    _isEditMode
+                        ? Container(
+                            height: size.width * numD12,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD03,
+                              ),
+                              border: Border.all(
+                                color: colorTextFieldBorder,
+                                width: 1,
+                              ),
+                            ),
+                            child: GooglePlaceAutoCompleteTextField(
+                              textEditingController: _cityController,
+                              googleAPIKey: googleMapAPiKey,
+                              isCrossBtnShown: false,
+                              textStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: size.width * numD032,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                              inputDecoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Enter City",
+                                hintStyle: TextStyle(
+                                  color: colorHint,
+                                  fontSize: size.width * numD035,
+                                  fontFamily: 'AirbnbCereal',
+                                ),
+                                prefixIcon: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: size.width * numD02,
+                                  ),
+                                  child: Container(
+                                    margin: EdgeInsets.only(
+                                      left: size.width * numD015,
+                                    ),
+                                    child: Image.asset(
+                                      "${iconsPath}ic_location.png",
+                                    ),
+                                  ),
+                                ),
+                                prefixIconConstraints: BoxConstraints(
+                                  maxHeight: size.width * numD04,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: size.width * numD02,
+                                ),
+                              ),
+                              countries: const ["uk", "in"],
+                              isLatLngRequired: false,
+                              itemClick: (Prediction prediction) {
+                                _cityController.text =
+                                    prediction.description ?? "";
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              },
+                            ),
+                          )
+                        : _buildTextField(
+                            size: size,
+                            controller: _cityController,
+                            hint: "Enter City",
+                            icon: "ic_location.png",
+                            readOnly: true,
+                          ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Postal Code"),
+                    _isEditMode
+                        ? Container(
+                            height: size.width * numD12,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD03,
+                              ),
+                              border: Border.all(
+                                color: colorTextFieldBorder,
+                                width: 1,
+                              ),
+                            ),
+                            child: GooglePlaceAutoCompleteTextField(
+                              textEditingController: _postCodeController,
+                              googleAPIKey: googleMapAPiKey,
+                              isCrossBtnShown: false,
+                              textStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: size.width * numD032,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                              inputDecoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Enter Postal Code",
+                                hintStyle: TextStyle(
+                                  color: colorHint,
+                                  fontSize: size.width * numD035,
+                                  fontFamily: 'AirbnbCereal',
+                                ),
+                                prefixIcon: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: size.width * numD02,
+                                  ),
+                                  child: Container(
+                                    margin: EdgeInsets.only(
+                                      left: size.width * numD015,
+                                    ),
+                                    child: Image.asset(
+                                      "${iconsPath}ic_location.png",
+                                    ),
+                                  ),
+                                ),
+                                prefixIconConstraints: BoxConstraints(
+                                  maxHeight: size.width * numD04,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: size.width * numD02,
+                                ),
+                              ),
+                              countries: const ["uk", "in"],
+                              isLatLngRequired: false,
+                              itemClick: (Prediction prediction) {
+                                _postCodeController.text =
+                                    prediction.description ?? "";
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              },
+                            ),
+                          )
+                        : _buildTextField(
+                            size: size,
+                            controller: _postCodeController,
+                            hint: "Enter Postal Code",
+                            icon: "ic_location.png",
+                            readOnly: true,
+                          ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Address"),
+                    _isEditMode
+                        ? Container(
+                            height: size.width * numD12,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD03,
+                              ),
+                              border: Border.all(
+                                color: colorTextFieldBorder,
+                                width: 1,
+                              ),
+                            ),
+                            child: GooglePlaceAutoCompleteTextField(
+                              textEditingController: _addressController,
+                              googleAPIKey: googleMapAPiKey,
+                              isCrossBtnShown: false,
+                              textStyle: TextStyle(
+                                color: Colors.black,
+                                fontSize: size.width * numD032,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                              inputDecoration: InputDecoration(
+                                border: InputBorder.none,
+                                hintText: "Enter Address",
+                                hintStyle: TextStyle(
+                                  color: colorHint,
+                                  fontSize: size.width * numD035,
+                                  fontFamily: 'AirbnbCereal',
+                                ),
+                                prefixIcon: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: size.width * numD02,
+                                  ),
+                                  child: Container(
+                                    margin: EdgeInsets.only(
+                                      left: size.width * numD015,
+                                    ),
+                                    child: Image.asset(
+                                      "${iconsPath}ic_location.png",
+                                    ),
+                                  ),
+                                ),
+                                prefixIconConstraints: BoxConstraints(
+                                  maxHeight: size.width * numD04,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: size.width * numD02,
+                                ),
+                              ),
+                              countries: const ["uk", "in"],
+                              isLatLngRequired: false,
+                              itemClick: (Prediction prediction) {
+                                _addressController.text =
+                                    prediction.description ?? "";
+                                FocusManager.instance.primaryFocus?.unfocus();
+                              },
+                            ),
+                          )
+                        : _buildTextField(
+                            size: size,
+                            controller: _addressController,
+                            hint: "Enter Address",
+                            icon: "ic_location.png",
+                            readOnly: true,
+                          ),
+                    const SizedBox(height: 20),
+
+                    _buildFieldLabel(size, "Current Location"),
+                    _buildTextField(
+                      size: size,
+                      controller: _currentLocationController,
+                      hint: "Current Location",
+                      icon: "ic_location.png",
+                      readOnly: true,
+                    ),
+                    const SizedBox(height: 30),
+
+                    _buildEmergencyContactsSection(size),
+                    const SizedBox(height: 20),
+
+                    if (_isEditMode)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: size.width * 0.12,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _isEditMode = false;
+                                    _initialized = false;
+                                    _imageFile = null;
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      size.width * numD04,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Cancel",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: size.width * 0.12,
+                              child: ElevatedButton(
+                                onPressed: _saveProfile,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      size.width * numD04,
+                                    ),
+                                  ),
+                                ),
+                                child: state is ProfileLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Save Changes",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        height: size.width * 0.12,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              _isEditMode = true;
+                            });
+                            _getCurrentLocation();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD04,
+                              ),
+                            ),
+                          ),
+                          child: const Text(
+                            "Edit Profile",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                SizedBox(height: 32.h),
-              ],
+              ),
             ),
           );
         },
       ),
     );
   }
-}
 
-class _InfoSection extends StatelessWidget {
-  final String title;
-  final List<_InfoItem> items;
-  const _InfoSection({required this.title, required this.items});
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 0),
-          child: Text(title, style: AppTextStyles.labelLarge.copyWith(color: AppColors.textSecondary)),
+  Widget _buildFieldLabel(Size size, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: commonTextStyle(
+          size: size,
+          fontSize: size.width * numD032,
+          color: Colors.black,
+          fontWeight: FontWeight.normal,
         ),
-        ...items,
-      ]),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required Size size,
+    required TextEditingController controller,
+    required String hint,
+    required String icon,
+    bool readOnly = true,
+    double scale = 1.0,
+  }) {
+    return TextFormField(
+      controller: controller,
+      cursorColor: colorTextFieldIcon,
+      obscureText: false,
+      keyboardType: TextInputType.text,
+      maxLines: 1,
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: size.width * numD032,
+        fontFamily: 'AirbnbCereal',
+      ),
+      minLines: 1,
+      readOnly: readOnly,
+      decoration: InputDecoration(
+        counterText: "",
+        filled: true,
+        fillColor: readOnly ? colorLightGrey : Colors.white,
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: colorHint,
+          fontSize: size.width * numD035,
+          fontFamily: 'AirbnbCereal',
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(size.width * 0.03),
+          borderSide: const BorderSide(width: 1, color: colorTextFieldBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(size.width * 0.03),
+          borderSide: const BorderSide(width: 1, color: colorTextFieldBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(size.width * 0.03),
+          borderSide: const BorderSide(width: 1, color: colorTextFieldBorder),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(size.width * 0.03),
+          borderSide: const BorderSide(width: 1, color: colorTextFieldBorder),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(size.width * 0.03),
+          borderSide: const BorderSide(width: 1, color: colorTextFieldBorder),
+        ),
+        prefixIcon: Padding(
+          padding: EdgeInsets.symmetric(horizontal: size.width * numD02),
+          child: Container(
+            margin: EdgeInsets.only(left: size.width * numD015),
+            child: Transform.scale(
+              scale: scale,
+              child: Image.asset(
+                "assets/icons/$icon",
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.info_outline, size: 18),
+              ),
+            ),
+          ),
+        ),
+        prefixIconConstraints: BoxConstraints(maxHeight: size.width * numD04),
+        contentPadding: EdgeInsets.symmetric(vertical: size.width * numD02),
+      ),
+      textAlignVertical: TextAlignVertical.center,
+      textCapitalization: TextCapitalization.words,
+    );
+  }
+
+  Widget _buildEmergencyContactsSection(Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildFieldLabel(size, 'Emergency Contacts'),
+            if (_isEditMode)
+              GestureDetector(
+                onTap: () => _showAddEditContactSheet(context, size),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Add',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: size.width * numD032,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_emergencyContacts.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: colorLightGrey,
+              borderRadius: BorderRadius.circular(size.width * numD03),
+            ),
+            child: Center(
+              child: Text(
+                'No emergency contacts added',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: size.width * numD032,
+                ),
+              ),
+            ),
+          )
+        else
+          ...List.generate(_emergencyContacts.length, (i) {
+            final c = _emergencyContacts[i];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: colorLightGrey,
+                borderRadius: BorderRadius.circular(size.width * numD03),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c.name,
+                          style: commonTextStyle(
+                            size: size,
+                            fontSize: size.width * numD035,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${c.countryCode} ${c.phone}',
+                          style: commonTextStyle(
+                            size: size,
+                            fontSize: size.width * numD032,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            c.relation,
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: size.width * numD028,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_isEditMode) ...[
+                    IconButton(
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: Colors.black54,
+                      ),
+                      onPressed: () => _showAddEditContactSheet(
+                        context,
+                        size,
+                        existing: c,
+                        index: i,
+                      ),
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(6),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Colors.red,
+                      ),
+                      onPressed: () =>
+                          setState(() => _emergencyContacts.removeAt(i)),
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(6),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  void _showAddEditContactSheet(
+    BuildContext ctx,
+    Size size, {
+    EmergencyContact? existing,
+    int? index,
+  }) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final relationCtrl = TextEditingController(text: existing?.relation ?? '');
+    final codeCtrl = TextEditingController(
+      text: existing?.countryCode ?? '+91',
+    );
+    final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
+    final emailCtrl = TextEditingController(text: existing?.email ?? '');
+    bool notifyEmail = existing?.notifyEmail ?? true;
+    bool notifySms = existing?.notifySms ?? false;
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx2, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx2).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    existing == null
+                        ? 'Add Emergency Contact'
+                        : 'Edit Emergency Contact',
+                    style: commonTextStyle(
+                      size: size,
+                      fontSize: size.width * numD04,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFieldLabel(size, 'Name'),
+                  _buildTextField(
+                    size: size,
+                    controller: nameCtrl,
+                    hint: 'Full name',
+                    icon: 'ic_user.png',
+                    readOnly: false,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildFieldLabel(size, 'Relation'),
+                  _buildTextField(
+                    size: size,
+                    controller: relationCtrl,
+                    hint: 'e.g. Spouse, Parent',
+                    icon: 'ic_user.png',
+                    readOnly: false,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildFieldLabel(size, 'Phone Number'),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: size.width * 0.22,
+                        child: _buildTextField(
+                          size: size,
+                          controller: codeCtrl,
+                          hint: '+91',
+                          icon: 'ic_phone.png',
+                          readOnly: false,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildTextField(
+                          size: size,
+                          controller: phoneCtrl,
+                          hint: 'Phone number',
+                          icon: 'ic_phone.png',
+                          readOnly: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _buildFieldLabel(size, 'Email (optional)'),
+                  _buildTextField(
+                    size: size,
+                    controller: emailCtrl,
+                    hint: 'Email address',
+                    icon: 'ic_email.png',
+                    readOnly: false,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: size.width * 0.14,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (nameCtrl.text.trim().isEmpty ||
+                            phoneCtrl.text.trim().isEmpty)
+                          return;
+                        final contact = EmergencyContact(
+                          name: nameCtrl.text.trim(),
+                          relation: relationCtrl.text.trim(),
+                          countryCode: codeCtrl.text.trim().isEmpty
+                              ? '+91'
+                              : codeCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          email: emailCtrl.text.trim().isEmpty
+                              ? null
+                              : emailCtrl.text.trim(),
+                          notifyEmail: notifyEmail,
+                          notifySms: notifySms,
+                        );
+                        setState(() {
+                          if (index != null) {
+                            _emergencyContacts[index] = contact;
+                          } else {
+                            _emergencyContacts.add(contact);
+                          }
+                        });
+                        Navigator.pop(ctx2);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            size.width * numD04,
+                          ),
+                        ),
+                      ),
+                      child: const Text(
+                        'Save Contact',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _InfoItem extends StatelessWidget {
-  final IconData icon; final String label, value;
-  const _InfoItem({required this.icon, required this.label, required this.value});
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-    child: Row(children: [
-      Icon(icon, size: 18.sp, color: AppColors.primary),
-      SizedBox(width: 12.w),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: AppTextStyles.caption),
-        Text(value, style: AppTextStyles.bodyMedium),
-      ])),
-    ]),
+TextStyle commonTextStyle({
+  required Size size,
+  required double fontSize,
+  required Color color,
+  double? lineHeight,
+  required FontWeight fontWeight,
+  String? fontfamily = "AirbnbCereal",
+}) {
+  return TextStyle(
+    fontFamily: fontfamily,
+    fontWeight: fontWeight,
+    fontSize: fontSize,
+    height: lineHeight,
+    color: color,
   );
 }
 
-class _MenuSection extends StatelessWidget {
-  final List<_MenuItem> items;
-  const _MenuSection({required this.items});
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: EdgeInsets.symmetric(horizontal: 16.w),
-    decoration: BoxDecoration(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(12.r),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+Widget emilyLogoWidgetForPagesForEmployee(double size, String? companyLogo) {
+  final double logoSize = size * 0.11;
+  return UnconstrainedBox(
+    child: Container(
+      height: logoSize,
+      width: logoSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.grey.shade50,
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
+      ),
+      child: ClipOval(
+        child: (companyLogo != null && companyLogo.isNotEmpty)
+            ? Image.network(
+                companyLogo,
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, e, st) => Image.asset(
+                  'assets/images/app_logo.png',
+                  fit: BoxFit.contain,
+                ),
+              )
+            : Image.asset('assets/images/app_logo.png', fit: BoxFit.contain),
+      ),
     ),
-    child: Column(children: items),
-  );
-}
-
-class _MenuItem extends StatelessWidget {
-  final IconData icon; final String label; final VoidCallback onTap;
-  const _MenuItem({required this.icon, required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: AppColors.primary, size: 20.sp),
-    title: Text(label, style: AppTextStyles.bodyMedium),
-    trailing: Icon(Icons.chevron_right, color: AppColors.textHint, size: 20.sp),
-    onTap: onTap,
   );
 }

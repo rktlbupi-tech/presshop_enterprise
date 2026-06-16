@@ -18,7 +18,7 @@ const numD1 = 0.1;
 const numD12 = 0.12;
 
 const colorThemePink = Color(0xFFE91E63);
-const colorEmployeeGreen1 = Color(0xFF4CAF50);
+const colorEmployeeGreen1 = Color(0xFF1877F2);
 const numD005 = 0.005;
 const numD032 = 0.032;
 const size0 = 0.0;
@@ -32,7 +32,13 @@ class DummyProfileData {
   final String? avatar;
   final String id;
   final String type;
-  DummyProfileData({this.profilePic, this.profileImage, this.avatar, this.id = '', this.type = 'employee'});
+  DummyProfileData({
+    this.profilePic,
+    this.profileImage,
+    this.avatar,
+    this.id = '',
+    this.type = 'employee',
+  });
 }
 
 class DummyProfileController {
@@ -107,7 +113,9 @@ class MapUtils {
       final lat1 = points[i].latitude * (3.14159265358979 / 180);
       final lat2 = points[i + 1].latitude * (3.14159265358979 / 180);
       final dLat = lat2 - lat1;
-      final dLng = (points[i + 1].longitude - points[i].longitude) * (3.14159265358979 / 180);
+      final dLng =
+          (points[i + 1].longitude - points[i].longitude) *
+          (3.14159265358979 / 180);
       final a = (dLat / 2) * (dLat / 2) + (dLng / 2) * (dLng / 2);
       total += 2 * earthRadiusKm * (a < 1 ? a : 1);
     }

@@ -1,117 +1,402 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/constants/app_icons.dart';
 import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/empty_state.dart';
+import '../../../../presentation/widgets/loading_widget.dart';
+import '../bloc/notifications_bloc.dart';
+import '../../domain/entities/notification_entity.dart';
 
-class _Notif {
-  final String id, title, body, type;
-  final DateTime time;
-  final bool read;
-  const _Notif({required this.id, required this.title, required this.body, required this.type, required this.time, this.read = false});
-}
-
-class NotificationsScreen extends StatefulWidget {
+class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
-  @override State<NotificationsScreen> createState() => _NotificationsScreenState();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          getIt<NotificationsBloc>()..add(const FetchNotifications()),
+      child: const _NotificationsView(),
+    );
+  }
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  final List<_Notif> _notifs = [
-    _Notif(id: '1', title: 'New Task Assigned', body: 'Cover press conference at City Hall by 13 Jun 2026', type: 'task', time: DateTime.now().subtract(const Duration(minutes: 30))),
-    _Notif(id: '2', title: 'Salary Credited', body: 'Your salary of ₹87,200 for May 2026 has been credited.', type: 'earning', time: DateTime.now().subtract(const Duration(hours: 2))),
-    _Notif(id: '3', title: 'Attendance Alert', body: 'You were marked late today. Check-in was at 9:15 AM.', type: 'attendance', time: DateTime.now().subtract(const Duration(hours: 5)), read: true),
-    _Notif(id: '4', title: 'Document Available', body: 'Your payslip for May 2026 is now available to download.', type: 'document', time: DateTime.now().subtract(const Duration(days: 1)), read: true),
-    _Notif(id: '5', title: 'Team Message', body: 'Rahul Sharma: Meeting at 3 PM today in conference room.', type: 'chat', time: DateTime.now().subtract(const Duration(days: 1)), read: true),
-  ];
+class _NotificationsView extends StatefulWidget {
+  const _NotificationsView();
 
-  IconData _icon(String type) => switch (type) {
-        'task' => Icons.task_outlined,
-        'earning' => Icons.account_balance_wallet_outlined,
-        'attendance' => Icons.access_time_outlined,
-        'document' => Icons.description_outlined,
-        'chat' => Icons.chat_outlined,
-        _ => Icons.notifications_outlined,
-      };
+  @override
+  State<_NotificationsView> createState() => _NotificationsViewState();
+}
 
-  Color _color(String type) => switch (type) {
-        'task' => AppColors.warning,
-        'earning' => AppColors.success,
-        'attendance' => AppColors.info,
-        'document' => AppColors.primary,
-        'chat' => AppColors.accent,
-        _ => AppColors.textSecondary,
-      };
+class _NotificationsViewState extends State<_NotificationsView> {
+  Widget _buildNotificationBadge(int unreadCount) {
+    return Center(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            height: 28.w,
+            width: 28.w,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade800, width: 1.5.w),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              right: -5.w,
+              top: -5.h,
+              child: Container(
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5.w),
+                ),
+                child: Text(
+                  unreadCount > 99 ? "99+" : unreadCount.toString(),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 8.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
-  String _timeAgo(DateTime t) {
-    final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return DateFormat('dd MMM').format(t);
+  void _showMarkAllReadDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          contentPadding: EdgeInsets.zero,
+          insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+          content: Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  AppIcons.delete,
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.primary,
+                    BlendMode.srcIn,
+                  ),
+                  width: 40.w,
+                  height: 40.w,
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  "Are you sure you want to mark\nall notifications as read?",
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'AirbnbCereal',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => Navigator.pop(dialogContext),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Text(
+                            "Cancel",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          context.read<NotificationsBloc>().add(
+                            const MarkAllAsRead(),
+                          );
+                          Navigator.pop(dialogContext);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Text(
+                            "Confirm",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.notifications_none,
+            size: 64.sp,
+            color: Colors.grey.shade300,
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            "No notifications yet",
+            style: TextStyle(
+              fontSize: 16.sp,
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'AirbnbCereal',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationItem(NotificationEntity notification) {
+    return InkWell(
+      onTap: () {
+        // Handle notification tapping: redirect to task or details based on metadata / type
+        final taskId =
+            notification.taskId ??
+            notification.targetId ??
+            notification.metadata['task_id'] ??
+            notification.metadata['taskId'];
+        if (taskId != null && taskId.toString().isNotEmpty) {
+          // If task ID is present, navigate to task detail screen or dashboard tasks tab
+          // This is aligned with the old app redirection behavior
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Loading details for task: $taskId"),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
+        decoration: BoxDecoration(
+          color: notification.isRead ? Colors.white : Colors.grey.shade50,
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.shade100, width: 1.w),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.r),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade200,
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                AppIcons.rabbitLogo,
+                color: Colors.white,
+                width: 24.w,
+                height: 24.w,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: notification.isRead
+                                ? FontWeight.w500
+                                : FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                      ),
+                      Text(
+                        DateFormat(
+                          'hh:mm a, dd MMM',
+                        ).format(notification.createdAt),
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: Colors.grey.shade500,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    notification.body,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  if (notification.imageUrl != null &&
+                      notification.imageUrl!.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: Image.network(
+                        notification.imageUrl!,
+                        width: double.infinity,
+                        height: 150.h,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppAppBar(
-        title: 'Notifications',
-        showBack: true,
-        actions: [
-          TextButton(
-            onPressed: () => setState(() {}),
-            child: Text('Mark all read', style: AppTextStyles.labelMedium.copyWith(color: AppColors.textOnPrimary)),
+    return BlocBuilder<NotificationsBloc, NotificationsState>(
+      builder: (context, state) {
+        int unreadCount = 0;
+        List<NotificationEntity> notifications = [];
+        bool isLoading = state is NotificationsLoading;
+
+        if (state is NotificationsLoaded) {
+          notifications = state.notifications;
+          unreadCount = state.unreadCount;
+        }
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppAppBar(
+            title: "Notifications",
+            showBack: true,
+            elevation: 0,
+            titleSpacing: 0,
+            actions: [
+              _buildNotificationBadge(unreadCount),
+              SizedBox(width: 16.w),
+            ],
           ),
-        ],
-      ),
-      body: _notifs.isEmpty
-          ? const EmptyState(icon: Icons.notifications_none, title: 'No notifications')
-          : ListView.separated(
-              padding: EdgeInsets.all(16.r),
-              itemCount: _notifs.length,
-              separatorBuilder: (ctx, i) => SizedBox(height: 8.h),
-              itemBuilder: (_, i) {
-                final n = _notifs[i];
-                return Container(
-                  padding: EdgeInsets.all(14.r),
-                  decoration: BoxDecoration(
-                    color: n.read ? AppColors.surface : _color(n.type).withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: n.read ? null : Border.all(color: _color(n.type).withValues(alpha: 0.2)),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+          body: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Divider(color: Colors.grey.shade200, thickness: 1.5.h),
+              ),
+              if (notifications.isNotEmpty && unreadCount > 0)
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
                   ),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                      padding: EdgeInsets.all(10.r),
-                      decoration: BoxDecoration(
-                        color: _color(n.type).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10.r),
+                  child: InkWell(
+                    onTap: () => _showMarkAllReadDialog(context),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Text(
+                        "Mark all read",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                          fontFamily: 'AirbnbCereal',
+                        ),
                       ),
-                      child: Icon(_icon(n.type), color: _color(n.type), size: 20.sp),
                     ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Expanded(child: Text(n.title,
-                              style: AppTextStyles.labelLarge.copyWith(
-                                  fontWeight: n.read ? FontWeight.w500 : FontWeight.w700))),
-                          Text(_timeAgo(n.time), style: AppTextStyles.caption),
-                        ]),
-                        SizedBox(height: 4.h),
-                        Text(n.body, style: AppTextStyles.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      ]),
-                    ),
-                    if (!n.read) ...[
-                      SizedBox(width: 8.w),
-                      Container(width: 8.w, height: 8.w, decoration: BoxDecoration(color: _color(n.type), shape: BoxShape.circle)),
-                    ],
-                  ]),
-                );
-              },
-            ),
+                  ),
+                ),
+              Expanded(
+                child: isLoading && notifications.isEmpty
+                    ? const LoadingWidget()
+                    : notifications.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        color: AppColors.primary,
+                        onRefresh: () async {
+                          context.read<NotificationsBloc>().add(
+                            const FetchNotifications(),
+                          );
+                          await Future.delayed(
+                            const Duration(milliseconds: 500),
+                          );
+                        },
+                        child: ListView.separated(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          itemCount: notifications.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 1),
+                          itemBuilder: (context, index) {
+                            return _buildNotificationItem(notifications[index]);
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

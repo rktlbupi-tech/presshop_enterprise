@@ -26,14 +26,25 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     try {
       final models = await _ds.fetchLog();
       return (models.map((m) => m.toEntity()).toList(), null);
-    } on Failure catch (f) { return (<AttendanceLogEntity>[], f); }
-    catch (e) { return (<AttendanceLogEntity>[], UnknownFailure(e.toString())); }
+    } on NotFoundFailure {
+      return (const <AttendanceLogEntity>[], null);
+    } on Failure catch (f) {
+      return (<AttendanceLogEntity>[], f);
+    } catch (e) {
+      return (<AttendanceLogEntity>[], UnknownFailure(e.toString()));
+    }
   }
 
   @override
   Future<(AttendanceSummaryEntity?, Failure?)> fetchSummary() async {
-    try { return ((await _ds.fetchSummary()).toEntity(), null); }
-    on Failure catch (f) { return (null, f); }
-    catch (e) { return (null, UnknownFailure(e.toString())); }
+    try {
+      return ((await _ds.fetchSummary()).toEntity(), null);
+    } on NotFoundFailure {
+      return (null, null);
+    } on Failure catch (f) {
+      return (null, f);
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
   }
 }

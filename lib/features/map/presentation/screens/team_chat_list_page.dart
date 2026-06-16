@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import 'package:intl/intl.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 
-import 'package:presshop_enterprise/core/constants/app_colors.dart';
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 
 // MOCKS FOR COMPILATION
 class TeamChatController extends ChangeNotifier {
@@ -52,7 +51,8 @@ class CustomFooter extends StatelessWidget {
   Widget build(BuildContext context) => const SizedBox();
 }
 
-Widget commonRefresherFooter(BuildContext context, dynamic mode) => const SizedBox();
+Widget commonRefresherFooter(BuildContext context, dynamic mode) =>
+    const SizedBox();
 
 class TeamChatItem {
   final Display display = Display();
@@ -86,50 +86,20 @@ class TeamChatMessagePage extends StatelessWidget {
   final bool isGroup;
   final String image;
   final String taskId;
-  const TeamChatMessagePage({Key? key, required this.name, this.isGroup = false, required this.image, required this.taskId}) : super(key: key);
-  @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: Text(name)));
-}
-
-class NewCommonAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final Size size;
-  final Widget title;
-  final double elevation;
-  final bool centerTitle;
-  final double titleSpacing;
-  final bool showActions;
-  final VoidCallback leadingFxn;
-  final bool hideLeading;
-  final List<Widget> actionWidget;
-
-  const NewCommonAppBar({
+  const TeamChatMessagePage({
     Key? key,
-    required this.size,
-    required this.title,
-    this.elevation = 0.0,
-    this.centerTitle = false,
-    this.titleSpacing = 0,
-    this.showActions = false,
-    required this.leadingFxn,
-    this.hideLeading = false,
-    this.actionWidget = const [],
+    required this.name,
+    this.isGroup = false,
+    required this.image,
+    required this.taskId,
   }) : super(key: key);
-
   @override
-  Widget build(BuildContext context) => AppBar(
-    title: title,
-    elevation: elevation,
-    centerTitle: centerTitle,
-    titleSpacing: titleSpacing,
-    leading: hideLeading ? null : IconButton(icon: const Icon(Icons.arrow_back), onPressed: leadingFxn),
-    actions: actionWidget,
-  );
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Widget build(BuildContext context) =>
+      Scaffold(appBar: AppBar(title: Text(name)));
 }
 
 final _sharedPreferences = _MockPrefs();
+
 class _MockPrefs {
   String? getString(String key) => "";
 }
@@ -143,20 +113,23 @@ class PresshopColors {
   static const Color presshop_grey_dark = Colors.grey;
 }
 
-Widget showAnimatedLoader(Size size) => const Center(child: CircularProgressIndicator());
+Widget showAnimatedLoader(Size size) =>
+    const Center(child: CircularProgressIndicator());
 
 // Mock userRoleProvider since Riverpod is removed
 enum UserRole { employee, enterprise }
+
 class UserRoleProvider {
   UserRole role = UserRole.employee;
 }
+
 final userRoleProvider = UserRoleProvider();
+
 class Ref {
   UserRoleProvider watch(dynamic provider) => provider;
 }
+
 final ref = Ref();
-
-
 
 class TeamChatListPage extends StatefulWidget {
   const TeamChatListPage({super.key});
@@ -219,29 +192,14 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
     final primaryColor = role == UserRole.employee
         ? colorEmployeeGreen1
         : colorThemePink;
-    final String? mediaHouseLogo = _sharedPreferences?.getString(
-      employeeMediaHouseLogoKey,
-    );
-
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: NewCommonAppBar(
-        size: size,
-        title: Text(
-          "Team Chat",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: responsiveWidth * appBarHeadingFontSize,
-          ),
-        ),
+      appBar: AppAppBar(
+        title: "Team Chat",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,
-        showActions: true,
-        leadingFxn: () => Navigator.pop(context),
-        hideLeading: false,
-        actionWidget: const [],
+        showBack: true,
       ),
       body: AnimatedBuilder(
         animation: _controller,
@@ -397,7 +355,8 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
           "Times of India";
       title = "$mediaHouse Team chat";
       subtitle = "Important: Please upload your field evidence.";
-      avatarUrl = _sharedPreferences?.getString(employeeMediaHouseLogoKey) ?? "";
+      avatarUrl =
+          _sharedPreferences?.getString(employeeMediaHouseLogoKey) ?? "";
       taskId = "";
     }
 

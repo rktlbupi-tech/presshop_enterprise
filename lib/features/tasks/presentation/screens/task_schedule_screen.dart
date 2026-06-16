@@ -1,88 +1,129 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import 'task_details_screen.dart';
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../controllers/task_schedule_controller.dart';
+import '../widgets/month_header.dart';
+import '../widgets/week_strip.dart';
+import '../widgets/calendar_grid.dart';
+import '../widgets/day_schedule_timeline.dart';
+import '../widgets/timeline_task_card.dart';
 
 class TaskScheduleScreen extends StatefulWidget {
-  const TaskScheduleScreen({super.key});
+  final bool hideLeading;
+  const TaskScheduleScreen({super.key, this.hideLeading = false});
 
   @override
   State<TaskScheduleScreen> createState() => _TaskScheduleScreenState();
 }
 
 class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
-  final List<String> _weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  late TaskScheduleController _controller;
 
-  final List<_DummyScheduleTask> _tasks = [
-    _DummyScheduleTask(
-      id: "1",
-      title: "Cover local protest",
-      startTime: "10:00",
-      endTime: "14:00",
-      location: "City Centre",
-      color: Colors.red,
-      mediaHouseLogo: "https://picsum.photos/100",
-    ),
-  ];
+  late PageController _monthPageController;
+  late PageController _dayPageController;
+  late PageController _weekPageController;
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TaskScheduleController();
+    _monthPageController = PageController(
+      initialPage: _controller.initialMonthPage,
+    );
+    _dayPageController = PageController(
+      initialPage: _controller.initialDayPage,
+    );
+    _weekPageController = PageController(
+      initialPage: _controller.initialWeekPage,
+    );
+    _scrollController = ScrollController();
+
+    _controller.addListener(_onControllerChange);
+  }
+
+  void _onControllerChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onControllerChange);
+    _monthPageController.dispose();
+    _dayPageController.dispose();
+    _weekPageController.dispose();
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppAppBar(title: 'View Task'),
+      appBar: widget.hideLeading
+          ? EmployeeAppBar(
+              onProfileTap: () {
+                final dashboardState = context
+                    .findAncestorStateOfType<DashboardScreenState>();
+                if (dashboardState != null) {
+                  dashboardState.changeTab(4);
+                }
+              },
+            )
+          : AppAppBar(
+              title: "View Task",
+              elevation: 0,
+              centerTitle: false,
+              titleSpacing: 0,
+              showBack: true,
+            ),
       body: Column(
         children: [
-          _buildMonthHeader(),
-          _buildWeekDayRow(),
+          MonthHeader(
+            controller: _controller,
+            monthPageController: _monthPageController,
+            size: size,
+          ),
+          _buildWeekDayRow(size),
           const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0)),
-          _buildCalendarGrid(),
-          _buildTaskListHeader(),
-          Expanded(child: _buildTaskList()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMonthHeader() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: Icon(Icons.chevron_left, color: Colors.black, size: 28.sp),
-            onPressed: () {},
-          ),
-          Text(
-            "June 2026",
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.chevron_right, color: Colors.black, size: 28.sp),
-            onPressed: () {},
+          Expanded(
+            child: _controller.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF1877F2)),
+                  )
+                : _buildCalendarBody(size),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWeekDayRow() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h),
+  Widget _buildWeekDayRow(Size size) {
+    if (_controller.calendarFormat != 'Month') return const SizedBox.shrink();
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: size.width * 0.015),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: _weekDays.map((day) {
-          final isWeekend = day == 'Sat' || day == 'Sun';
-          return Text(
-            day,
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-              color: isWeekend ? Colors.grey.shade400 : Colors.grey.shade600,
+        children: TaskScheduleController.weekDays.map((day) {
+          final isSat = day == 'Sat';
+          final isSun = day == 'Sun';
+          return Expanded(
+            child: Center(
+              child: Text(
+                day,
+                style: TextStyle(
+                  fontSize: size.width * 0.032,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: "AirbnbCereal",
+                  color: isSat || isSun
+                      ? Colors.grey.shade300
+                      : Colors.grey.shade500,
+                ),
+              ),
             ),
           );
         }).toList(),
@@ -90,78 +131,60 @@ class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
     );
   }
 
-  Widget _buildCalendarGrid() {
-    return SizedBox(
-      height: 250.h,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.all(16.w),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 7,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-        ),
-        itemCount: 30, // Dummy month days
-        itemBuilder: (context, index) {
-          final day = index + 1;
-          final isSelected = day == 13; // dummy selected day
-          final hasTask = day == 13 || day == 15 || day == 20;
-
-          return Container(
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF2D83E6) : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildCalendarBody(Size size) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _controller.calendarFormat == 'Month'
+          ? Column(
               children: [
-                Text(
-                  day.toString(),
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? Colors.white : Colors.black87,
+                SizedBox(
+                  height: size.height * 0.32,
+                  child: CalendarGrid(
+                    key: const ValueKey('MonthView'),
+                    controller: _controller,
+                    monthPageController: _monthPageController,
+                    size: size,
                   ),
                 ),
-                if (hasTask && !isSelected)
-                  Container(
-                    margin: EdgeInsets.only(top: 2.h),
-                    width: 4.w,
-                    height: 4.w,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
+                _buildTaskListHeader(size),
+                Expanded(child: _buildIntegratedTaskList()),
               ],
+            )
+          : KeyedSubtree(
+              key: ValueKey(
+                'DayView_${_controller.selectedDay.year}_${_controller.selectedDay.month}_${_controller.selectedDay.day}',
+              ),
+              child: _buildTaskList(_controller.selectedDay),
             ),
-          );
-        },
-      ),
     );
   }
 
-  Widget _buildTaskListHeader() {
+  Widget _buildTaskListHeader(Size size) {
+    final day = _controller.selectedDay;
+    final String dateStr =
+        "${_getWeekdayFull(day.weekday)}, ${day.day} ${TaskScheduleController.months[day.month - 1]} ${day.year}";
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       color: Colors.white,
       child: Row(
         children: [
           Container(
-            width: 4.w,
-            height: 20.h,
+            width: 4,
+            height: 20,
             decoration: BoxDecoration(
-              color: const Color(0xFF007AFF),
-              borderRadius: BorderRadius.circular(2.r),
+              color: const Color(0xFF1877F2),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          SizedBox(width: 12.w),
+          const SizedBox(width: 12),
           Text(
-            "Sat, 13 June 2026",
-            style: TextStyle(
-              fontSize: 16.sp,
+            dateStr,
+            style: const TextStyle(
+              fontSize: 16,
               fontWeight: FontWeight.w800,
+              fontFamily: "AirbnbCereal",
               color: Colors.black,
             ),
           ),
@@ -170,171 +193,171 @@ class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
     );
   }
 
-  Widget _buildTaskList() {
-    return ListView.builder(
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
-      itemCount: _tasks.length,
-      itemBuilder: (context, index) {
-        return _TimelineTaskCard(task: _tasks[index]);
-      },
+  Widget _buildIntegratedTaskList() {
+    final tasks = _controller.getTasksFor(_controller.selectedDay);
+    if (tasks.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => _controller.fetchTasks(showLoading: false),
+        color: const Color(0xFF1877F2),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.4,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 48,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "No tasks scheduled for this day",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                    fontFamily: "AirbnbCereal",
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () => _controller.fetchTasks(showLoading: false),
+      color: const Color(0xFF1877F2),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          return TimelineTaskCard(task: tasks[index]);
+        },
+      ),
     );
   }
-}
 
-class _TimelineTaskCard extends StatelessWidget {
-  final _DummyScheduleTask task;
-
-  const _TimelineTaskCard({required this.task});
-
-  String _to12HourFormat(String timeStr) {
-    try {
-      final parts = timeStr.split(':');
-      if (parts.length >= 2) {
-        int hour = int.parse(parts[0]);
-        int minute = int.parse(parts[1]);
-        String ampm = hour >= 12 ? 'PM' : 'AM';
-        int displayHour = hour % 12;
-        if (displayHour == 0) displayHour = 12;
-        String hourStr = displayHour.toString().padLeft(2, '0');
-        String minuteStr = minute.toString().padLeft(2, '0');
-        return "$hourStr:$minuteStr $ampm";
-      }
-    } catch (_) {}
-    return timeStr;
+  String _getWeekdayFull(int weekday) {
+    switch (weekday) {
+      case 1:
+        return "Monday";
+      case 2:
+        return "Tuesday";
+      case 3:
+        return "Wednesday";
+      case 4:
+        return "Thursday";
+      case 5:
+        return "Friday";
+      case 6:
+        return "Saturday";
+      case 7:
+        return "Sunday";
+      default:
+        return "";
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor = task.color.withValues(alpha: 0.05);
-    Color accentColor = task.color;
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskDetailsScreen(taskId: task.id),
-          ),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: 10.h),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              Container(
-                width: 4.5.w,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16.r),
-                    bottomLeft: Radius.circular(16.r),
-                  ),
+  Widget _buildTaskList(DateTime startDay) {
+    if (_controller.calendarFormat == 'Day') {
+      return PageView.builder(
+        controller: _dayPageController,
+        onPageChanged: (index) {
+          final newDay = startDay.add(
+            Duration(days: index - _controller.initialDayPage),
+          );
+          _controller.updateSelectedDay(newDay);
+        },
+        itemBuilder: (context, index) {
+          final day = startDay.add(
+            Duration(days: index - _controller.initialDayPage),
+          );
+          final tasks = _controller.getTasksFor(day);
+          return RefreshIndicator(
+            onRefresh: () => _controller.fetchTasks(showLoading: false),
+            color: const Color(0xFF1877F2),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: DayScheduleTimeline(
+                  day: day,
+                  tasks: tasks,
+                  controller: _controller,
                 ),
               ),
-              Expanded(
+            ),
+          );
+        },
+      );
+    } else if (_controller.calendarFormat == 'Week') {
+      return Column(
+        children: [
+          WeekStrip(
+            controller: _controller,
+            weekPageController: _weekPageController,
+            size: MediaQuery.of(context).size,
+          ),
+          const Divider(height: 1, thickness: 0.5, color: Color(0xFFEEEEEE)),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _controller.fetchTasks(showLoading: false),
+              color: const Color(0xFF1877F2),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.sp,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        "${_to12HourFormat(task.startTime)} - ${_to12HourFormat(task.endTime)}",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      SizedBox(height: 5.h),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 12.sp, color: Colors.grey.shade500),
-                          SizedBox(width: 4.w),
-                          Expanded(
-                            child: Text(
-                              task.location,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: DayScheduleTimeline(
+                    day: _controller.selectedDay,
+                    tasks: _controller.getTasksFor(_controller.selectedDay),
+                    controller: _controller,
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(right: 18.w),
-                child: Container(
-                  width: 42.w,
-                  height: 42.w,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: task.mediaHouseLogo.isNotEmpty
-                        ? Image.network(
-                            task.mediaHouseLogo,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 20, color: Colors.grey),
-                          )
-                        : const Icon(Icons.business, size: 20, color: Colors.grey),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+        ],
+      );
+    }
+
+    final List<DateTime> daysToShow = List.generate(14, (i) {
+      return startDay.add(Duration(days: i));
+    });
+
+    return Container(
+      color: Colors.white,
+      child: RefreshIndicator(
+        onRefresh: () => _controller.fetchTasks(showLoading: false),
+        color: const Color(0xFF1877F2),
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: daysToShow.map((day) {
+            final tasks = _controller.getTasksFor(day);
+            return SliverToBoxAdapter(
+              child: DayScheduleTimeline(
+                day: day,
+                tasks: tasks,
+                controller: _controller,
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
-}
-
-class _DummyScheduleTask {
-  final String id;
-  final String title;
-  final String startTime;
-  final String endTime;
-  final String location;
-  final Color color;
-  final String mediaHouseLogo;
-
-  _DummyScheduleTask({
-    required this.id,
-    required this.title,
-    required this.startTime,
-    required this.endTime,
-    required this.location,
-    required this.color,
-    required this.mediaHouseLogo,
-  });
 }

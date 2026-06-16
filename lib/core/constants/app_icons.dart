@@ -59,4 +59,5 @@ class AppIcons {
   static const String onboarding1 = 'assets/images/img_onboarding1.png';
   static const String onboarding2 = 'assets/images/img_onboarding2.png';
   static const String onboarding3 = 'assets/images/img_onboarding3.png';
+  static const String rabbitLogo = 'assets/images/ic_black_rabbit.png';
 }

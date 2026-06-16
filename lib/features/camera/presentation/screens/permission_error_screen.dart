@@ -48,7 +48,7 @@ class CameraPermissionErrorScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: size.width * 0.05,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
+                fontFamily: 'AirbnbCereal',
               ),
               textAlign: TextAlign.center,
             ),
@@ -58,7 +58,7 @@ class CameraPermissionErrorScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: size.width * 0.035,
                 color: Colors.grey[600],
-                fontFamily: 'Poppins',
+                fontFamily: 'AirbnbCereal',
               ),
               textAlign: TextAlign.center,
             ),
@@ -80,7 +80,7 @@ class CameraPermissionErrorScreen extends StatelessWidget {
                     color: Colors.white,
                     fontSize: size.width * 0.04,
                     fontWeight: FontWeight.w700,
-                    fontFamily: 'Poppins',
+                    fontFamily: 'AirbnbCereal',
                   ),
                 ),
               ),

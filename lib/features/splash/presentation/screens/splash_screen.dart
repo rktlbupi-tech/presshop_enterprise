@@ -42,8 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
-    // Force false for testing
-    final onboardingSeen = false; // prefs.getBool('onboarding_seen') ?? false;
+    final onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
     final token = prefs.getString('auth_token');
     if (!mounted) return;
     if (!onboardingSeen) {
@@ -92,7 +91,7 @@ class _SplashScreenState extends State<SplashScreen>
                           fontSize: 28.sp,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
-                          fontFamily: 'Poppins',
+                          fontFamily: 'AirbnbCereal',
                           letterSpacing: 4,
                         ),
                       ),

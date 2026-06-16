@@ -63,6 +63,16 @@ class SocketClient {
     _socket?.off(event);
   }
 
+  void emitWithAck(String event, dynamic data, {required Function(dynamic) ack}) {
+    if (!isConnected) {
+      _log('Cannot emitWithAck [$event] — not connected');
+      ack(null);
+      return;
+    }
+    _log('EmitWithAck [$event]');
+    _socket?.emitWithAck(event, data, ack: ack);
+  }
+
   void disconnect() {
     _socket?.disconnect();
     _socket?.dispose();

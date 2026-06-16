@@ -89,6 +89,8 @@ class SearchAndFilterBar extends StatelessWidget {
                           decoration: const InputDecoration(
                             hintText: "Search any location",
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(
                               vertical: 8,
                               horizontal: 12,

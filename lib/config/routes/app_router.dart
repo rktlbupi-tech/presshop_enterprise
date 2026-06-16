@@ -34,8 +34,7 @@ GoRouter createRouter(SharedPreferences prefs) {
         return isOnboarding ? null : AppRoutes.onboarding;
       }
 
-      // Temporarily bypassed for testing
-      // if (token == null && !isAuth) return AppRoutes.login;
+      if (token == null && !isAuth) return AppRoutes.login;
 
       if (token != null && isAuth) return AppRoutes.dashboard;
 

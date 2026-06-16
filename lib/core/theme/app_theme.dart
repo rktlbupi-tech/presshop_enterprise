@@ -7,7 +7,7 @@ class AppTheme {
 
   static ThemeData get light => ThemeData(
         useMaterial3: true,
-        fontFamily: 'Poppins', // fallback: system font if Poppins assets not added
+        fontFamily: 'AirbnbCereal', // fallback: system font if AirbnbCereal assets not added
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,
           primary: AppColors.primary,
@@ -24,17 +24,17 @@ class AppTheme {
 
         // AppBar
         appBarTheme: AppBarTheme(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 0.5,
           centerTitle: true,
           titleTextStyle: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
-            color: AppColors.textOnPrimary,
-            fontFamily: 'Poppins',
+            color: Colors.black87,
+            fontFamily: 'AirbnbCereal',
           ),
-          iconTheme: const IconThemeData(color: AppColors.textOnPrimary),
+          iconTheme: const IconThemeData(color: Colors.black87),
         ),
 
         // Elevated Button
@@ -49,7 +49,7 @@ class AppTheme {
             textStyle: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Poppins',
+              fontFamily: 'AirbnbCereal',
             ),
             elevation: 0,
           ),
@@ -67,7 +67,7 @@ class AppTheme {
             textStyle: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Poppins',
+              fontFamily: 'AirbnbCereal',
             ),
           ),
         ),
@@ -100,17 +100,17 @@ class AppTheme {
           hintStyle: TextStyle(
             fontSize: 14.sp,
             color: AppColors.textHint,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
           labelStyle: TextStyle(
             fontSize: 14.sp,
             color: AppColors.textSecondary,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
           errorStyle: TextStyle(
             fontSize: 11.sp,
             color: AppColors.error,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
         ),
 
@@ -148,7 +148,7 @@ class AppTheme {
           contentTextStyle: TextStyle(
             fontSize: 14.sp,
             color: Colors.white,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
           behavior: SnackBarBehavior.floating,

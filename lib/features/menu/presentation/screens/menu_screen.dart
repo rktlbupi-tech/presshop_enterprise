@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_switch/flutter_switch.dart';
+import 'package:presshop_enterprise/features/map/core/map_constants.dart';
+import 'package:presshop_enterprise/features/mileage/presentation/screens/track_mileage_screen.dart';
+import 'package:presshop_enterprise/features/mileage/presentation/screens/claim_expenses_screen.dart';
+import 'package:presshop_enterprise/features/profile/presentation/screens/digital_id_screen.dart'
+    show DigitalIdScreen;
+import 'package:presshop_enterprise/features/submit_forms/presentation/screens/submit_forms_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
@@ -11,18 +18,19 @@ import '../../../attendance/presentation/screens/attendance_screen.dart';
 import '../../../documents/presentation/screens/documents_screen.dart';
 import '../../../earnings/presentation/screens/earnings_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
-import '../../../profile/presentation/screens/profile_screen.dart';
+import '../../../profile/presentation/screens/profile_screen.dart'
+    show ProfileScreen;
 import '../../../sos/presentation/widgets/sos_dialog.dart';
 import '../../../team_chat/presentation/screens/team_chat_screen.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
 import '../../../../features/settings/presentation/screens/faq_screen.dart';
 import '../../../../features/settings/presentation/screens/term_check_screen.dart';
-import '../../../../features/settings/presentation/screens/contact_us_screen.dart';
-import '../../../../features/settings/presentation/screens/change_password_screen.dart';
-import '../../../../features/settings/presentation/screens/account_delete_screen.dart';
+import '../../../duties/presentation/screens/duties_screen.dart';
+import '../../../payslip/presentation/screens/payslip_screen.dart';
 
 const _iconsPath = 'assets/icons/';
+const Color colorLightGrey = Color(0xFFF3F5F4);
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -43,8 +51,18 @@ class _MenuScreenState extends State<MenuScreen> {
   Future<void> _logout() async {
     final prefs = getIt<SharedPreferences>();
     await prefs.remove('auth_token');
+    await prefs.remove('user_id');
+    await prefs.remove('user_email');
+    await prefs.remove('user_first_name');
+    await prefs.remove('user_last_name');
+    await prefs.remove('user_phone');
+    await prefs.remove('user_avatar');
+    await prefs.remove('user_role');
+    await prefs.remove('company_name');
+    await prefs.remove('company_logo');
+    await prefs.remove('onboarding_seen');
     if (!mounted) return;
-    context.go(AppRoutes.login);
+    context.go(AppRoutes.onboarding);
   }
 
   void _logoutDialog() {
@@ -80,8 +98,11 @@ class _MenuScreenState extends State<MenuScreen> {
                     const Spacer(),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: Icon(Icons.close,
-                          color: Colors.black, size: size.width * 0.06),
+                      icon: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: size.width * 0.06,
+                      ),
                     ),
                   ],
                 ),
@@ -141,8 +162,10 @@ class _MenuScreenState extends State<MenuScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(size.width * 0.03)),
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                            ),
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
@@ -168,8 +191,10 @@ class _MenuScreenState extends State<MenuScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(size.width * 0.03)),
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                            ),
                           ),
                           onPressed: () => Navigator.pop(ctx),
                           child: Text(
@@ -198,7 +223,7 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.white,
       appBar: EmployeeAppBar(
         isOnline: _onDuty,
         onProfileTap: () => _open(const ProfileScreen()),
@@ -215,8 +240,8 @@ class _MenuScreenState extends State<MenuScreen> {
             child: Row(
               children: [
                 ImageIcon(
-                  const AssetImage('assets/icons/ic_location.png'),
-                  size: size.width * 0.06,
+                  const AssetImage('assets/markers/location1.webp'),
+                  size: size.width * numD06,
                   color: Colors.black,
                 ),
                 SizedBox(width: size.width * 0.03),
@@ -237,7 +262,8 @@ class _MenuScreenState extends State<MenuScreen> {
                               TextSpan(
                                 text: _onDuty ? 'Off Duty' : 'On Duty',
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -248,8 +274,7 @@ class _MenuScreenState extends State<MenuScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: 4, right: 2),
+                            padding: const EdgeInsets.only(bottom: 4, right: 2),
                             child: Text(
                               _onDuty ? 'Online' : 'Offline',
                               style: TextStyle(
@@ -260,13 +285,14 @@ class _MenuScreenState extends State<MenuScreen> {
                               ),
                             ),
                           ),
-                          Switch(
+                          FlutterSwitch(
+                            width: 55,
+                            height: 27,
+                            padding: 2,
                             value: _onDuty,
-                            activeThumbColor: AppColors.primary,
-                            activeTrackColor:
-                                AppColors.primary.withValues(alpha: 0.4),
-                            inactiveTrackColor: Colors.grey.shade300,
-                            onChanged: (v) => setState(() => _onDuty = v),
+                            inactiveColor: Colors.grey.shade400,
+                            activeColor: AppColors.primary,
+                            onToggle: (v) => setState(() => _onDuty = v),
                           ),
                         ],
                       ),
@@ -276,7 +302,7 @@ class _MenuScreenState extends State<MenuScreen> {
               ],
             ),
           ),
-          const Divider(thickness: 1.5, color: Color(0xFFF5F5F5)),
+          const Divider(thickness: 1.5, color: colorLightGrey),
           SizedBox(height: size.width * 0.01),
 
           // ── MY ACCOUNT ───────────────────────────────────────────────────
@@ -297,8 +323,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF2DC78A),
                 iconBgColor: const Color(0xFFE6F9F2),
                 iconSize: size.width * 0.069,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Digital ID', icon: Icons.badge_outlined)),
+                onTap: () => _open(DigitalIdScreen()),
               ),
               _MenuGroupItem(
                 name: 'Notifications',
@@ -338,9 +363,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 iconSize: size.width * 0.078,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Submit forms',
-                    icon: Icons.description_outlined)),
+                onTap: () => _open(const SubmitFormsScreen()),
               ),
               _MenuGroupItem(
                 name: 'Track mileage',
@@ -348,8 +371,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFFF59E0B),
                 iconBgColor: const Color(0xFFFFF8EC),
                 iconSize: size.width * 0.068,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Track mileage', icon: Icons.route_outlined)),
+                onTap: () => _open(TrackMileageScreen()),
               ),
               _MenuGroupItem(
                 name: 'Claim expenses',
@@ -357,9 +379,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF10B981),
                 iconBgColor: const Color(0xFFD1FAE5),
                 iconSize: size.width * 0.070,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Claim expenses',
-                    icon: Icons.receipt_long_outlined)),
+                onTap: () => _open(const ClaimExpensesScreen()),
               ),
             ],
           ),
@@ -377,8 +397,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF3B82F6),
                 iconBgColor: const Color(0xFFEFF6FF),
                 iconSize: size.width * 0.058,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Duties', icon: Icons.work_outline)),
+                onTap: () => _open(const DutiesScreen()),
               ),
               _MenuGroupItem(
                 name: 'Attendance log',
@@ -393,8 +412,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF10B981),
                 iconBgColor: const Color(0xFFD1FAE5),
                 iconSize: size.width * 0.076,
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Payslip', icon: Icons.savings_outlined)),
+                onTap: () => _open(const PayslipScreen()),
               ),
               _MenuGroupItem(
                 name: 'View earnings',
@@ -426,8 +444,12 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_alert2.png',
                 iconColor: const Color(0xFFF59E0B),
                 iconBgColor: const Color(0xFFFFF8EC),
-                onTap: () => _open(const ComingSoonScreen(
-                    title: 'Share alert', icon: Icons.campaign_outlined)),
+                onTap: () => _open(
+                  const ComingSoonScreen(
+                    title: 'Share alert',
+                    icon: Icons.campaign_outlined,
+                  ),
+                ),
               ),
               _MenuGroupItem(
                 name: 'SOS',
@@ -442,8 +464,12 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_chat.png',
                 iconColor: const Color(0xFF4A80F0),
                 iconBgColor: const Color(0xFFEEF2FF),
-                onTap: () => _open(const TeamChatScreen(
-                    roomId: 'general', roomName: 'Team Chat')),
+                onTap: () => _open(
+                  const TeamChatScreen(
+                    roomId: 'general',
+                    roomName: 'Team Chat',
+                  ),
+                ),
               ),
             ],
           ),
@@ -460,11 +486,13 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_faq.png',
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
-                onTap: () => _open(const FAQScreen(
-                  priceTipsSelected: false,
-                  type: 'faq',
-                  index: 0,
-                )),
+                onTap: () => _open(
+                  const FAQScreen(
+                    priceTipsSelected: false,
+                    type: 'faq',
+                    index: 0,
+                  ),
+                ),
               ),
               _MenuGroupItem(
                 name: 'Legal T&Cs',
@@ -480,32 +508,33 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 iconSize: size.width * 0.068,
-                onTap: () => _open(const TermCheckScreen(type: 'privacy_policy')),
+                onTap: () =>
+                    _open(const TermCheckScreen(type: 'privacy_policy')),
               ),
-              _MenuGroupItem(
-                name: 'Contact Us',
-                iconPath: '${_iconsPath}ic_contact_us.png',
-                iconColor: const Color(0xFF3B82F6),
-                iconBgColor: const Color(0xFFEFF6FF),
-                iconSize: size.width * 0.062,
-                onTap: () => _open(const ContactUsScreen()),
-              ),
-              _MenuGroupItem(
-                name: 'Change password',
-                iconPath: '${_iconsPath}ic_key.png',
-                iconColor: const Color(0xFFF59E0B),
-                iconBgColor: const Color(0xFFFEF3C7),
-                iconSize: size.width * 0.055,
-                onTap: () => _open(const ChangePasswordScreen()),
-              ),
-              _MenuGroupItem(
-                name: 'Account settings',
-                iconPath: '${_iconsPath}ic_alert.png',
-                iconColor: const Color(0xFF10B981),
-                iconBgColor: const Color(0xFFD1FAE5),
-                iconSize: size.width * 0.055,
-                onTap: () => _open(const AccountDeleteScreen()),
-              ),
+              // _MenuGroupItem(
+              //   name: 'Contact Us',
+              //   iconPath: '${_iconsPath}ic_contact_us.png',
+              //   iconColor: const Color(0xFF3B82F6),
+              //   iconBgColor: const Color(0xFFEFF6FF),
+              //   iconSize: size.width * 0.062,
+              //   onTap: () => _open(const ContactUsScreen()),
+              // ),
+              // _MenuGroupItem(
+              //   name: 'Change password',
+              //   iconPath: '${_iconsPath}ic_key.png',
+              //   iconColor: const Color(0xFFF59E0B),
+              //   iconBgColor: const Color(0xFFFEF3C7),
+              //   iconSize: size.width * 0.055,
+              //   onTap: () => _open(const ChangePasswordScreen()),
+              // ),
+              // _MenuGroupItem(
+              //   name: 'Account settings',
+              //   iconPath: '${_iconsPath}ic_alert.png',
+              //   iconColor: const Color(0xFF10B981),
+              //   iconBgColor: const Color(0xFFD1FAE5),
+              //   iconSize: size.width * 0.055,
+              //   onTap: () => _open(const AccountDeleteScreen()),
+              // ),
               _MenuGroupItem(
                 name: 'Logout',
                 iconPath: '${_iconsPath}ic_logout.png',
@@ -545,9 +574,7 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
         ),
         Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
           child: Column(
             children: items.asMap().entries.map((entry) {
               final i = entry.key;
@@ -559,8 +586,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     onTap: item.onTap,
                     borderRadius: BorderRadius.vertical(
                       top: i == 0 ? const Radius.circular(16) : Radius.zero,
-                      bottom:
-                          isLast ? const Radius.circular(16) : Radius.zero,
+                      bottom: isLast ? const Radius.circular(16) : Radius.zero,
                     ),
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -626,7 +652,7 @@ class _MenuScreenState extends State<MenuScreen> {
                     const Divider(
                       height: 1,
                       thickness: 2,
-                      color: Color(0xFFF5F5F5),
+                      color: colorLightGrey,
                     ),
                 ],
               );
@@ -638,19 +664,30 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Widget _buildIcon(_MenuGroupItem item, Size size) {
+    if (item.name == 'Notifications') {
+      return Container(
+        margin: const EdgeInsets.only(top: 5),
+        height: size.width * numD06,
+        width: size.width * numD06,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black, width: 1.2),
+          borderRadius: BorderRadius.circular(size.width * numD015),
+        ),
+      );
+    }
     final double iconSize = item.iconSize ?? (size.width * 0.06);
     if (item.iconPath.endsWith('.svg')) {
       return SvgPicture.asset(
         item.iconPath,
         width: iconSize,
         height: iconSize,
-        colorFilter: ColorFilter.mode(item.iconColor, BlendMode.srcIn),
+        colorFilter: const ColorFilter.mode(Colors.black, BlendMode.srcIn),
       );
     }
     return ImageIcon(
       AssetImage(item.iconPath),
       size: iconSize,
-      color: item.iconColor,
+      color: Colors.black,
     );
   }
 }

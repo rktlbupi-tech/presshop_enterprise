@@ -90,7 +90,7 @@ TextStyle commonTextStyle({
     fontSize: fontSize,
     color: color,
     fontWeight: fontWeight,
-    fontFamily: 'Poppins',
+    fontFamily: 'AirbnbCereal',
   );
 }
 

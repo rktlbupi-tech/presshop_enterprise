@@ -4,6 +4,14 @@ class SocketEvents {
   // ── Chat namespace (/chat-v2) ────────────────────────────
   static const String sendMessage = 'send-message';
   static const String receiveMessage = 'receive-message';
+
+  // ── Task chat (chat-v2 namespace) ────────────────────────
+  static const String conversationSubscribe = 'conversation.subscribe';
+  static const String conversationUnsubscribe = 'conversation.unsubscribe';
+  static const String taskMessageSend = 'message.send';
+  static const String taskMessageNew = 'message.new';
+  static const String typingStart = 'typing.start';
+  static const String typingStop = 'typing.stop';
   static const String messageRead = 'message-read';
   static const String userTyping = 'user-typing';
   static const String userStoppedTyping = 'user-stopped-typing';

@@ -94,7 +94,7 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen> {
             color: Colors.white,
             fontSize: size.width * numD045,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
         ),
         actions: [

@@ -12,8 +12,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConfig.apiBaseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -84,6 +84,7 @@ class ApiClient {
         final message =
             e.response?.data?['message'] as String? ?? 'Server error occurred.';
         if (statusCode == 401) return const UnauthorizedFailure();
+        if (statusCode == 404) return const NotFoundFailure();
         return ServerFailure(message);
       default:
         return const UnknownFailure();

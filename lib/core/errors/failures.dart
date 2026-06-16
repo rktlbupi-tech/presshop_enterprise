@@ -26,3 +26,8 @@ class ValidationFailure extends Failure {
 class UnknownFailure extends Failure {
   const UnknownFailure([super.message = 'Something went wrong. Please try again.']);
 }
+
+class NotFoundFailure extends Failure {
+  const NotFoundFailure([super.message = 'Resource not found.']);
+}
+

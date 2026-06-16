@@ -142,7 +142,7 @@ class _EmployeePublishContentScreenState
                     style: TextStyle(
                       fontSize: size.width * numD045,
                       fontWeight: FontWeight.w700,
-                      fontFamily: 'Poppins',
+                      fontFamily: 'AirbnbCereal',
                     ),
                   ),
                   SizedBox(width: size.width * numD015),
@@ -425,7 +425,7 @@ class _EmployeePublishContentScreenState
             color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: size.width * appBarHeadingFontSize,
-            fontFamily: 'Poppins',
+            fontFamily: 'AirbnbCereal',
           ),
         ),
       ),
@@ -494,7 +494,7 @@ class _EmployeePublishContentScreenState
                               style: TextStyle(
                                 fontSize: size.width * numD03,
                                 color: Colors.black,
-                                fontFamily: 'Poppins',
+                                fontFamily: 'AirbnbCereal',
                               ),
                               decoration: InputDecoration(
                                 hintText:
@@ -502,7 +502,7 @@ class _EmployeePublishContentScreenState
                                 hintStyle: TextStyle(
                                   color: colorHint,
                                   fontSize: size.width * numD03,
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'AirbnbCereal',
                                 ),
                                 disabledBorder: _outlineBorder(size),
                                 focusedBorder: _outlineBorder(size),
@@ -535,7 +535,7 @@ class _EmployeePublishContentScreenState
                           style: TextStyle(
                             fontSize: size.width * numD036,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
+                            fontFamily: 'AirbnbCereal',
                           ),
                         ),
                       ),
@@ -637,7 +637,7 @@ class _EmployeePublishContentScreenState
                                           '00:00',
                                           style: TextStyle(
                                             fontSize: size.width * numD03,
-                                            fontFamily: 'Poppins',
+                                            fontFamily: 'AirbnbCereal',
                                           ),
                                         ),
                                       ),
@@ -663,7 +663,7 @@ class _EmployeePublishContentScreenState
                     style: TextStyle(
                       fontSize: size.width * numD028,
                       color: Colors.black,
-                      fontFamily: 'Poppins',
+                      fontFamily: 'AirbnbCereal',
                     ),
                     decoration: _filledDecoration(
                       size,
@@ -685,7 +685,7 @@ class _EmployeePublishContentScreenState
                     style: TextStyle(
                       fontSize: size.width * numD028,
                       color: Colors.black,
-                      fontFamily: 'Poppins',
+                      fontFamily: 'AirbnbCereal',
                     ),
                     decoration: _filledDecoration(
                       size,
@@ -712,7 +712,7 @@ class _EmployeePublishContentScreenState
                             style: TextStyle(
                               fontSize: size.width * numD035,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
+                              fontFamily: 'AirbnbCereal',
                             ),
                           ),
                         ),
@@ -738,7 +738,7 @@ class _EmployeePublishContentScreenState
                                     _selectedTask?.title ?? 'Select a task',
                                     style: TextStyle(
                                       fontSize: size.width * numD031,
-                                      fontFamily: 'Poppins',
+                                      fontFamily: 'AirbnbCereal',
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -809,7 +809,7 @@ class _EmployeePublishContentScreenState
                                   color: Colors.white,
                                   fontSize: size.width * numD035,
                                   fontWeight: FontWeight.w700,
-                                  fontFamily: 'Poppins',
+                                  fontFamily: 'AirbnbCereal',
                                 ),
                               ),
                             ),
@@ -836,7 +836,7 @@ class _EmployeePublishContentScreenState
                                 color: Colors.white,
                                 fontSize: size.width * numD035,
                                 fontWeight: FontWeight.w700,
-                                fontFamily: 'Poppins',
+                                fontFamily: 'AirbnbCereal',
                               ),
                             ),
                           ),
@@ -858,7 +858,7 @@ class _EmployeePublishContentScreenState
                       fontSize: size.width * numD03,
                       color: Colors.black,
                       fontWeight: FontWeight.w400,
-                      fontFamily: 'Poppins',
+                      fontFamily: 'AirbnbCereal',
                     ),
                   ),
                 ),
@@ -948,7 +948,7 @@ class _EmployeePublishContentScreenState
               style: TextStyle(
                 fontSize: size.width * numD035,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
+                fontFamily: 'AirbnbCereal',
               ),
             ),
           ),
