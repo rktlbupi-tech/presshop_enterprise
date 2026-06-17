@@ -317,8 +317,7 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
                       ),
                   ],
                 ),
-              ),
-            ),
+              ),            ),
           ),
 
           SizedBox(height: 18.h),

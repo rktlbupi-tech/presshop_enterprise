@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/domain/entities/profile_entity.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../attendance/presentation/screens/uniform_verification_screen.dart';
 import '../../../attendance/presentation/screens/uniform_verification_screen.dart';
@@ -15,6 +16,7 @@ import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../../presentation/widgets/coming_soon_screen.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_icons.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -46,10 +48,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     final s = seconds % 60;
-    if (h > 0) {
-      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    }
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _activateDutyTimer(DateTime checkInTime) {
@@ -148,8 +147,10 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       _localCheckInTime ?? latestLog?.checkIn ?? DateTime.now(),
                     )
                   : '09:03 AM';
-              final siteStr = isCheckedIn ? 'Building A' : '--';
-              final mileageStr = isCheckedIn ? '18 miles' : '--';
+              final siteStr = profile?.currentLocation?.isNotEmpty == true
+                  ? profile!.currentLocation!
+                  : 'MG Road, Bengaluru';
+              final mileageStr = isCheckedIn ? '18 miles' : '0 miles';
 
               // ColoredBox + SafeArea instead of nested Scaffold — avoids
               // the layout assertion errors caused by double Scaffold nesting.
@@ -168,7 +169,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeader(fullName, initials, isCheckedIn),
+                        _buildHeader(profile, fullName, initials, isCheckedIn),
                         SizedBox(height: 16.h),
                         _buildDutyCard(
                           isCheckedIn,
@@ -206,154 +207,132 @@ class _HomeScreen3State extends State<HomeScreen3> {
 
   // ── Header ────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(String fullName, String initials, bool isOnline) {
+  Widget _buildHeader(
+    ProfileEntity? profile,
+    String fullName,
+    String initials,
+    bool isOnline,
+  ) {
+    final avatar = profile?.profileImage;
+    final companyName = profile?.companyName ?? 'PressHop Enterprise';
+    final companyLogo = profile?.companyLogo;
+
     return Row(
       children: [
         GestureDetector(
           onTap: () => _navigateToTab(4),
           child: Stack(
-            clipBehavior: Clip.none,
             children: [
               Container(
-                width: 40.w,
-                height: 40.w,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1F5BF6),
+                width: 42.w,
+                height: 42.w,
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    initials.isNotEmpty ? initials : 'RS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'AirbnbCereal',
-                    ),
+                  color: avatar != null && avatar.isNotEmpty
+                      ? Colors.grey.shade100
+                      : const Color(0xFF1F5BF6),
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                    width: 1.5,
                   ),
+                  image: avatar != null && avatar.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(avatar),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
+                child: avatar == null || avatar.isEmpty
+                    ? Center(
+                        child: Text(
+                          initials.isNotEmpty ? initials : 'RS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                      )
+                    : null,
               ),
               Positioned(
                 right: 0,
-                bottom: 0,
+                top: 0,
                 child: Container(
-                  width: 10.w,
-                  height: 10.w,
+                  width: 11.w,
+                  height: 11.w,
                   decoration: BoxDecoration(
                     color: isOnline
-                        ? const Color(0xFF127A45)
+                        ? AppColors.accent
                         : Colors.grey.shade400,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFF2F4F8),
-                      width: 2.w,
-                    ),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                 ),
               ),
             ],
           ),
         ),
-        SizedBox(width: 12.w),
+        SizedBox(width: 10.w),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _getGreeting(),
-                style: TextStyle(
-                  color: const Color(0xFF9AA2B1),
-                  fontSize: 9.5.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-              SizedBox(height: 2.h),
-              Text(
                 fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: const Color(0xFF0B0F1A),
+                  color: Colors.black87,
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'AirbnbCereal',
                 ),
               ),
-            ],
-          ),
-        ),
-        GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const EmployeeCameraScreen()),
-          ),
-          child: Container(
-            width: 38.w,
-            height: 38.w,
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: const Color(0xFFE5E8EE)),
-            ),
-            child: Icon(
-              LucideIcons.camera,
-              color: const Color(0xFF0B0F1A),
-              size: 18.sp,
-            ),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 38.w,
-                height: 38.w,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: const Color(0xFFE5E8EE)),
-                ),
-                child: Icon(
-                  LucideIcons.bell,
-                  color: const Color(0xFF0B0F1A),
-                  size: 18.sp,
-                ),
-              ),
-              Positioned(
-                right: -2.w,
-                top: -2.h,
-                child: Container(
-                  width: 14.w,
-                  height: 14.w,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC23B36),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFF2F4F8),
-                      width: 1.5.w,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8.sp,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'AirbnbCereal',
-                      ),
-                    ),
-                  ),
+              Text(
+                companyName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w400,
+                  fontFamily: 'AirbnbCereal',
                 ),
               ),
             ],
           ),
+        ),
+        Container(
+          width: 40.w,
+          height: 40.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+            image: companyLogo != null && companyLogo.isNotEmpty
+                ? DecorationImage(
+                    image: NetworkImage(companyLogo),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: companyLogo == null || companyLogo.isEmpty
+              ? Padding(
+                  padding: EdgeInsets.all(6.w),
+                  child: Image.asset(
+                    AppIcons.appLogo,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.business,
+                      color: AppColors.primary,
+                      size: 20.sp,
+                    ),
+                  ),
+                )
+              : null,
         ),
       ],
     );
@@ -389,41 +368,31 @@ class _HomeScreen3State extends State<HomeScreen3> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 4.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(11.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6.w,
-                        height: 6.w,
-                        decoration: BoxDecoration(
-                          color: isOnline
-                              ? const Color(0xFF7DF3A8)
-                              : Colors.grey.shade400,
-                          shape: BoxShape.circle,
-                        ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6.w,
+                      height: 6.w,
+                      decoration: BoxDecoration(
+                        color: isOnline
+                            ? const Color(0xFF7DF3A8)
+                            : Colors.grey.shade400,
+                        shape: BoxShape.circle,
                       ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        isOnline ? 'ON DUTY' : 'OFF DUTY',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                          fontFamily: 'AirbnbCereal',
-                        ),
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      isOnline ? 'ON DUTY' : 'OFF DUTY',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                        fontFamily: 'AirbnbCereal',
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -452,70 +421,75 @@ class _HomeScreen3State extends State<HomeScreen3> {
           // Row 2: gauge + detail rows
           Row(
             children: [
-              SizedBox(
-                width: 80.w,
-                height: 80.w,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 80.w,
-                      height: 80.w,
-                      child: CircularProgressIndicator(
-                        value: isOnline ? 0.78 : 0.0,
-                        strokeWidth: 5.w,
-                        backgroundColor: Colors.white.withValues(alpha: 0.22),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
+              StreamBuilder<int>(
+                stream: _dutyTimerStream,
+                builder: (context, _) {
+                  const shiftSeconds = 8 * 3600; // 8-hour shift
+                  final elapsed = _localCheckInTime == null
+                      ? 0
+                      : DateTime.now()
+                            .difference(_localCheckInTime!)
+                            .inSeconds
+                            .clamp(0, shiftSeconds);
+                  final remaining = shiftSeconds - elapsed;
+                  final progress = remaining / shiftSeconds;
+                  return SizedBox(
+                    width: 80.w,
+                    height: 80.w,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 80.w,
+                          height: 80.w,
+                          child: CircularProgressIndicator(
+                            value: isOnline ? progress : 1.0,
+                            strokeWidth: 5.w,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.22),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    Container(
-                      width: 66.w,
-                      height: 66.w,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1742C7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Only this StreamBuilder rebuilds every second.
-                          StreamBuilder<int>(
-                            stream: _dutyTimerStream,
-                            builder: (context, _) {
-                              final secs = _localCheckInTime == null
-                                  ? 0
-                                  : DateTime.now()
-                                        .difference(_localCheckInTime!)
-                                        .inSeconds
-                                        .clamp(0, 359999);
-                              return Text(
-                                _formatDuration(secs),
+                        Container(
+                          width: 66.w,
+                          height: 66.w,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1742C7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                isOnline
+                                    ? _formatDuration(remaining)
+                                    : '08:00:00',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w800,
                                   fontFamily: 'AirbnbCereal',
                                 ),
-                              );
-                            },
+                              ),
+                              Text(
+                                isOnline ? 'ON DUTY' : 'OFF DUTY',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 7.sp,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                  fontFamily: 'AirbnbCereal',
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            isOnline ? 'ON DUTY' : 'OFF DUTY',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 7.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               SizedBox(width: 20.w),
               Expanded(
@@ -593,6 +567,8 @@ class _HomeScreen3State extends State<HomeScreen3> {
               ),
             ),
           ),
+          // ── RECENT SESSIONS (hidden) ──────────────────────────────────
+          /*
           SizedBox(height: 14.h),
           Container(height: 1, color: Colors.white.withValues(alpha: 0.14)),
           SizedBox(height: 12.h),
@@ -630,6 +606,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
           _buildDutySessionRow('Mon, Jun 16', '9:03 AM', '6:31 PM', '9h 28m'),
           SizedBox(height: 7.h),
           _buildDutySessionRow('Sat, Jun 14', '8:57 AM', '6:04 PM', '9h 07m'),
+          */
         ],
       ),
     );
@@ -753,13 +730,8 @@ class _HomeScreen3State extends State<HomeScreen3> {
           ),
           SizedBox(height: 14.h),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                LucideIcons.file_up,
-                color: const Color(0xFF1F5BF6),
-                size: 14.sp,
-              ),
-              SizedBox(width: 6.w),
               Text(
                 'Evidence submitted',
                 style: TextStyle(
@@ -768,15 +740,33 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   fontFamily: 'AirbnbCereal',
                 ),
               ),
-              const Spacer(),
               Text(
-                '14 items',
+                'View 14 items',
                 style: TextStyle(
                   color: const Color(0xFF0B0F1A),
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w800,
                   fontFamily: 'AirbnbCereal',
                 ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              _buildEvidenceThumb(
+                'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=100&h=100&fit=crop',
+                'Site Visit',
+              ),
+              SizedBox(width: 14.w),
+              _buildEvidenceThumb(
+                'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=100&h=100&fit=crop',
+                'Road Work',
+              ),
+              SizedBox(width: 14.w),
+              _buildEvidenceThumb(
+                'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=100&h=100&fit=crop',
+                'Event Cover',
               ),
             ],
           ),
@@ -1420,7 +1410,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     borderRadius: BorderRadius.circular(11.r),
                     border: Border.all(color: const Color(0xFFD5E2FD)),
                   ),
-                  child: Icon(LucideIcons.briefcase, color: const Color(0xFF1F5BF6), size: 16.sp),
+                  child: Icon(
+                    LucideIcons.briefcase,
+                    color: const Color(0xFF1F5BF6),
+                    size: 16.sp,
+                  ),
                 ),
                 SizedBox(width: 10.w),
                 Column(
@@ -1446,7 +1440,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   ],
                 ),
                 const Spacer(),
-                Icon(Icons.chevron_right, color: const Color(0xFF9AA2B1), size: 16.sp),
+                Icon(
+                  Icons.chevron_right,
+                  color: const Color(0xFF9AA2B1),
+                  size: 16.sp,
+                ),
               ],
             ),
           ),
@@ -1465,7 +1463,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
           const Divider(height: 1, color: Color(0xFFEFF1F5)),
           SizedBox(height: 10.h),
           Text(
-            'RECENT',
+            'HISTORY',
             style: TextStyle(
               color: const Color(0xFF9AA2B1),
               fontSize: 9.sp,
@@ -1475,7 +1473,13 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
           ),
           SizedBox(height: 10.h),
-          _buildDutyLogRow('Mon, Jun 16', '9:03 AM', '6:31 PM', '9h 28m', isToday: true),
+          _buildDutyLogRow(
+            'Mon, Jun 16',
+            '9:03 AM',
+            '6:31 PM',
+            '9h 28m',
+            isToday: true,
+          ),
           SizedBox(height: 8.h),
           _buildDutyLogRow('Sat, Jun 14', '8:57 AM', '6:04 PM', '9h 07m'),
           SizedBox(height: 8.h),
@@ -1568,7 +1572,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
           child: Text(
             duration,
             style: TextStyle(
-              color: isToday ? const Color(0xFF127A45) : const Color(0xFF5A6373),
+              color: isToday
+                  ? const Color(0xFF127A45)
+                  : const Color(0xFF5A6373),
               fontSize: 10.sp,
               fontWeight: FontWeight.w700,
               fontFamily: 'AirbnbCereal',
@@ -1910,7 +1916,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Recent Earnings',
+                      'View Earnings ',
                       style: TextStyle(
                         color: const Color(0xFF0B0F1A),
                         fontSize: 13.5.sp,
@@ -1919,7 +1925,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      'Last 3 payouts · June',
+                      'Last 3 transctions · June',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,
@@ -2034,7 +2040,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     borderRadius: BorderRadius.circular(11.r),
                     border: Border.all(color: const Color(0xFFD5E2FD)),
                   ),
-                  child: Icon(LucideIcons.car, color: const Color(0xFF1F5BF6), size: 16.sp),
+                  child: Icon(
+                    LucideIcons.car,
+                    color: const Color(0xFF1F5BF6),
+                    size: 16.sp,
+                  ),
                 ),
                 SizedBox(width: 10.w),
                 Column(
@@ -2060,7 +2070,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   ],
                 ),
                 const Spacer(),
-                Icon(Icons.chevron_right, color: const Color(0xFF9AA2B1), size: 16.sp),
+                Icon(
+                  Icons.chevron_right,
+                  color: const Color(0xFF9AA2B1),
+                  size: 16.sp,
+                ),
               ],
             ),
           ),
@@ -2096,14 +2110,21 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     fit: BoxFit.cover,
                     errorBuilder: (ctx, err, st) => Container(
                       color: const Color(0xFFEAF1FE),
-                      child: Icon(LucideIcons.car, color: const Color(0xFF1F5BF6), size: 38.sp),
+                      child: Icon(
+                        LucideIcons.car,
+                        color: const Color(0xFF1F5BF6),
+                        size: 38.sp,
+                      ),
                     ),
                   ),
                 ),
                 // Vehicle details
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 10.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -2121,7 +2142,10 @@ class _HomeScreen3State extends State<HomeScreen3> {
                               ),
                             ),
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 6.w,
+                                vertical: 2.h,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEAF5EE),
                                 borderRadius: BorderRadius.circular(5.r),
@@ -2141,7 +2165,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                         SizedBox(height: 5.h),
                         Row(
                           children: [
-                            Icon(LucideIcons.hash, color: const Color(0xFF9AA2B1), size: 10.sp),
+                            Icon(
+                              LucideIcons.hash,
+                              color: const Color(0xFF9AA2B1),
+                              size: 10.sp,
+                            ),
                             SizedBox(width: 3.w),
                             Text(
                               'MH 02 AB 1234',
@@ -2203,7 +2231,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                           color: const Color(0xFFEAF1FE),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
-                        child: Icon(LucideIcons.map_pin, color: const Color(0xFF1F5BF6), size: 13.sp),
+                        child: Icon(
+                          LucideIcons.map_pin,
+                          color: const Color(0xFF1F5BF6),
+                          size: 13.sp,
+                        ),
                       ),
                       SizedBox(width: 10.w),
                       Expanded(
@@ -2265,6 +2297,47 @@ class _HomeScreen3State extends State<HomeScreen3> {
           }),
         ],
       ),
+    );
+  }
+
+  Widget _buildEvidenceThumb(String imageUrl, String title) {
+    return Column(
+      children: [
+        Container(
+          width: 52.w,
+          height: 52.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFE5E8EE), width: 1.5),
+          ),
+          child: ClipOval(
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, st) => Container(
+                color: const Color(0xFFEAF1FE),
+                child: Icon(
+                  LucideIcons.image,
+                  color: const Color(0xFF1F5BF6),
+                  size: 22.sp,
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 5.h),
+        Text(
+          title,
+          style: TextStyle(
+            color: const Color(0xFF0B0F1A),
+            fontSize: 9.5.sp,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'AirbnbCereal',
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

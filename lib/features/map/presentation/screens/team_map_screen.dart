@@ -1326,39 +1326,48 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                     bottom: Radius.circular(16),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: _buildActionBtn(
-                        icon: LucideIcons.message_circle,
-                        label: "Chat",
-                        color: colorThemePink,
-                        onTap: () {
-                          debugPrint(
-                            "CHAT BUTTON CLICKED - Message/User ID: $id",
-                          );
-                          // _customInfoWindowController.hideInfoWindow?.call();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TeamChatListPage(),
-                            ),
-                          );
-                        },
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionBtn(
+                            icon: LucideIcons.message_circle,
+                            label: "Chat",
+                            color: colorThemePink,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TeamChatListPage(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildActionBtn(
+                            icon: LucideIcons.phone,
+                            label: "Call",
+                            color: const Color(0xFF3178D1),
+                            onTap: () {
+                              debugPrint(
+                                "CALL BUTTON CLICKED - First Phone Number: $phone",
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildActionBtn(
-                        icon: LucideIcons.phone,
-                        label: "Call",
-                        color: const Color(0xFF3178D1),
-                        onTap: () {
-                          debugPrint(
-                            "CALL BUTTON CLICKED - First Phone Number: $phone",
-                          );
-                        },
-                      ),
+                    const SizedBox(height: 8),
+                    _buildActionBtn(
+                      icon: Icons.person_off_outlined,
+                      label: "Report unavailable",
+                      color: const Color(0xFFC23B36),
+                      onTap: () => _reportUnavailable(id, name),
                     ),
                   ],
                 ),
@@ -1371,6 +1380,50 @@ class _TeamMapScreenState extends State<TeamMapScreen>
           painter: _TrianglePainter(color: Colors.grey[50]!),
         ),
       ],
+    );
+  }
+
+  void _reportUnavailable(String id, String name) {
+    _customInfoWindowController.hideInfoWindow?.call();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Report unavailable',
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontFamily: 'AirbnbCereal'),
+        ),
+        content: Text(
+          'Report $name as not available right now? Your organiser will be notified.',
+          style: const TextStyle(fontFamily: 'AirbnbCereal'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC23B36),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              // TODO: wire to backend report endpoint when available.
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Reported $name as unavailable'),
+                    backgroundColor: const Color(0xFFC23B36),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Report'),
+          ),
+        ],
+      ),
     );
   }
 

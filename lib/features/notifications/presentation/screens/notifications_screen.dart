@@ -45,14 +45,15 @@ class _NotificationsViewState extends State<_NotificationsView> {
               borderRadius: BorderRadius.circular(6.r),
             ),
           ),
-          if (unreadCount > 0)
-            Positioned(
+          Positioned(
               right: -5.w,
               top: -5.h,
               child: Container(
                 padding: EdgeInsets.all(4.w),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: unreadCount > 0
+                      ? AppColors.primary
+                      : Colors.grey.shade400,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5.w),
                 ),

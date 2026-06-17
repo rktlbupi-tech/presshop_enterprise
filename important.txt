@@ -8,7 +8,7 @@
 
 Meeting of 16 June 
 
-1. Guard can report that attandance person is not availble 
+1.Other User can report that attandance person is not availble 
 2. dutied record logs histor of prev 1 year filter feature 
 
 
@@ -27,3 +27,26 @@ Task -> Tasks
 
 
 Open Camera - Cta Button 
+
+
+
+
+///////////
+
+14 items -> view 14 items 
+
+Recent -> History 
+
+
+Evidence submited 
+
+view 14 items 
+
+
+------------------------
+
+History 
+
+
+Recent Earnings -> View Earnings 
+Last 3 transctions
