@@ -31,7 +31,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
       'startLoc': 'North Circular Rd, London, UK',
       'endTime': '08:47 AM',
       'endLoc': 'Holloway Rd, London, UK',
-      'distance': '24.6 km',
+      'distance': '24.6 miles',
       'duration': '35m',
       'coords': [
         const LatLng(51.5612, -0.1654),
@@ -44,7 +44,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
       'startLoc': 'Holloway Rd, London, UK',
       'endTime': '09:42 AM',
       'endLoc': 'Kings Cross Rd, London, UK',
-      'distance': '18.3 km',
+      'distance': '18.3 miles',
       'duration': '37m',
       'coords': [
         const LatLng(51.5562, -0.1189),
@@ -57,7 +57,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
       'startLoc': 'Kings Cross Rd, London, UK',
       'endTime': '10:28 AM',
       'endLoc': 'Camden High St, London, UK',
-      'distance': '16.7 km',
+      'distance': '16.7 miles',
       'duration': '35m',
       'coords': [
         const LatLng(51.5306, -0.1162),
@@ -70,7 +70,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
       'startLoc': 'Camden High St, London, UK',
       'endTime': '10:59 AM',
       'endLoc': 'Victoria Street, London, UK',
-      'distance': '26.0 km',
+      'distance': '26.0 miles',
       'duration': '19m',
       'coords': [
         const LatLng(51.5390, -0.1425),
@@ -232,8 +232,8 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildStatItem("Total Distance", "85.6 km",
-                  "▲ 12.4 km vs yesterday", LucideIcons.milestone, Colors.blue),
+              _buildStatItem("Total Distance", "85.6 miles",
+                  "▲ 12.4 miles vs yesterday", LucideIcons.milestone, Colors.blue),
               const SizedBox(width: 16),
               _buildStatItem("Total Trips", "4", "▲ 1 vs yesterday",
                   LucideIcons.gauge, Colors.green),

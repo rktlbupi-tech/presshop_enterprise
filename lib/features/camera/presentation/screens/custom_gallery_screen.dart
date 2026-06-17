@@ -6,6 +6,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/camera_data.dart';
 import '../../utils/camera_constants.dart';
+import 'employee_preview_screen.dart';
 
 class CustomGalleryScreen extends StatefulWidget {
   final bool picAgain;

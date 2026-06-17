@@ -2,7 +2,7 @@ class AppStrings {
   AppStrings._();
 
   // ── App ──────────────────────────────────────────────────
-  static const String appName = 'Presshop Enterprise';
+  static const String appName = 'PressHop Enterprise';
 
   // ── Onboarding ───────────────────────────────────────────
   static const String onboarding1Title = 'Manage Your Team';
@@ -35,7 +35,7 @@ class AppStrings {
   static const String welcomeBack = 'Welcome Back';
   static const String loginSubtitle = 'Sign in to your account';
   static const String createAccount = 'Create Account';
-  static const String signupSubtitle = 'Join Presshop Enterprise';
+  static const String signupSubtitle = 'Join PressHop Enterprise';
 
   // Employee login (carried over from the old app)
   static const String enterpriseLoginTitle =

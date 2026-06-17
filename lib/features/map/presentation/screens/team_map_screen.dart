@@ -2137,7 +2137,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                       Positioned(
                         left: 0,
                         right: 0,
-                        bottom: bottomOffset + 50.h,
+                        bottom: 12.h,
                         child: IgnorePointer(
                           ignoring: context
                               .watch<MapCubit>()

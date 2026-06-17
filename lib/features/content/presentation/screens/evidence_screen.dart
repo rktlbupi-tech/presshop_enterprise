@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:dots_indicator/dots_indicator.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
@@ -496,41 +497,53 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             SizedBox(height: 8.h),
             const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0)),
             Expanded(
-              child: _feedList.isEmpty && _isLoading
+              child: _isLoading && _feedList.isEmpty
                   ? const Center(child: CircularProgressIndicator())
-                  : _feedList.isNotEmpty
-                      ? RefreshIndicator(
-                          onRefresh: () => _loadFeed(refresh: true),
-                          child: GridView.builder(
-                            controller: _scrollController,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 16.h,
-                            ),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.72,
-                              mainAxisSpacing: 16.w,
-                              crossAxisSpacing: 16.w,
-                            ),
-                            itemCount: _feedList.length,
-                            itemBuilder: (context, index) {
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => _EvidenceDetailsScreen(
-                                        item: _feedList[index],
+                  : RefreshIndicator(
+                      onRefresh: () => _loadFeed(refresh: true),
+                      child: _feedList.isNotEmpty
+                          ? GridView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              controller: _scrollController,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 16.w,
+                                vertical: 16.h,
+                              ),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 0.72,
+                                mainAxisSpacing: 16.w,
+                                crossAxisSpacing: 16.w,
+                              ),
+                              itemCount: _feedList.length,
+                              itemBuilder: (context, index) {
+                                return InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => _EvidenceDetailsScreen(
+                                          item: _feedList[index],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                                child: _feedCard(_feedList[index]),
-                              );
-                            },
-                          ),
-                        )
-                      : const Center(child: Text("No Content Found")),
+                                    );
+                                  },
+                                  child: _feedCard(_feedList[index]),
+                                );
+                              },
+                            )
+                          : SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics(),
+                              ),
+                              child: Container(
+                                height: 400.h,
+                                alignment: Alignment.center,
+                                child: const Text("No Content Found"),
+                              ),
+                            ),
+                    ),
             ),
             if (_isLoading && _feedList.isNotEmpty)
               Padding(
@@ -665,22 +678,25 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 
   Widget _feedThumbnail(String imageUrl, List<EnterpriseFeedContent> contentList) {
+    final firstContent =
+        contentList.isNotEmpty ? contentList.first : null;
+    final showImage = _isDisplayableImage(firstContent);
+    final placeholderType = firstContent?.evidenceType ?? "image";
     return ClipRRect(
       borderRadius: BorderRadius.circular(16.r),
       child: Stack(
         children: [
-          imageUrl.isNotEmpty
+          showImage
               ? Image.network(
                   imageUrl,
                   height: 110.w,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _imagePlaceholder(
-                      contentList.isNotEmpty ? contentList.first.evidenceType : "image"),
+                  errorBuilder: (_, __, ___) =>
+                      _imagePlaceholder(placeholderType),
                 )
-              : _imagePlaceholder(
-                  contentList.isNotEmpty ? contentList.first.evidenceType : "image"),
-          if (imageUrl.isNotEmpty)
+              : _imagePlaceholder(placeholderType),
+          if (showImage)
             Image.asset(
               "assets/images/watermark1.png",
               height: 110.w,
@@ -721,7 +737,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       color: Colors.grey[300],
       child: Center(
         child: Icon(
-          type.toLowerCase() == 'video' ? Icons.videocam_outlined : Icons.image_outlined,
+          _evidenceTypeIcon(type),
           size: 40.w,
           color: Colors.grey,
         ),
@@ -748,6 +764,51 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 }
 
+/// Returns true only when [content]'s previewUrl points to a real, decodable
+/// image. Audio / video / document evidence (e.g. `.m4a`, `.mp4`, `.pdf`) must
+/// never be fed into `Image.network` — doing so throws "Invalid image data".
+bool _isDisplayableImage(EnterpriseFeedContent? content) {
+  if (content == null) return false;
+  final url = content.previewUrl.toLowerCase();
+  if (url.isEmpty) return false;
+
+  final type = content.evidenceType.toLowerCase();
+  if (type == 'video' ||
+      type == 'audio' ||
+      type == 'doc' ||
+      type == 'document' ||
+      type == 'pdf') {
+    return false;
+  }
+
+  // Guard against a mislabeled type by also rejecting known non-image
+  // extensions (handles URLs with or without query strings).
+  const nonImageExtensions = [
+    '.m4a', '.mp3', '.wav', '.aac', '.ogg', '.flac',
+    '.mp4', '.mov', '.webm', '.m4v', '.avi', '.mkv',
+    '.pdf', '.doc', '.docx',
+  ];
+  if (nonImageExtensions.any((ext) => url.contains(ext))) return false;
+
+  return true;
+}
+
+/// Icon used for non-image evidence placeholders.
+IconData _evidenceTypeIcon(String type) {
+  switch (type.toLowerCase()) {
+    case 'video':
+      return Icons.videocam_outlined;
+    case 'audio':
+      return Icons.audiotrack_outlined;
+    case 'doc':
+    case 'document':
+    case 'pdf':
+      return Icons.description_outlined;
+    default:
+      return Icons.image_outlined;
+  }
+}
+
 class _FeedFilterModel {
   String name;
   String icon;
@@ -764,15 +825,21 @@ class _FeedFilterModel {
   });
 }
 
-class _EvidenceDetailsScreen extends StatelessWidget {
+class _EvidenceDetailsScreen extends StatefulWidget {
   final EnterpriseFeedItem item;
 
   const _EvidenceDetailsScreen({required this.item});
 
   @override
+  State<_EvidenceDetailsScreen> createState() => _EvidenceDetailsScreenState();
+}
+
+class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
+  int _currentMediaIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final firstContent = item.content.isNotEmpty ? item.content.first : null;
+    final firstContent = widget.item.content.isNotEmpty ? widget.item.content.first : null;
     final location = (firstContent?.captureAddressLine1 != null &&
             firstContent!.captureAddressLine1.isNotEmpty)
         ? firstContent.captureAddressLine1
@@ -780,9 +847,9 @@ class _EvidenceDetailsScreen extends StatelessWidget {
     final capturedAt = (firstContent?.capturedAt != null &&
             firstContent!.capturedAt.isNotEmpty)
         ? firstContent.capturedAt
-        : (firstContent?.createdAt ?? item.task.createdAt);
-    final description = item.task.description.isNotEmpty
-        ? item.task.description
+        : (firstContent?.createdAt ?? widget.item.task.createdAt);
+    final description = widget.item.task.description.isNotEmpty
+        ? widget.item.task.description
         : (firstContent?.description ?? '');
 
     return Scaffold(
@@ -817,7 +884,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.task.title,
+                      widget.item.task.title,
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -938,7 +1005,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                         );
                         try {
                           final response = await getIt<ApiClient>().get(
-                            'enterprise/tasks/${item.task.id}',
+                            'enterprise/tasks/${widget.item.task.id}',
                           );
                           if (context.mounted) {
                             Navigator.pop(context); // dismiss loading
@@ -1007,7 +1074,7 @@ class _EvidenceDetailsScreen extends StatelessWidget {
   }
 
   Widget _imageSlideshow() {
-    if (item.content.isEmpty) {
+    if (widget.item.content.isEmpty) {
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Container(
@@ -1027,17 +1094,23 @@ class _EvidenceDetailsScreen extends StatelessWidget {
         SizedBox(
           height: 200.w,
           child: PageView.builder(
-            itemCount: item.content.length,
+            itemCount: widget.item.content.length,
+            onPageChanged: (value) {
+              setState(() {
+                _currentMediaIndex = value;
+              });
+            },
             itemBuilder: (_, i) {
-              final contentItem = item.content[i];
+              final contentItem = widget.item.content[i];
               final imageUrl = contentItem.previewUrl;
+              final showImage = _isDisplayableImage(contentItem);
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16.r),
                   child: Stack(
                     children: [
-                      imageUrl.isNotEmpty
+                      showImage
                           ? Image.network(
                               imageUrl,
                               width: double.infinity,
@@ -1046,8 +1119,19 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                               errorBuilder: (_, __, ___) =>
                                   Container(color: Colors.grey[300]),
                             )
-                          : Container(color: Colors.grey[300]),
-                      if (imageUrl.isNotEmpty)
+                          : Container(
+                              width: double.infinity,
+                              height: 200.w,
+                              color: Colors.grey[300],
+                              child: Center(
+                                child: Icon(
+                                  _evidenceTypeIcon(contentItem.evidenceType),
+                                  size: 56.w,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                      if (showImage)
                         Image.asset(
                           "assets/images/watermark1.png",
                           width: double.infinity,
@@ -1056,35 +1140,8 @@ class _EvidenceDetailsScreen extends StatelessWidget {
                       Positioned(
                         right: 8.w,
                         top: 8.w,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 4.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                contentItem.evidenceType.toLowerCase() == 'video'
-                                    ? Icons.videocam
-                                    : Icons.image,
-                                color: Colors.white,
-                                size: 14.sp,
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                "${i + 1}/${item.content.length}",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                            ],
-                          ),
+                        child: Column(
+                          children: _getMediaCountList(),
                         ),
                       ),
                     ],
@@ -1094,7 +1151,85 @@ class _EvidenceDetailsScreen extends StatelessWidget {
             },
           ),
         ),
+        if (widget.item.content.length > 1) ...[
+          SizedBox(height: 12.h),
+          DotsIndicator(
+            dotsCount: widget.item.content.length,
+            position: _currentMediaIndex,
+            decorator: const DotsDecorator(
+              color: Colors.grey, // Inactive color
+              activeColor: Colors.redAccent,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  List<Widget> _getMediaCountList() {
+    final contents = widget.item.content;
+    final imageCount = contents.where((c) => c.evidenceType.toLowerCase() == 'image').length;
+    final videoCount = contents.where((c) => c.evidenceType.toLowerCase() == 'video').length;
+    final audioCount = contents.where((c) => c.evidenceType.toLowerCase() == 'audio').length;
+    final docCount = contents.where((c) {
+      final t = c.evidenceType.toLowerCase();
+      return t == 'doc' || t == 'document' || t == 'pdf';
+    }).length;
+
+    final List<Widget> list = [];
+    if (imageCount > 0) {
+      list.add(_buildCountCard('image', imageCount));
+    }
+    if (videoCount > 0) {
+      if (list.isNotEmpty) list.add(SizedBox(height: 6.h));
+      list.add(_buildCountCard('video', videoCount));
+    }
+    if (audioCount > 0) {
+      if (list.isNotEmpty) list.add(SizedBox(height: 6.h));
+      list.add(_buildCountCard('audio', audioCount));
+    }
+    if (docCount > 0) {
+      if (list.isNotEmpty) list.add(SizedBox(height: 6.h));
+      list.add(_buildCountCard('document', docCount));
+    }
+    return list;
+  }
+
+  Widget _buildCountCard(String type, int count) {
+    return Container(
+      width: 44.w,
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3F4E4C).withOpacity(0.8),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            "$count",
+            style: TextStyle(
+              fontSize: 11.sp,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(width: 3.w),
+          Image.asset(
+            type == 'image'
+                ? 'assets/icons/ic_camera_publish.png'
+                : type == 'video'
+                    ? 'assets/icons/ic_v_cam.png'
+                    : type == 'audio'
+                        ? 'assets/icons/new_audio.png'
+                        : 'assets/icons/doc_icon.png',
+            color: Colors.white,
+            height: type == 'image' ? 10.w : 14.w,
+            width: type == 'image' ? 10.w : 14.w,
+          ),
+        ],
+      ),
     );
   }
 

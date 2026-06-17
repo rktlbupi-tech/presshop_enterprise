@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../presentation/widgets/app_app_bar.dart';
 import '../../data/datasources/settings_remote_datasource.dart';
 
 // ── Models ────────────────────────────────────────────────────────
@@ -160,14 +161,10 @@ class FAQScreenState extends State<FAQScreen> {
     final Color themeColor = AppColors.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: Text(
-          widget.priceTipsSelected ? "Price Tips" : "FAQs",
-          style: TextStyle(color: Colors.black, fontSize: size.width * 0.05, fontWeight: FontWeight.bold),
-        ),
+      appBar: AppAppBar(
+        title: widget.priceTipsSelected ? "Price Tips" : "FAQs",
+        showBack: true,
+        showLogo: false,
       ),
       body: SafeArea(
         child: isApiSuccess

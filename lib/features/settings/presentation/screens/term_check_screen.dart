@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
-import 'package:presshop_enterprise/core/constants/app_text_styles.dart';
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import '../../../../config/di/injection.dart';
 
 import '../../data/datasources/settings_remote_datasource.dart';
@@ -135,14 +135,10 @@ class _TermCheckScreenState extends State<TermCheckScreen> {
           ),
         ),
       ),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: Text(
-          widget.type == "privacy_policy" ? "Privacy policy" : "Legal T&Cs",
-          style: AppTextStyles.h2.copyWith(color: Colors.black),
-        ),
+      appBar: AppAppBar(
+        title: widget.type == "privacy_policy" ? "Privacy policy" : "Legal T&Cs",
+        showBack: true,
+        showLogo: false,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

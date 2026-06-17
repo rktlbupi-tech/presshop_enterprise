@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:presshop_enterprise/features/dashboard/presentation/screens/home_screen_v2.dart';
+import 'package:presshop_enterprise/features/dashboard/presentation/screens/home_screen_v3.dart';
 import 'package:presshop_enterprise/features/profile/presentation/bloc/profile_bloc.dart';
+import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
@@ -12,11 +13,7 @@ import '../../../map/presentation/bloc/map_cubit.dart';
 import '../../../map/presentation/bloc/employee_map_cubit.dart';
 import '../../../menu/presentation/screens/menu_screen.dart';
 import '../../../../config/di/injection.dart';
-import 'home_screen.dart';
 
-/// Employee dashboard shell — 1:1 with the old app's bottom navigation:
-/// Evidence · Task · Home (center) · Team · Menu, blue selected,
-/// Home as the default landing tab.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -25,10 +22,43 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class DashboardScreenState extends State<DashboardScreen> {
-  // Defaults to the Home tab (index 2).
   int _currentIndex = 2;
 
   static const String _iconsPath = 'assets/icons/';
+
+  late final AttendanceBloc _attendanceBloc;
+  late final ProfileBloc _profileBloc;
+  late final MapCubit _mapCubit;
+  late final EmployeeMapCubit _employeeMapCubit;
+
+  // Invariant screens created once — never recreated on tab changes.
+  late final Widget _evidenceScreen;
+  late final Widget _taskScreen;
+  late final Widget _homeScreen;
+  late final Widget _menuScreen;
+
+  @override
+  void initState() {
+    super.initState();
+    _attendanceBloc = getIt<AttendanceBloc>()..add(const FetchAttendanceLog());
+    _profileBloc = getIt<ProfileBloc>()..add(const FetchProfile());
+    _mapCubit = MapCubit();
+    _employeeMapCubit = EmployeeMapCubit();
+    _evidenceScreen = const EvidenceScreen(hideLeading: true);
+    _taskScreen = const TaskScheduleScreen(hideLeading: true);
+    _homeScreen = BlocProvider.value(
+      value: _attendanceBloc,
+      child: const HomeScreen3(),
+    );
+    _menuScreen = const MenuScreen();
+  }
+
+  @override
+  void dispose() {
+    _mapCubit.close();
+    _employeeMapCubit.close();
+    super.dispose();
+  }
 
   void changeTab(int index) {
     setState(() {
@@ -39,28 +69,28 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final iconSize = 24.sp;
+    // Only TeamMapScreen needs isScreenActive updated dynamically.
     final screens = [
-      const EvidenceScreen(hideLeading: true),
-      const TaskScheduleScreen(hideLeading: true),
-      const HomeScreen2(),
+      _evidenceScreen,
+      _taskScreen,
+      _homeScreen,
       MultiBlocProvider(
         key: const ValueKey('team_map_bloc_provider'),
         providers: [
-          BlocProvider(create: (_) => MapCubit()),
-          BlocProvider(create: (_) => EmployeeMapCubit()),
+          BlocProvider.value(value: _mapCubit),
+          BlocProvider.value(value: _employeeMapCubit),
         ],
         child: TeamMapScreen(
           key: const ValueKey('team_map_screen'),
           isScreenActive: _currentIndex == 3,
         ),
       ),
-      const MenuScreen(),
+      _menuScreen,
     ];
 
-    return BlocProvider(
-      create: (_) => getIt<ProfileBloc>()..add(const FetchProfile()),
+    return BlocProvider.value(
+      value: _profileBloc,
       child: Scaffold(
-        extendBody: true,
         backgroundColor: AppColors.surface,
         body: IndexedStack(index: _currentIndex, children: screens),
         bottomNavigationBar: BottomNavigationBar(

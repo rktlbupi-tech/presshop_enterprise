@@ -233,12 +233,21 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
     try {
       await cameraController!.setFlashMode(FlashMode.off);
       final picture = await cameraController!.takePicture();
-      final bytes = await File(picture.path).readAsBytes();
-      await ImageGallerySaverPlus.saveImage(
-        Uint8List.fromList(bytes),
-        name: 'captured_image_${DateTime.now().millisecondsSinceEpoch}',
-      );
       cameraController!.pausePreview();
+      // Saving to the device gallery must never block the move to the preview
+      // screen. On iOS this throws/hangs when the photo-add permission is
+      // missing, so it is isolated with its own guard + timeout.
+      try {
+        final bytes = await File(picture.path).readAsBytes();
+        await Future.value(
+          ImageGallerySaverPlus.saveImage(
+            Uint8List.fromList(bytes),
+            name: 'captured_image_${DateTime.now().millisecondsSinceEpoch}',
+          ),
+        ).timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('Gallery save failed (continuing to preview): $e');
+      }
       camListData.add(CameraData(
         path: picture.path,
         mimeType: 'image',

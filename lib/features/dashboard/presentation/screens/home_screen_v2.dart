@@ -11,7 +11,6 @@ import '../../../attendance/presentation/screens/check_in_out_screen.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../mileage/presentation/screens/track_mileage_screen.dart';
 import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../sos/presentation/widgets/sos_dialog.dart';
 import '../../../../presentation/widgets/coming_soon_screen.dart';
 import 'dashboard_screen.dart';
@@ -24,38 +23,22 @@ class HomeScreen2 extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen2> {
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning,';
-    if (hour < 17) return 'Good Afternoon,';
-    return 'Good Evening,';
-  }
-
   void _navigateToTab(int index) {
-    final dashboardState = context
-        .findAncestorStateOfType<DashboardScreenState>();
-    if (dashboardState != null) {
-      dashboardState.changeTab(index);
-    }
+    context.findAncestorStateOfType<DashboardScreenState>()?.changeTab(index);
   }
 
   @override
   Widget build(BuildContext context) {
     final prefs = getIt<SharedPreferences>();
     final onDuty = prefs.getBool('on_duty') ?? false;
-
-    final currentDateString = DateFormat(
-      'EEEE, dd MMM yyyy',
-    ).format(DateTime.now());
+    final currentDateString = DateFormat('EEEE, dd MMM yyyy').format(DateTime.now());
 
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
         final profile = state is ProfileLoaded ? state.profile : null;
-        final firstName = profile?.firstName ?? 'Hopper';
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
-
+          backgroundColor: const Color(0xFFF4F6FB),
           appBar: EmployeeAppBar(
             isOnline: onDuty,
             firstNameOverride: profile?.firstName,
@@ -64,122 +47,100 @@ class _HomeScreenState extends State<HomeScreen2> {
             avatarOverride: profile?.profileImage,
             companyLogoOverride: profile?.companyLogo,
             onProfileTap: () {
-              final dashboardState = context
-                  .findAncestorStateOfType<DashboardScreenState>();
-              if (dashboardState != null) {
-                dashboardState.changeTab(
-                  4,
-                ); // Switch to Menu screen where profile actions live
-              }
+              context.findAncestorStateOfType<DashboardScreenState>()?.changeTab(4);
             },
           ),
           body: SafeArea(
             bottom: false,
-            child: Column(
-              children: [
-                // 1. Custom App Bar / Header Section
-                // _buildHeader(context, firstName),
-
-                // Scrollable Body
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      context.read<ProfileBloc>().add(const FetchProfile());
-                      await Future.delayed(const Duration(milliseconds: 500));
-                    },
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
-                      ),
-                      padding: EdgeInsets.only(
-                        left: 16.w,
-                        right: 16.w,
-                        top: 8.h,
-                        bottom:
-                            80.h, // Bottom padding to avoid navigation overlay
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 2. Featured Blue Task Banner
-                          _buildTaskBanner(currentDateString),
-                          SizedBox(height: 16.h),
-
-                          // 3. Upcoming Task
-                          _buildSectionHeader(
-                            title: 'Upcoming Task',
-                            actionText: 'View All',
-                            onActionTap: () => _navigateToTab(1),
-                          ),
-                          SizedBox(height: 8.h),
-                          _buildUpcomingTaskCard(),
-                          SizedBox(height: 16.h),
-
-                          // 4. Quick Actions
-                          _buildSectionHeader(
-                            title: 'Quick Actions',
-                            actionText: 'View All',
-                            onActionTap: () => _navigateToTab(4),
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildQuickActions(context),
-                          SizedBox(height: 16.h),
-
-                          // 5. Leave Balance
-                          _buildSectionHeader(
-                            title: 'Leave Balance',
-                            actionText: 'View Details',
-                            onActionTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ComingSoonScreen(
-                                    title: 'Leave Balance',
-                                    icon: Icons.calendar_month_outlined,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          SizedBox(height: 8.h),
-                          _buildLeaveBalance(),
-                          SizedBox(height: 16.h),
-
-                          // 6. Announcements
-                          _buildSectionHeader(
-                            title: 'Announcements',
-                            actionText: 'View All',
-                            onActionTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ComingSoonScreen(
-                                    title: 'Announcements',
-                                    icon: Icons.campaign_outlined,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          SizedBox(height: 8.h),
-                          _buildAnnouncementsCard(context),
-                          SizedBox(height: 16.h),
-
-                          // 7. Recent Messages
-                          _buildSectionHeader(
-                            title: 'Recent Messages',
-                            actionText: 'View All',
-                            onActionTap: () => _navigateToTab(3),
-                          ),
-                          SizedBox(height: 8.h),
-                          _buildRecentMessages(context),
-                          SizedBox(height: 16.h),
-                        ],
-                      ),
-                    ),
-                  ),
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () async {
+                context.read<ProfileBloc>().add(const FetchProfile());
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-              ],
+                padding: EdgeInsets.only(
+                  left: 16.w,
+                  right: 16.w,
+                  top: 12.h,
+                  bottom: 88.h,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTaskBanner(currentDateString),
+                    SizedBox(height: 20.h),
+
+                    _buildSectionHeader(
+                      title: 'Upcoming Task',
+                      actionText: 'View All',
+                      onActionTap: () => _navigateToTab(1),
+                    ),
+                    SizedBox(height: 10.h),
+                    _buildUpcomingTaskCard(),
+                    SizedBox(height: 20.h),
+
+                    _buildSectionHeader(
+                      title: 'Quick Actions',
+                      actionText: 'View All',
+                      onActionTap: () => _navigateToTab(4),
+                    ),
+                    SizedBox(height: 12.h),
+                    _buildQuickActions(context),
+                    SizedBox(height: 20.h),
+
+                    _buildSectionHeader(
+                      title: 'Leave Balance',
+                      actionText: 'View Details',
+                      onActionTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ComingSoonScreen(
+                              title: 'Leave Balance',
+                              icon: Icons.calendar_month_outlined,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 10.h),
+                    _buildLeaveBalance(),
+                    SizedBox(height: 20.h),
+
+                    _buildSectionHeader(
+                      title: 'Announcements',
+                      actionText: 'View All',
+                      onActionTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ComingSoonScreen(
+                              title: 'Announcements',
+                              icon: Icons.campaign_outlined,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    SizedBox(height: 10.h),
+                    _buildAnnouncementsCard(context),
+                    SizedBox(height: 20.h),
+
+                    _buildSectionHeader(
+                      title: 'Recent Messages',
+                      actionText: 'View All',
+                      onActionTap: () => _navigateToTab(3),
+                    ),
+                    SizedBox(height: 10.h),
+                    _buildRecentMessages(context),
+                    SizedBox(height: 16.h),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -187,101 +148,125 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Header Welcome bar
-  Widget _buildHeader(BuildContext context, String name) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => _navigateToTab(4),
-                child: Icon(Icons.menu, color: Colors.black87, size: 24.sp),
-              ),
-              SizedBox(width: 14.w),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getGreeting(),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14.sp,
-                      fontFamily: 'AirbnbCereal',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '$name! 👋',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 18.sp,
-                      fontFamily: 'AirbnbCereal',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    'Have a productive day!',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 11.sp,
-                      fontFamily: 'AirbnbCereal',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildTaskBanner(String currentDate) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 22.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18.r),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1877F2), Color(0xFF0C4EC4)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1877F2).withValues(alpha: 0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotificationsScreen(),
-                ),
-              );
-            },
-            child: Stack(
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.notifications_none_outlined,
-                    color: Colors.black87,
-                    size: 24.sp,
+                Text(
+                  currentDate,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 11.sp,
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                Positioned(
-                  right: 4.w,
-                  top: 4.h,
+                SizedBox(height: 6.h),
+                Text(
+                  'You have 2 tasks\ndue today',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20.sp,
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                SizedBox(height: 18.h),
+                GestureDetector(
+                  onTap: () => _navigateToTab(1),
                   child: Container(
-                    padding: EdgeInsets.all(4.w),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8.sp,
-                        fontWeight: FontWeight.bold,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 9.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.28),
+                        width: 1,
                       ),
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View My Tasks',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontFamily: 'AirbnbCereal',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 6.w),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 14.sp,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 16.w),
+          Container(
+            width: 72.w,
+            height: 72.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.1),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '2',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28.sp,
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'tasks',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 10.sp,
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -292,101 +277,6 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Task banner gradient card
-  Widget _buildTaskBanner(String currentDate) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1D4ED8).withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -10.w,
-            bottom: -15.h,
-            child: Icon(
-              Icons.assignment_outlined,
-              size: 100.w,
-              color: Colors.white.withValues(alpha: 0.12),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Today is $currentDate',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 12.sp,
-                  fontFamily: 'AirbnbCereal',
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                'You have 2 tasks today',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20.sp,
-                  fontFamily: 'AirbnbCereal',
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              ElevatedButton(
-                onPressed: () => _navigateToTab(1),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF1D4ED8),
-                  elevation: 0,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 18.w,
-                    vertical: 10.h,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'View My Tasks',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontFamily: 'AirbnbCereal',
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(width: 6.w),
-                    Icon(Icons.arrow_forward_rounded, size: 14.sp),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Generic Section Header
   Widget _buildSectionHeader({
     required String title,
     required String actionText,
@@ -398,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen2> {
         Text(
           title,
           style: TextStyle(
-            color: Colors.black,
+            color: const Color(0xFF0F172A),
             fontSize: 15.sp,
             fontFamily: 'AirbnbCereal',
             fontWeight: FontWeight.w700,
@@ -409,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen2> {
           child: Text(
             actionText,
             style: TextStyle(
-              color: const Color(0xFF2563EB),
+              color: AppColors.primary,
               fontSize: 12.sp,
               fontFamily: 'AirbnbCereal',
               fontWeight: FontWeight.w600,
@@ -420,7 +310,6 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Upcoming Task Card
   Widget _buildUpcomingTaskCard() {
     return Container(
       width: double.infinity,
@@ -428,11 +317,10 @@ class _HomeScreenState extends State<HomeScreen2> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.w),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -440,15 +328,15 @@ class _HomeScreenState extends State<HomeScreen2> {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF0FDF4),
-              shape: BoxShape.circle,
+            padding: EdgeInsets.all(9.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
-              Icons.trending_up,
-              color: const Color(0xFF16A34A),
-              size: 22.sp,
+              Icons.task_alt_rounded,
+              color: const Color(0xFF64748B),
+              size: 20.sp,
             ),
           ),
           SizedBox(width: 12.w),
@@ -459,41 +347,41 @@ class _HomeScreenState extends State<HomeScreen2> {
                 Text(
                   'Site Inspection – Building A',
                   style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 13.5.sp,
+                    color: const Color(0xFF0F172A),
+                    fontSize: 13.sp,
                     fontFamily: 'AirbnbCereal',
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 6.h),
+                SizedBox(height: 5.h),
                 Row(
                   children: [
                     Icon(
-                      Icons.calendar_today_outlined,
-                      color: Colors.grey.shade400,
-                      size: 12.sp,
+                      Icons.access_time_rounded,
+                      color: const Color(0xFFCBD5E1),
+                      size: 11.sp,
                     ),
-                    SizedBox(width: 4.w),
+                    SizedBox(width: 3.w),
                     Text(
                       'Today, 10:00 AM',
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: const Color(0xFF94A3B8),
                         fontSize: 11.sp,
                         fontFamily: 'AirbnbCereal',
                       ),
                     ),
-                    SizedBox(width: 14.w),
+                    SizedBox(width: 10.w),
                     Icon(
                       Icons.location_on_outlined,
-                      color: Colors.grey.shade400,
-                      size: 12.sp,
+                      color: const Color(0xFFCBD5E1),
+                      size: 11.sp,
                     ),
-                    SizedBox(width: 3.w),
+                    SizedBox(width: 2.w),
                     Expanded(
                       child: Text(
-                        'Building A, 2nd Floor',
+                        'Building A',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: const Color(0xFF94A3B8),
                           fontSize: 11.sp,
                           fontFamily: 'AirbnbCereal',
                         ),
@@ -510,16 +398,16 @@ class _HomeScreenState extends State<HomeScreen2> {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
-              borderRadius: BorderRadius.circular(12.r),
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(20.r),
             ),
             child: Text(
               'In Progress',
               style: TextStyle(
-                color: const Color(0xFF15803D),
+                color: const Color(0xFF475569),
                 fontSize: 10.sp,
                 fontFamily: 'AirbnbCereal',
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -528,14 +416,11 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Quick Actions Horizontal list
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       _ActionItem(
         label: 'Check In',
-        icon: Icons.login,
-        bgColor: const Color(0xFFEFF6FF),
-        iconColor: const Color(0xFF2563EB),
+        icon: Icons.login_rounded,
         onTap: () {
           Navigator.push(
             context,
@@ -549,22 +434,16 @@ class _HomeScreenState extends State<HomeScreen2> {
       _ActionItem(
         label: 'Expenses',
         icon: Icons.receipt_long_outlined,
-        bgColor: const Color(0xFFFFF7ED),
-        iconColor: const Color(0xFFEA580C),
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const ClaimExpensesScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const ClaimExpensesScreen()),
           );
         },
       ),
       _ActionItem(
         label: 'Mileage',
-        icon: Icons.speed_outlined,
-        bgColor: const Color(0xFFECFDF5),
-        iconColor: const Color(0xFF059669),
+        icon: Icons.speed_rounded,
         onTap: () {
           Navigator.push(
             context,
@@ -574,16 +453,14 @@ class _HomeScreenState extends State<HomeScreen2> {
       ),
       _ActionItem(
         label: 'Leave',
-        icon: Icons.calendar_month_outlined,
-        bgColor: const Color(0xFFFAF5FF),
-        iconColor: const Color(0xFF7C3AED),
+        icon: Icons.event_available_outlined,
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const ComingSoonScreen(
                 title: 'Leave',
-                icon: Icons.calendar_month_outlined,
+                icon: Icons.event_available_outlined,
               ),
             ),
           );
@@ -592,8 +469,7 @@ class _HomeScreenState extends State<HomeScreen2> {
       _ActionItem(
         label: 'SOS',
         icon: Icons.shield_outlined,
-        bgColor: const Color(0xFFFEF2F2),
-        iconColor: const Color(0xFFDC2626),
+        isSos: true,
         onTap: () {
           showDialog(context: context, builder: (context) => const SosDialog());
         },
@@ -604,134 +480,107 @@ class _HomeScreenState extends State<HomeScreen2> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: actions.map((act) {
         return Expanded(
-          child: Column(
-            children: [
-              GestureDetector(
-                onTap: act.onTap,
-                child: Container(
-                  width: 50.w,
-                  height: 50.w,
+          child: GestureDetector(
+            onTap: act.onTap,
+            child: Column(
+              children: [
+                Container(
+                  width: 52.w,
+                  height: 52.w,
                   decoration: BoxDecoration(
-                    color: act.bgColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: act.iconColor.withValues(alpha: 0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: act.isSos
+                        ? const Color(0xFFFEF2F2)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14.r),
                   ),
-                  child: Icon(act.icon, color: act.iconColor, size: 22.sp),
+                  child: Icon(
+                    act.icon,
+                    color: act.isSos
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFF475569),
+                    size: 22.sp,
+                  ),
                 ),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                act.label,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 11.sp,
-                  fontFamily: 'AirbnbCereal',
-                  fontWeight: FontWeight.w600,
+                SizedBox(height: 7.h),
+                Text(
+                  act.label,
+                  style: TextStyle(
+                    color: const Color(0xFF475569),
+                    fontSize: 10.5.sp,
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }).toList(),
     );
   }
 
-  // Leave Balance Row
   Widget _buildLeaveBalance() {
     return Row(
       children: [
-        _buildLeaveCard(
-          'Annual Leave',
-          '12.5',
-          const Color(0xFF3B82F6),
-          const Color(0xFFEFF6FF),
-        ),
+        _buildLeaveCard('Annual', '12.5'),
         SizedBox(width: 8.w),
-        _buildLeaveCard(
-          'Sick Leave',
-          '5.0',
-          const Color(0xFF10B981),
-          const Color(0xFFECFDF5),
-        ),
+        _buildLeaveCard('Sick', '5.0'),
         SizedBox(width: 8.w),
-        _buildLeaveCard(
-          'Casual Leave',
-          '3.0',
-          const Color(0xFF8B5CF6),
-          const Color(0xFFF5F3FF),
-        ),
+        _buildLeaveCard('Casual', '3.0'),
         SizedBox(width: 8.w),
-        _buildLeaveCard(
-          'Comp Off',
-          '2.0',
-          const Color(0xFFF59E0B),
-          const Color(0xFFFFFBEB),
-        ),
+        _buildLeaveCard('Comp Off', '2.0'),
       ],
     );
   }
 
-  Widget _buildLeaveCard(
-    String title,
-    String count,
-    Color countColor,
-    Color bgColor,
-  ) {
+  Widget _buildLeaveCard(String title, String count) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 6.w),
+        padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 4.w),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.w),
+          borderRadius: BorderRadius.circular(12.r),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.01),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           children: [
             Text(
+              count,
+              style: TextStyle(
+                color: const Color(0xFF0F172A),
+                fontSize: 17.sp,
+                fontFamily: 'AirbnbCereal',
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 5.h),
+            Text(
               title,
               style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 9.5.sp,
+                color: const Color(0xFF94A3B8),
+                fontSize: 9.sp,
                 fontFamily: 'AirbnbCereal',
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: 6.h),
+            SizedBox(height: 2.h),
             Text(
-              count,
+              'days',
               style: TextStyle(
-                color: countColor,
-                fontSize: 16.sp,
-                fontFamily: 'AirbnbCereal',
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'Days Available',
-              style: TextStyle(
-                color: Colors.grey.shade400,
+                color: const Color(0xFFCBD5E1),
                 fontSize: 8.5.sp,
                 fontFamily: 'AirbnbCereal',
-                fontWeight: FontWeight.w500,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -739,19 +588,17 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Announcements card
   Widget _buildAnnouncementsCard(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.w),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -760,14 +607,14 @@ class _HomeScreenState extends State<HomeScreen2> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAF5FF),
-              shape: BoxShape.circle,
+            padding: EdgeInsets.all(9.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(
               Icons.campaign_outlined,
-              color: const Color(0xFF7C3AED),
+              color: const Color(0xFF64748B),
               size: 20.sp,
             ),
           ),
@@ -779,7 +626,7 @@ class _HomeScreenState extends State<HomeScreen2> {
                 Text(
                   'New Safety Guidelines',
                   style: TextStyle(
-                    color: Colors.black87,
+                    color: const Color(0xFF0F172A),
                     fontSize: 13.sp,
                     fontFamily: 'AirbnbCereal',
                     fontWeight: FontWeight.w700,
@@ -792,12 +639,13 @@ class _HomeScreenState extends State<HomeScreen2> {
                     color: Colors.grey.shade500,
                     fontSize: 11.sp,
                     fontFamily: 'AirbnbCereal',
+                    height: 1.4,
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(width: 8.w),
+          SizedBox(width: 10.w),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -805,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen2> {
                 '2h ago',
                 style: TextStyle(
                   color: Colors.grey.shade400,
-                  fontSize: 9.sp,
+                  fontSize: 9.5.sp,
                   fontFamily: 'AirbnbCereal',
                 ),
               ),
@@ -814,7 +662,7 @@ class _HomeScreenState extends State<HomeScreen2> {
                 width: 7.w,
                 height: 7.w,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF2563EB),
+                  color: Color(0xFF1877F2),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -825,7 +673,6 @@ class _HomeScreenState extends State<HomeScreen2> {
     );
   }
 
-  // Recent Messages list
   Widget _buildRecentMessages(BuildContext context) {
     final messages = [
       _MessageModel(
@@ -833,24 +680,21 @@ class _HomeScreenState extends State<HomeScreen2> {
         text: 'The inspection report is ready.',
         time: '10:30 AM',
         unreadCount: 2,
-        avatarUrl:
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
       ),
       _MessageModel(
         name: 'Site Team – Building A',
         text: 'Please submit your daily report.',
         time: '9:45 AM',
         unreadCount: 5,
-        avatarUrl:
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
       ),
       _MessageModel(
         name: 'HR Team',
         text: 'Your leave request has been approved.',
         time: 'Yesterday',
         unreadCount: 1,
-        avatarUrl:
-            'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100',
+        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100',
       ),
     ];
 
@@ -858,11 +702,10 @@ class _HomeScreenState extends State<HomeScreen2> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.w),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -872,90 +715,89 @@ class _HomeScreenState extends State<HomeScreen2> {
           final msg = messages[index];
           return Column(
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 14.w,
-                  vertical: 2.h,
-                ),
-                leading: CircleAvatar(
-                  radius: 20.r,
-                  backgroundImage: NetworkImage(msg.avatarUrl),
-                  backgroundColor: Colors.grey.shade200,
-                ),
-                title: Text(
-                  msg.name,
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 12.5.sp,
-                    fontFamily: 'AirbnbCereal',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: EdgeInsets.only(top: 2.h),
-                  child: Text(
-                    msg.text,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 11.sp,
-                      fontFamily: 'AirbnbCereal',
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          msg.time,
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 9.5.sp,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                        if (msg.unreadCount > 0) ...[
-                          SizedBox(height: 4.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 6.w,
-                              vertical: 2.h,
-                            ),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2563EB),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '${msg.unreadCount}',
+              InkWell(
+                onTap: () => _navigateToTab(3),
+                borderRadius: BorderRadius.circular(12.r),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20.r,
+                        backgroundImage: NetworkImage(msg.avatarUrl),
+                        backgroundColor: Colors.grey.shade100,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              msg.name,
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 8.sp,
-                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                                fontSize: 12.5.sp,
+                                fontFamily: 'AirbnbCereal',
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              msg.text,
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 11.sp,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            msg.time,
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 9.5.sp,
+                              fontFamily: 'AirbnbCereal',
+                            ),
                           ),
+                          if (msg.unreadCount > 0) ...[
+                            SizedBox(height: 5.h),
+                            Container(
+                              constraints: BoxConstraints(minWidth: 18.w),
+                              padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              child: Text(
+                                '${msg.unreadCount}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.sp,
+                                  fontFamily: 'AirbnbCereal',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    SizedBox(width: 6.w),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.grey.shade300,
-                      size: 11.sp,
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-                onTap: () => _navigateToTab(3),
               ),
               if (index < messages.length - 1)
                 Divider(
-                  height: 1.h,
-                  thickness: 0.5.h,
+                  height: 1,
+                  thickness: 1,
                   color: const Color(0xFFF1F5F9),
                   indent: 14.w,
                   endIndent: 14.w,
@@ -971,15 +813,13 @@ class _HomeScreenState extends State<HomeScreen2> {
 class _ActionItem {
   final String label;
   final IconData icon;
-  final Color bgColor;
-  final Color iconColor;
   final VoidCallback onTap;
+  final bool isSos;
   _ActionItem({
     required this.label,
     required this.icon,
-    required this.bgColor,
-    required this.iconColor,
     required this.onTap,
+    this.isSos = false,
   });
 }
 

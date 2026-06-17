@@ -62,7 +62,7 @@ class PresshopEnterpriseApp extends StatelessWidget {
       builder: (context, child) {
         final router = createRouter(getIt());
         return MaterialApp.router(
-          title: 'Presshop Enterprise',
+          title: 'PressHop Enterprise',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           routerConfig: router,

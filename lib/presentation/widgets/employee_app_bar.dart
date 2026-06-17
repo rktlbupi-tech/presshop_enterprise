@@ -179,8 +179,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
               height: 40.w,
               width: 40.w,
               decoration: BoxDecoration(
-                shape: BoxShape.rectangle,
-                borderRadius: BorderRadius.circular(8.r),
+                shape: BoxShape.circle,
                 color: Colors.white,
                 border: Border.all(
                   color: Colors.grey.shade200,

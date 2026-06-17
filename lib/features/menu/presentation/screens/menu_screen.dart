@@ -331,6 +331,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: AppColors.primary,
                 iconBgColor: const Color(0xFFFFF8EC),
                 badgeCount: _notificationCount,
+                alwaysShowBadge: true,
                 onTap: () => _open(const NotificationsScreen()),
               ),
             ],
@@ -601,7 +602,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               alignment: Alignment.center,
                               children: [
                                 _buildIcon(item, size),
-                                if (item.badgeCount > 0)
+                                if (item.badgeCount > 0 || item.alwaysShowBadge)
                                   Positioned(
                                     right: 0,
                                     top: 0,
@@ -612,7 +613,9 @@ class _MenuScreenState extends State<MenuScreen> {
                                         shape: BoxShape.circle,
                                       ),
                                       child: CircleAvatar(
-                                        backgroundColor: item.iconColor,
+                                        backgroundColor: item.badgeCount > 0
+                                            ? item.iconColor
+                                            : Colors.grey.shade400,
                                         radius: size.width * 0.018,
                                         child: Text(
                                           item.badgeCount.toString(),
@@ -698,6 +701,7 @@ class _MenuGroupItem {
   final Color iconColor;
   final Color iconBgColor;
   final int badgeCount;
+  final bool alwaysShowBadge;
   final VoidCallback onTap;
   final double? iconSize;
 
@@ -707,6 +711,7 @@ class _MenuGroupItem {
     required this.iconColor,
     required this.iconBgColor,
     this.badgeCount = 0,
+    this.alwaysShowBadge = false,
     required this.onTap,
     this.iconSize,
   });
