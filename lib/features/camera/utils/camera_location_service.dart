@@ -1,28 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:location/location.dart';
+import 'package:location/location.dart' show LocationData;
+import 'package:geolocator/geolocator.dart';
 
+/// Resolves the device's current location for the camera/preview flow.
+///
+/// Uses **Geolocator** (the same reliable mechanism the Team map uses) instead
+/// of the `location` plugin, which was returning null on iOS. The result is
+/// wrapped back into a [LocationData] so callers don't need to change.
 class CameraLocationService {
-  final Location _location = Location();
-
   Future<LocationData?> getCurrentLocation(
     BuildContext context, {
     bool shouldShowSettingPopup = true,
   }) async {
     try {
-      bool serviceEnabled = await _location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await _location.requestService();
-        if (!serviceEnabled) return null;
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
       }
 
-      PermissionStatus permissionStatus = await _location.hasPermission();
-      if (permissionStatus == PermissionStatus.denied) {
-        permissionStatus = await _location.requestPermission();
-        if (permissionStatus != PermissionStatus.granted) return null;
+      Position? pos;
+      try {
+        pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+          ),
+        ).timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // Live fix timed out — fall back to the last known position.
+        pos = await Geolocator.getLastKnownPosition();
       }
+      if (pos == null) return null;
 
-      return await _location.getLocation();
-    } catch (e) {
+      return LocationData.fromMap({
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+        'accuracy': pos.accuracy,
+        'altitude': pos.altitude,
+        'speed': pos.speed,
+        'heading': pos.heading,
+      });
+    } catch (_) {
       return null;
     }
   }

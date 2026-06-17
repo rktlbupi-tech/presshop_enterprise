@@ -718,8 +718,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                     child: Center(
                                       child: FittedBox(
                                         child: Padding(
-                                          padding: EdgeInsets.all(
-                                            size.width * 0.04,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: size.width * 0.04,
                                           ),
                                           child: Text(
                                             _timeRemaining,
@@ -734,6 +734,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                       ),
                                     ),
                                   ),
+                                  // Reserve space for the bottom status bar so
+                                  // the value stays centered in the visible area.
+                                  SizedBox(height: size.width * 0.09),
                                 ],
                               ),
                             ),

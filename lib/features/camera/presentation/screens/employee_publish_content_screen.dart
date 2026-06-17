@@ -383,19 +383,31 @@ class _EmployeePublishContentScreenState
         ? description
         : 'Uploading task evidence';
 
-    UploadProgressNotifier.instance.startUpload(taskId: taskId, title: title);
+    Future<bool> doUpload() => _taskService.uploadEvidence(
+          taskId: taskId,
+          mediaList: mediaList,
+          latitude: lat,
+          longitude: lng,
+          address: address,
+          description: description,
+          onProgress: UploadProgressNotifier.instance.updateProgress,
+        );
 
-    _taskService
-        .uploadEvidence(
+    UploadProgressNotifier.instance.startUpload(
       taskId: taskId,
-      mediaList: mediaList,
-      latitude: lat,
-      longitude: lng,
-      address: address,
-      description: description,
-      onProgress: UploadProgressNotifier.instance.updateProgress,
-    )
-        .then((success) {
+      title: title,
+      onRetry: () async {
+        final ok = await doUpload();
+        if (ok) {
+          UploadProgressNotifier.instance.completeUpload();
+        } else {
+          UploadProgressNotifier.instance.failUpload();
+        }
+        return ok;
+      },
+    );
+
+    doUpload().then((success) {
       if (success) {
         UploadProgressNotifier.instance.completeUpload();
       } else {
@@ -585,7 +597,9 @@ class _EmployeePublishContentScreenState
                                   child: SizedBox(
                                     height: size.width * numD06,
                                     child: _audioPath.isEmpty
-                                        ? Icon(Icons.mic,
+                                        ? ImageIcon(
+                                            const AssetImage(
+                                                'assets/icons/ic_mic.png'),
                                             size: size.width * numD04,
                                             color: Colors.black)
                                         : Icon(
@@ -667,7 +681,9 @@ class _EmployeePublishContentScreenState
                     ),
                     decoration: _filledDecoration(
                       size,
-                      prefixIcon: const Icon(Icons.location_on_outlined),
+                      prefixIcon: const ImageIcon(
+                        AssetImage('assets/icons/ic_location.png'),
+                      ),
                     ),
                   ),
                 ),
@@ -689,7 +705,9 @@ class _EmployeePublishContentScreenState
                     ),
                     decoration: _filledDecoration(
                       size,
-                      prefixIcon: const Icon(Icons.access_time),
+                      prefixIcon: const ImageIcon(
+                        AssetImage('assets/icons/ic_clock.png'),
+                      ),
                     ),
                   ),
                 ),

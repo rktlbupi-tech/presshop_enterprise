@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'socket_events.dart';
@@ -63,14 +65,33 @@ class SocketClient {
     _socket?.off(event);
   }
 
-  void emitWithAck(String event, dynamic data, {required Function(dynamic) ack}) {
+  void emitWithAck(
+    String event,
+    dynamic data, {
+    required Function(dynamic) ack,
+  }) {
     if (!isConnected) {
       _log('Cannot emitWithAck [$event] — not connected');
       ack(null);
       return;
     }
-    _log('EmitWithAck [$event]');
-    _socket?.emitWithAck(event, data, ack: ack);
+    _log('EmitWithAck [$event] →  request:\n${_pretty(data)}');
+    _socket?.emitWithAck(
+      event,
+      data,
+      ack: (response) {
+        _log('Ack [$event] ←  response:\n${_pretty(response)}');
+        ack(response);
+      },
+    );
+  }
+
+  String _pretty(dynamic data) {
+    try {
+      return const JsonEncoder.withIndent('  ').convert(data);
+    } catch (_) {
+      return data.toString();
+    }
   }
 
   void disconnect() {

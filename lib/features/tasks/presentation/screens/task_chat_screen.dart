@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dots_indicator/dots_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:geocoding/geocoding.dart';
@@ -265,9 +266,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
 
   Future<void> _startAudioRecording() async {
     try {
-      final status = await Permission.microphone.request();
-      if (!status.isGranted) {
-        _showSnack("Microphone permission required");
+      // Use the recorder's own permission check (the `record` plugin) — it
+      // matches what actually gates recording. permission_handler's
+      // Permission.microphone can report denied on iOS even when granted.
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        _showMicPermissionDialog();
         return;
       }
       final dir = await getApplicationCacheDirectory();
@@ -279,6 +283,46 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       });
     } catch (e) {
       _showSnack("Microphone is currently busy or in use by another app.");
+    }
+  }
+
+  void _showMicPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Microphone permission',
+          style: TextStyle(fontFamily: 'AirbnbCereal', fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Microphone access is needed to record voice notes. Please enable it for PressHop in Settings.',
+          style: TextStyle(fontFamily: 'AirbnbCereal'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onMediaSendAck(dynamic ack) {
+    debugPrint('[Chat Socket] message.send ack: $ack');
+    if (ack is Map && ack['success'] == false) {
+      _showSnack(ack['error']?.toString() ?? 'Failed to send media message');
     }
   }
 
@@ -304,7 +348,7 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             'payload': {'text': ''},
             'mediaAssetIds': assetIds,
           },
-          ack: (_) {},
+          ack: _onMediaSendAck,
         );
       } else {
         _showSnack("Failed to send audio. Please try again.");
@@ -335,7 +379,7 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             },
             'mediaAssetIds': assetIds,
           },
-          ack: (_) {},
+          ack: _onMediaSendAck,
         );
         _linkEvidenceFiles(files);
       } else {
@@ -1204,133 +1248,223 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     final topPad = MediaQuery.of(context).padding.top;
-    final botPad = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final item = items[i];
-                    final isImage = item.mimeType.startsWith('image') ||
-                        item.mimeType.isEmpty ||
-                        item.path.toLowerCase().endsWith('.jpg') ||
-                        item.path.toLowerCase().endsWith('.jpeg') ||
-                        item.path.toLowerCase().endsWith('.png');
-                    if (isImage) {
-                      return InteractiveViewer(
-                        child: Center(
+          // ── Media pager (matches EmployeePreviewScreen) ─────────────────
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemCount: items.length,
+              itemBuilder: (context, i) {
+                final item = items[i];
+                final isImage = item.mimeType.startsWith('image') ||
+                    item.mimeType.isEmpty ||
+                    item.path.toLowerCase().endsWith('.jpg') ||
+                    item.path.toLowerCase().endsWith('.jpeg') ||
+                    item.path.toLowerCase().endsWith('.png');
+                return InteractiveViewer(
+                  scaleEnabled: isImage,
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      // Media
+                      if (isImage)
+                        SizedBox(
+                          height: size.height,
+                          width: size.width,
                           child: Image.file(
                             File(item.path),
                             fit: BoxFit.contain,
                             errorBuilder: (_, e, s) => const Icon(
-                              Icons.broken_image,
-                              color: Colors.white,
-                              size: 60,
+                                Icons.broken_image,
+                                color: Colors.white,
+                                size: 60),
+                          ),
+                        )
+                      else
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.videocam,
+                                  color: Colors.white, size: 64),
+                              const SizedBox(height: 12),
+                              Text(
+                                item.path.split('/').last,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Close / delete current (white circle X)
+                      Positioned(
+                        top: topPad + size.width * 0.04,
+                        right: size.width * 0.02,
+                        child: IconButton(
+                          onPressed: _removeCurrentPage,
+                          icon: Container(
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle),
+                            child: Icon(Icons.close,
+                                color: Colors.black, size: size.width * 0.06),
+                          ),
+                        ),
+                      ),
+
+                      // Dots indicator
+                      if (items.length > 1)
+                        Positioned(
+                          bottom: 0,
+                          child: DotsIndicator(
+                            dotsCount: items.length,
+                            position: _currentPage,
+                            decorator: DotsDecorator(
+                              color: Colors.grey,
+                              activeColor: AppColors.primary,
                             ),
                           ),
                         ),
-                      );
-                    }
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.videocam, color: Colors.white, size: 64),
-                          const SizedBox(height: 12),
-                          Text(
-                            item.path.split('/').last,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+
+                      // Date & location pills
+                      Container(
+                        margin: EdgeInsets.only(bottom: size.width * 0.03),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: size.width * 0.04,
+                            vertical: size.width * 0.04),
+                        child: Row(
+                          children: [
+                            Expanded(
+                                child: _infoPill(
+                              size,
+                              icon: Icons.access_time,
+                              text: item.dateTime,
+                              isAlert: false,
+                            )),
+                            const SizedBox(width: 16),
+                            Expanded(
+                                child: _infoPill(
+                              size,
+                              icon: Icons.location_on,
+                              text: item.location.isEmpty
+                                  ? 'No Location'
+                                  : item.location,
+                              isAlert: item.location.isEmpty,
+                            )),
+                          ],
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ),
-              if (items.length > 1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    '${_currentPage + 1} / ${items.length}',
-                    style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontFamily: 'AirbnbCereal'),
+                    ],
                   ),
-                ),
-              Container(
-                color: Colors.white,
-                padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + botPad),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _addMore,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Colors.black87),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text(
-                          'ADD MORE',
-                          style: TextStyle(
-                              color: Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'AirbnbCereal'),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context, items),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text(
-                          'SUBMIT',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'AirbnbCereal'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          Positioned(
-            top: topPad + 8,
-            left: 4,
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios,
-                  color: Colors.white, size: 22),
+                );
+              },
             ),
           ),
-          Positioned(
-            top: topPad + 8,
-            right: 4,
-            child: IconButton(
-              onPressed: _removeCurrentPage,
-              icon: const Icon(Icons.highlight_remove,
-                  color: Colors.white, size: 30),
+
+          // ── Bottom action bar (Add More / Submit) ───────────────────────
+          Container(
+            color: Colors.white,
+            padding: EdgeInsets.fromLTRB(size.width * 0.03, size.width * 0.02,
+                size.width * 0.03, size.width * 0.08),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: size.width * 0.13,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(size.width * 0.03)),
+                      ),
+                      onPressed: _addMore,
+                      child: Text(
+                        'Add More',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: size.width * 0.035,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'AirbnbCereal'),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: size.width * 0.13,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(size.width * 0.03)),
+                      ),
+                      onPressed: () => Navigator.pop(context, items),
+                      child: Text(
+                        'Submit',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: size.width * 0.035,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'AirbnbCereal'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoPill(Size size,
+      {required IconData icon, required String text, required bool isAlert}) {
+    return Container(
+      height: size.width * 0.11,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size.width * 0.04),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon,
+              size: size.width * 0.04,
+              color: isAlert ? Colors.red : const Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: size.width * 0.028,
+                color: const Color(0xFF1E293B),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'AirbnbCereal',
+              ),
             ),
           ),
         ],

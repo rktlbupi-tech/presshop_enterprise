@@ -383,7 +383,11 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
   }
 
   Future<void> startAudioRecording() async {
-    final status = await Permission.microphone.request();
+    // The `record` plugin's own check matches what gates recording;
+    // permission_handler can report denied on iOS even when granted.
+    final status = await _audioRecorder.hasPermission()
+        ? PermissionStatus.granted
+        : PermissionStatus.denied;
     if (status.isGranted) {
       final dir = await getTemporaryDirectory();
       final path =

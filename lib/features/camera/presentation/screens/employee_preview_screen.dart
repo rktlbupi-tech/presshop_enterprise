@@ -12,6 +12,7 @@ import '../widgets/video_player_widget.dart';
 import 'employee_camera_screen.dart';
 import 'employee_publish_content_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../../main.dart' show sharedPreferences;
 
 class EmployeePreviewScreen extends StatefulWidget {
   final CameraData? cameraData;
@@ -85,14 +86,54 @@ class _EmployeePreviewScreenState extends State<EmployeePreviewScreen> {
     bool showErrorPage = true,
   }) async {
     setState(() => isLocationFetching = true);
-    final loc = await _locationService.getCurrentLocation(
+    LocationData? loc = await _locationService.getCurrentLocation(
       context,
       shouldShowSettingPopup: shouldShowSettingPopup,
     );
-    setState(() => isLocationFetching = false);
-    if (loc != null) {
-      await _applyLocation(loc);
+    // The `location` plugin often returns null (or null lat/lon) on the first
+    // call before a GPS fix is acquired — retry once after a short delay.
+    if ((loc == null || loc.latitude == null || loc.longitude == null) &&
+        mounted) {
+      await Future.delayed(const Duration(milliseconds: 900));
+      loc = await _locationService.getCurrentLocation(
+        context,
+        shouldShowSettingPopup: false,
+      );
     }
+    if (!mounted) return;
+    setState(() => isLocationFetching = false);
+    if (loc != null && loc.latitude != null && loc.longitude != null) {
+      await _applyLocation(loc);
+    } else {
+      // Live fetch failed — fall back to the last cached location in prefs.
+      _applyFromPrefs();
+    }
+  }
+
+  /// Uses the last known location saved in SharedPreferences so the preview
+  /// still shows something useful when a live fix isn't available.
+  void _applyFromPrefs() {
+    final lat = sharedPreferences?.getDouble(currentLat);
+    final lon = sharedPreferences?.getDouble(currentLon);
+    final address = sharedPreferences?.getString(currentAddress) ?? '';
+    final hasCoords = lat != null && lon != null && (lat != 0 || lon != 0);
+    if (address.isEmpty && !hasCoords) return;
+    if (!mounted) return;
+    setState(() {
+      for (final m in mediaList) {
+        if (m.latitude.isEmpty && lat != null) m.latitude = lat.toString();
+        if (m.longitude.isEmpty && lon != null) m.longitude = lon.toString();
+        if (m.location.isEmpty) {
+          m.location =
+              address.isNotEmpty ? address : 'Lat: $lat, Long: $lon';
+        }
+      }
+      country = sharedPreferences?.getString(currentCountry) ?? country;
+      state = sharedPreferences?.getString(currentState) ?? state;
+      city = sharedPreferences?.getString(currentCity) ?? city;
+      if (lat != null) latitude = lat.toString();
+      if (lon != null) longitude = lon.toString();
+    });
   }
 
   Future<void> _applyLocation(LocationData loc) async {
@@ -117,6 +158,13 @@ class _EmployeePreviewScreenState extends State<EmployeePreviewScreen> {
         latitude = lat.toString();
         longitude = lon.toString();
       });
+      // Cache for later captures (parity with the old app).
+      sharedPreferences?.setDouble(currentLat, lat);
+      sharedPreferences?.setDouble(currentLon, lon);
+      sharedPreferences?.setString(currentAddress, address);
+      sharedPreferences?.setString(currentCountry, place.country ?? '');
+      sharedPreferences?.setString(currentState, place.administrativeArea ?? '');
+      sharedPreferences?.setString(currentCity, place.locality ?? '');
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -269,9 +317,16 @@ class _EmployeePreviewScreenState extends State<EmployeePreviewScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              // Location card
+                              // Location card — tap to (re)fetch location.
                               Expanded(
-                                child: Container(
+                                child: GestureDetector(
+                                  onTap: isLocationFetching
+                                      ? null
+                                      : () => _requestLocation(
+                                            shouldShowSettingPopup: true,
+                                            showErrorPage: false,
+                                          ),
+                                  child: Container(
                                   height: size.width * numD11,
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -317,6 +372,7 @@ class _EmployeePreviewScreenState extends State<EmployeePreviewScreen> {
                                       ),
                                     ],
                                   ),
+                                ),
                                 ),
                               ),
                             ],
@@ -400,11 +456,17 @@ class _EmployeePreviewScreenState extends State<EmployeePreviewScreen> {
                                 BorderRadius.circular(size.width * numD03),
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: () async {
+                          // Try to attach a location, but never block
+                          // publishing on it — otherwise Next silently does
+                          // nothing when location is unavailable.
                           if (mediaList.first.location.isEmpty) {
-                            _requestLocation();
-                            return;
+                            await _requestLocation(
+                              shouldShowSettingPopup: true,
+                              showErrorPage: false,
+                            );
                           }
+                          if (!mounted) return;
                           final pubData = PublishData(
                             imagePath: mediaList.first.mediaPath,
                             address: mediaList[currentPage].location,

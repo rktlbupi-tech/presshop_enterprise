@@ -2,16 +2,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import 'package:intl/intl.dart';
+import 'package:presshop_enterprise/config/di/injection.dart';
+import 'package:presshop_enterprise/core/network/api_client.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 
-// MOCKS FOR COMPILATION
+// Real conversations endpoint chat modes (mirrors the legacy app).
+const String _kTeamChatModes =
+    'enterprise-task-group,enterprise-task-direct,hopper-direct,hopper-group,enterprise-org-team';
+
 class TeamChatController extends ChangeNotifier {
+  TeamChatController({ApiClient? apiClient})
+    : _apiClient = apiClient ?? getIt<ApiClient>();
+
+  final ApiClient _apiClient;
+
   List<TeamChatItem> conversations = [];
-  bool hasMore = false;
+  bool hasMore = true;
   bool isLoading = false;
-  Future<void> fetchConversations({bool refresh = false}) async {}
+  String? nextCursor;
+
+  Future<void> fetchConversations({bool refresh = false}) async {
+    if (refresh) {
+      nextCursor = null;
+      hasMore = true;
+    }
+
+    if (!hasMore || (isLoading && !refresh)) return;
+
+    if (conversations.isEmpty) {
+      isLoading = true;
+      notifyListeners();
+    }
+
+    try {
+      final queryParameters = <String, dynamic>{
+        'chatMode': _kTeamChatModes,
+        'limit': 20,
+      };
+      if (nextCursor != null) {
+        queryParameters['cursor'] = nextCursor;
+      }
+
+      final response = await _apiClient.get(
+        'chat-v2/conversations',
+        queryParameters: queryParameters,
+      );
+
+      final data = response.data;
+      if (data is Map &&
+          data['success'] == true &&
+          data['data'] is Map<String, dynamic>) {
+        final parsed = TeamChatData.fromJson(
+          Map<String, dynamic>.from(data['data'] as Map),
+        );
+        if (refresh) {
+          conversations = parsed.items;
+        } else {
+          conversations.addAll(parsed.items);
+        }
+        nextCursor = parsed.nextCursor;
+        if (nextCursor == null) {
+          hasMore = false;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching team conversations: $e');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 }
 
 class RefreshController {
@@ -54,31 +116,117 @@ class CustomFooter extends StatelessWidget {
 Widget commonRefresherFooter(BuildContext context, dynamic mode) =>
     const SizedBox();
 
+class TeamChatData {
+  final List<TeamChatItem> items;
+  final String? nextCursor;
+
+  TeamChatData({required this.items, this.nextCursor});
+
+  factory TeamChatData.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    final items = rawItems is List
+        ? rawItems
+              .whereType<Map>()
+              .map(
+                (x) => TeamChatItem.fromJson(Map<String, dynamic>.from(x)),
+              )
+              .toList()
+        : <TeamChatItem>[];
+    return TeamChatData(
+      items: items,
+      nextCursor: json['nextCursor'] as String?,
+    );
+  }
+}
+
 class TeamChatItem {
-  final Display display = Display();
-  final Conversation conversation = Conversation();
-  final Membership membership = Membership();
+  final Display display;
+  final Conversation conversation;
+  final Membership membership;
+
+  TeamChatItem({
+    required this.display,
+    required this.conversation,
+    required this.membership,
+  });
+
+  factory TeamChatItem.fromJson(Map<String, dynamic> json) => TeamChatItem(
+    display: Display.fromJson(
+      json['display'] is Map
+          ? Map<String, dynamic>.from(json['display'] as Map)
+          : const {},
+    ),
+    conversation: Conversation.fromJson(
+      json['conversation'] is Map
+          ? Map<String, dynamic>.from(json['conversation'] as Map)
+          : const {},
+    ),
+    membership: Membership.fromJson(
+      json['membership'] is Map
+          ? Map<String, dynamic>.from(json['membership'] as Map)
+          : const {},
+    ),
+  );
 }
 
 class Display {
-  String title = "Team Chat";
-  String subtitle = "Preview message";
-  String avatarImage = "";
+  String title;
+  String subtitle;
+  String avatarImage;
+
+  Display({this.title = "", this.subtitle = "", this.avatarImage = ""});
+
+  factory Display.fromJson(Map<String, dynamic> json) => Display(
+    title: json['title'] as String? ?? "",
+    subtitle: json['subtitle'] as String? ?? "",
+    avatarImage: json['avatarImage'] as String? ?? "",
+  );
 }
 
 class Conversation {
-  String id = "1";
-  String? lastMessagePreview = "Preview message";
-  String? lastMessageAt = "2023-10-10T10:10:10Z";
-  Settings settings = Settings();
+  String id;
+  String? lastMessagePreview;
+  String? lastMessageAt;
+  Settings settings;
+
+  Conversation({
+    this.id = "",
+    this.lastMessagePreview,
+    this.lastMessageAt,
+    Settings? settings,
+  }) : settings = settings ?? Settings();
+
+  factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
+    id: (json['_id'] ?? json['id'] ?? "").toString(),
+    lastMessagePreview: json['lastMessagePreview'] as String?,
+    lastMessageAt: json['lastMessageAt'] as String?,
+    settings: Settings.fromJson(
+      json['settings'] is Map
+          ? Map<String, dynamic>.from(json['settings'] as Map)
+          : const {},
+    ),
+  );
 }
 
 class Settings {
-  Map<String, dynamic>? metadata = {};
+  Map<String, dynamic>? metadata;
+
+  Settings({this.metadata});
+
+  factory Settings.fromJson(Map<String, dynamic> json) => Settings(
+    metadata: json['metadata'] is Map
+        ? Map<String, dynamic>.from(json['metadata'] as Map)
+        : null,
+  );
 }
 
 class Membership {
-  int unreadCount = 0;
+  int unreadCount;
+
+  Membership({this.unreadCount = 0});
+
+  factory Membership.fromJson(Map<String, dynamic> json) =>
+      Membership(unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0);
 }
 
 class TeamChatMessagePage extends StatelessWidget {

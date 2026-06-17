@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../../../main.dart' show cameras;
 import '../bloc/attendance_bloc.dart';
 
 enum _Step { capture, verifying, success }
@@ -18,7 +19,10 @@ class UniformVerificationScreen extends StatefulWidget {
 
 class _UniformVerificationScreenState extends State<UniformVerificationScreen>
     with SingleTickerProviderStateMixin {
-  final _picker = ImagePicker();
+  CameraController? _cameraController;
+  bool _cameraReady = false;
+  bool _capturing = false;
+  int _activeSlot = 0; // which view is captured next on shutter tap
 
   // Three capture slots: Front, Side, Full Body
   final List<File?> _photos = [null, null, null];
@@ -48,21 +52,57 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    if (cameras.isEmpty) return;
+    // Front camera for the uniform self-check; fall back to whatever exists.
+    final desc = cameras.firstWhere(
+      (c) => c.lensDirection == CameraLensDirection.front,
+      orElse: () => cameras.first,
+    );
+    final controller = CameraController(
+      desc,
+      ResolutionPreset.medium,
+      enableAudio: false,
+      imageFormatGroup:
+          Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.jpeg,
+    );
+    _cameraController = controller;
+    try {
+      await controller.initialize();
+      if (mounted) setState(() => _cameraReady = true);
+    } catch (_) {
+      if (mounted) setState(() => _cameraReady = false);
+    }
   }
 
   @override
   void dispose() {
     _rotateController.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
+  /// Captures the given view directly from the live in-app preview — no
+  /// device camera app is opened.
   Future<void> _captureSlot(int index) async {
-    final XFile? file = await _picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 80,
-    );
-    if (file != null && mounted) {
-      setState(() => _photos[index] = File(file.path));
+    final c = _cameraController;
+    if (c == null || !c.value.isInitialized || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      final XFile shot = await c.takePicture();
+      if (!mounted) return;
+      setState(() {
+        _photos[index] = File(shot.path);
+        // Advance to the next empty slot so the next shutter tap fills it.
+        final next = _photos.indexWhere((p) => p == null);
+        _activeSlot = next == -1 ? index : next;
+      });
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _capturing = false);
     }
   }
 
@@ -181,33 +221,48 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
 
           SizedBox(height: 24.h),
 
-          // Person silhouette guide
+          // Live in-app camera preview inside the guide frame
           Expanded(
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Dashed outline guide box
                 Container(
                   width: 200.w,
                   height: double.infinity,
                   margin: EdgeInsets.symmetric(horizontal: 80.w),
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(16.r),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.18),
                       width: 1.5,
                     ),
                   ),
-                ),
-                // Silhouette icon
-                Icon(
-                  LucideIcons.user_round,
-                  size: 130.sp,
-                  color: Colors.white.withValues(alpha: 0.10),
+                  child: (_cameraReady &&
+                          _cameraController != null &&
+                          _cameraController!.value.isInitialized)
+                      ? FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width:
+                                _cameraController!.value.previewSize?.height ?? 1,
+                            height:
+                                _cameraController!.value.previewSize?.width ?? 1,
+                            child: CameraPreview(_cameraController!),
+                          ),
+                        )
+                      : Center(
+                          child: Icon(
+                            LucideIcons.user_round,
+                            size: 130.sp,
+                            color: Colors.white.withValues(alpha: 0.10),
+                          ),
+                        ),
                 ),
                 // Corner brackets for framing effect
                 ..._buildCornerBrackets(),
-                // Center label
+                // Center label — shows the view being captured next
                 Positioned(
                   bottom: 20.h,
                   child: Container(
@@ -220,7 +275,9 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
                       borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
-                      'Stand 1.5 m from camera · Full body visible',
+                      !_photos.contains(null)
+                          ? 'All views captured'
+                          : 'Capturing: ${_slotLabels[_activeSlot]}',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10.sp,
@@ -233,7 +290,34 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
             ),
           ),
 
-          SizedBox(height: 20.h),
+          SizedBox(height: 14.h),
+
+          // Shutter — captures the active view from the live preview in-place
+          GestureDetector(
+            onTap: (_cameraReady && _photos.contains(null))
+                ? () => _captureSlot(_activeSlot)
+                : null,
+            child: Container(
+              width: 66.w,
+              height: 66.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.12),
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: _capturing
+                  ? Padding(
+                      padding: EdgeInsets.all(18.w),
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(LucideIcons.camera, color: Colors.white, size: 26.sp),
+            ),
+          ),
+
+          SizedBox(height: 16.h),
 
           // Capture slot buttons
           Padding(

@@ -190,7 +190,10 @@ class _TeamMapScreenState extends State<TeamMapScreen>
     });
 
     _setupSosSocketListeners();
-    _initLocation();
+    // Only request location once the Team tab is actually shown — otherwise the
+    // map (built in the dashboard's IndexedStack) prompts for location while the
+    // user is still on Home.
+    if (widget.isScreenActive) _initLocation();
   }
 
   void _setupSosSocketListeners() {
@@ -235,6 +238,13 @@ class _TeamMapScreenState extends State<TeamMapScreen>
   @override
   void didUpdateWidget(covariant TeamMapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Initialize location the first time the Team tab becomes active.
+    if (!oldWidget.isScreenActive &&
+        widget.isScreenActive &&
+        _currentPosition == null) {
+      _initLocation();
+    }
+
     if (widget.isScreenActive && !oldWidget.isScreenActive) {
       _pulseController.repeat();
       _loadEmployeeMapData();

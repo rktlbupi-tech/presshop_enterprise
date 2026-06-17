@@ -60,13 +60,12 @@ class MapService {
       return null;
     }
 
+    // Permission is requested once upstream (MapCubit / TeamMapScreen). Here we
+    // only read the current status so we never trigger a second system prompt.
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        debugPrint("MapService: Location permissions are denied.");
-        return null;
-      }
+      debugPrint("MapService: Location permissions are denied.");
+      return null;
     }
 
     if (permission == LocationPermission.deniedForever) {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthInterceptor extends Interceptor {
@@ -28,28 +27,18 @@ class AuthInterceptor extends Interceptor {
   }
 }
 
+/// Clean, single-line network logging — no ANSI boxes, no escape-code noise.
+///   →  GET  /enterprise/tasks?…
+///   ←  200  GET /enterprise/tasks  (123ms)
+///   ✖  500  POST /enterprise/…     error
 class AppLogInterceptor extends Interceptor {
-  final Logger _logger = Logger(
-    printer: PrettyPrinter(
-      methodCount: 0,
-      errorMethodCount: 5,
-      lineLength: 80,
-      colors: true,
-      printEmojis: true,
-    ),
-  );
-
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (kDebugMode) {
-      _logger.i('REQUEST [${options.method}] => ${options.uri}');
-      if (options.data != null) {
-        try {
-          _logger.d('Body: ${const JsonEncoder.withIndent('  ').convert(options.data)}');
-        } catch (_) {
-          _logger.d('Body: ${options.data}');
-        }
-      }
+      options.extra['__startMs'] = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('→  ${options.method.padRight(4)} ${_short(options.uri)}');
+      final body = _formatBody(options.data);
+      if (body != null) debugPrint('   body: $body');
     }
     handler.next(options);
   }
@@ -57,7 +46,9 @@ class AppLogInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     if (kDebugMode) {
-      _logger.i('RESPONSE [${response.statusCode}] => ${response.requestOptions.uri}');
+      final o = response.requestOptions;
+      debugPrint(
+          '←  ${response.statusCode}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}');
     }
     handler.next(response);
   }
@@ -65,8 +56,45 @@ class AppLogInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (kDebugMode) {
-      _logger.e('ERROR [${err.response?.statusCode}] => ${err.requestOptions.uri}\n${err.message}');
+      final o = err.requestOptions;
+      debugPrint(
+          '✖  ${err.response?.statusCode ?? '---'}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}');
+      if (err.message != null) debugPrint('   error: ${err.message}');
+      final data = err.response?.data;
+      if (data != null) debugPrint('   resp:  ${_truncate(data.toString(), 500)}');
     }
     handler.next(err);
   }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _short(Uri uri) {
+    final q = uri.query.isNotEmpty ? '?${uri.query}' : '';
+    return '${uri.path}$q';
+  }
+
+  String _elapsed(RequestOptions o) {
+    final start = o.extra['__startMs'];
+    if (start is int) {
+      return '  (${DateTime.now().millisecondsSinceEpoch - start}ms)';
+    }
+    return '';
+  }
+
+  String? _formatBody(dynamic data) {
+    if (data == null) return null;
+    if (data is FormData) {
+      final fields = {for (final f in data.fields) f.key: f.value};
+      final files = data.files.map((e) => e.value.filename ?? 'file').toList();
+      return 'FormData fields=$fields files=$files';
+    }
+    try {
+      return _truncate(const JsonEncoder.withIndent('  ').convert(data), 1000);
+    } catch (_) {
+      return _truncate(data.toString(), 1000);
+    }
+  }
+
+  String _truncate(String s, int max) =>
+      s.length > max ? '${s.substring(0, max)}…' : s;
 }

@@ -31,9 +31,10 @@ class ContentSubmittedScreen extends StatelessWidget {
               ),
               SizedBox(height: size.width * 0.06),
               Text(
-                'Submitted!',
+                'Your Submission Has Been Received',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: size.width * 0.07,
+                  fontSize: size.width * 0.06,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'AirbnbCereal',
                   color: Colors.black,
@@ -41,10 +42,11 @@ class ContentSubmittedScreen extends StatelessWidget {
               ),
               SizedBox(height: size.width * 0.03),
               Text(
-                'Your content has been submitted successfully.',
+                "Your content or evidence has been securely uploaded and shared with your organisation for review and further action. All submissions are automatically processed through PressHop's AI moderation tools to detect manipulated, AI-generated, or non-compliant content.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: size.width * 0.035,
+                  fontSize: size.width * 0.034,
+                  height: 1.45,
                   color: Colors.grey[600],
                   fontFamily: 'AirbnbCereal',
                 ),

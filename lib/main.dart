@@ -7,6 +7,7 @@ import 'config/di/injection.dart';
 import 'config/routes/app_router.dart';
 import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
+import 'features/camera/presentation/widgets/upload_progress_overlay.dart';
 
 /// Global camera list — populated before runApp so it's ready on first frame.
 List<CameraDescription> cameras = [];
@@ -66,6 +67,15 @@ class PresshopEnterpriseApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           routerConfig: router,
+          builder: (context, child) {
+            // Float the upload-progress banner above every screen.
+            return Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                const UploadProgressOverlay(),
+              ],
+            );
+          },
         );
       },
     );

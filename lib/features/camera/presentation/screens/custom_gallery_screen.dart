@@ -78,7 +78,30 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen> {
         fromGallary: true,
       ));
     }
-    if (mounted) Navigator.pop(context, result);
+    if (!mounted) return;
+    if (result.isEmpty) {
+      Navigator.pop(context);
+      return;
+    }
+    if (widget.picAgain) {
+      // Opened from the preview's "Add More" — return the picks to it.
+      Navigator.pop(context, result);
+    } else {
+      // First-time selection from the camera — go straight to the preview
+      // screen (same flow as the old app), then on to publish.
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EmployeePreviewScreen(
+            cameraData: null,
+            pickAgain: widget.picAgain,
+            type: 'camera',
+            cameraListData: result,
+            mediaList: const [],
+          ),
+        ),
+      );
+    }
   }
 
   @override
