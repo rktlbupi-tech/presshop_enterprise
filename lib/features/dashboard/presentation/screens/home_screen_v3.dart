@@ -1333,9 +1333,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 children: [
                   Text(
                     'Capture the moment',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 15.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'AirbnbCereal',
                     ),
@@ -1343,9 +1345,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   SizedBox(height: 2.h),
                   Text(
                     'Shoot & submit field evidence',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontFamily: 'AirbnbCereal',
                     ),
                   ),
@@ -1370,7 +1374,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     Icon(LucideIcons.camera, color: Colors.white, size: 12.sp),
                     SizedBox(width: 5.w),
                     Text(
-                      'Open',
+                      'Open camera',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11.sp,

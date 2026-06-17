@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../presentation/widgets/loading_widget.dart';
 import '../../data/datasources/settings_remote_datasource.dart';
 
 // ── Models ────────────────────────────────────────────────────────
@@ -392,7 +393,7 @@ class FAQScreenState extends State<FAQScreen> {
                   ),
                 ),
               )
-            : const Center(child: CircularProgressIndicator()),
+            : const LoadingWidget(),
       ),
     );
   }

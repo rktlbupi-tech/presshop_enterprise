@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:presshop_enterprise/core/network/api_endpoints.dart';
 
 import '../../../../core/network/api_client.dart';
@@ -22,15 +23,35 @@ class SettingsRemoteDatasource {
   }
 
   Future<String?> fetchLegalTerms(String type) async {
-    final res = await _client.get(
-      ApiEndpoints.getGeneralMgmtApp,
-      queryParameters: {'type': type, 'role': 'enterprise'},
-    );
-    if (res.data['status'] != null &&
-        res.data['status']['description'] != null) {
-      return res.data['status']['description']?.toString();
+    // Legal T&Cs come from a dedicated endpoint (matches the old app);
+    // privacy_policy and other CMS pages use the general management endpoint.
+    final res = type == 'legal'
+        ? await _client.get(
+            'hopper/legal',
+            queryParameters: {'role': 'enterprise'},
+          )
+        : await _client.get(
+            ApiEndpoints.getGeneralMgmtApp,
+            queryParameters: {'type': type, 'role': 'enterprise'},
+          );
+    final data = res.data;
+    if (kDebugMode) debugPrint('fetchLegalTerms[$type] raw: $data');
+    if (data is! Map) return null;
+
+    // Pull the HTML description from whichever shape the API returns.
+    String? fromMap(dynamic node) {
+      if (node is Map && node['description'] != null) {
+        final d = node['description'].toString();
+        return d.isEmpty ? null : d;
+      }
+      if (node is String && node.isNotEmpty) return node;
+      return null;
     }
-    return null;
+
+    return fromMap(data['status']) ??
+        fromMap(data['data']) ??
+        fromMap(data) ??
+        (data['description']?.toString());
   }
 
   Future<List<Map<String, dynamic>>> fetchCategories(String type) async {

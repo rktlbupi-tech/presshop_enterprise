@@ -24,6 +24,11 @@ class DashboardScreen extends StatefulWidget {
 class DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 2;
 
+  // One-shot intents to deep-link the Team map into SOS / Share Alert
+  // (used by the Menu tab — mirrors the old app's openSos / openShareAlert).
+  bool _mapOpenSos = false;
+  bool _mapOpenShareAlert = false;
+
   static const String _iconsPath = 'assets/icons/';
 
   late final AttendanceBloc _attendanceBloc;
@@ -66,6 +71,25 @@ class DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  /// Switches to the Team map tab and opens the SOS or Share Alert panel
+  /// (matches the old app's menu behaviour).
+  void openTeamMap({bool sos = false, bool shareAlert = false}) {
+    setState(() {
+      _currentIndex = 3;
+      _mapOpenSos = sos;
+      _mapOpenShareAlert = shareAlert;
+    });
+    // Reset the one-shot flags so a later tap can re-trigger them.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && (_mapOpenSos || _mapOpenShareAlert)) {
+        setState(() {
+          _mapOpenSos = false;
+          _mapOpenShareAlert = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final iconSize = 24.sp;
@@ -83,6 +107,8 @@ class DashboardScreenState extends State<DashboardScreen> {
         child: TeamMapScreen(
           key: const ValueKey('team_map_screen'),
           isScreenActive: _currentIndex == 3,
+          openSosDirectly: _mapOpenSos,
+          openShareAlertDirectly: _mapOpenShareAlert,
         ),
       ),
       _menuScreen,

@@ -12,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/coming_soon_screen.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
 import '../../../attendance/presentation/screens/attendance_screen.dart';
 import '../../../documents/presentation/screens/documents_screen.dart';
@@ -20,8 +19,8 @@ import '../../../earnings/presentation/screens/earnings_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart'
     show ProfileScreen;
-import '../../../sos/presentation/widgets/sos_dialog.dart';
-import '../../../team_chat/presentation/screens/team_chat_screen.dart';
+import '../../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../map/presentation/screens/team_chat_list_page.dart';
 import '../../../content/presentation/screens/evidence_screen.dart';
 import '../../../tasks/presentation/screens/task_schedule_screen.dart';
 import '../../../../features/settings/presentation/screens/faq_screen.dart';
@@ -445,12 +444,9 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_alert2.png',
                 iconColor: const Color(0xFFF59E0B),
                 iconBgColor: const Color(0xFFFFF8EC),
-                onTap: () => _open(
-                  const ComingSoonScreen(
-                    title: 'Share alert',
-                    icon: Icons.campaign_outlined,
-                  ),
-                ),
+                onTap: () => context
+                    .findAncestorStateOfType<DashboardScreenState>()
+                    ?.openTeamMap(shareAlert: true),
               ),
               _MenuGroupItem(
                 name: 'SOS',
@@ -458,19 +454,16 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFFEF4444),
                 iconBgColor: const Color(0xFFFFEEEE),
                 iconSize: size.width * 0.074,
-                onTap: () => SosDialog.show(context),
+                onTap: () => context
+                    .findAncestorStateOfType<DashboardScreenState>()
+                    ?.openTeamMap(sos: true),
               ),
               _MenuGroupItem(
                 name: 'Chat',
                 iconPath: '${_iconsPath}ic_chat.png',
                 iconColor: const Color(0xFF4A80F0),
                 iconBgColor: const Color(0xFFEEF2FF),
-                onTap: () => _open(
-                  const TeamChatScreen(
-                    roomId: 'general',
-                    roomName: 'Team Chat',
-                  ),
-                ),
+                onTap: () => _open(const TeamChatListPage()),
               ),
             ],
           ),

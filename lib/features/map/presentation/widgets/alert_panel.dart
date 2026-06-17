@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
+import 'package:presshop_enterprise/features/map/data/services/emergency_service.dart';
 
 const List<Map<String, String>> alertTypesForEmployee = [
   {'type': 'contact-my-family', 'icon': 'assets/markers/gifs/contact-family.gif', 'label': 'Contact my family'},
@@ -34,6 +37,152 @@ class AlertPanelEmployee extends StatefulWidget {
 
 class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
   bool showEmergencyServices = false;
+  bool isLoading = false;
+
+  final EmergencyService _emergencyService = EmergencyService();
+
+  // Nearby stations grouped by category. Populated as each fetch resolves.
+  Map<String, List<EmergencyStation>> realEmergencyServices = {
+    'Police': [],
+    'Ambulance': [],
+    'Fire Brigade': [],
+  };
+
+  // Categories still awaiting their Places API response.
+  final Set<String> _loadingCategories = {};
+
+  // Whether a fetch has already been kicked off (so reopening doesn't refetch).
+  bool _fetchStarted = false;
+
+  /// Country-correct default emergency number, used when a station exposes no
+  /// phone number or when nearby search returns nothing. Ported from old app.
+  String getEmergencyNumber(String category) {
+    String countryCode = '';
+    try {
+      countryCode = _prefs?.getString('country_code') ?? '';
+    } catch (_) {}
+
+    // Strip any formatting, e.g. "+91" -> "91", "+44" -> "44".
+    countryCode = countryCode.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (countryCode == '44') {
+      // UK
+      return '999';
+    } else if (countryCode == '1') {
+      // USA / Canada
+      return '911';
+    } else if (countryCode == '91') {
+      // India
+      if (category == 'Police') return '100';
+      if (category == 'Ambulance') return '102';
+      return '101';
+    } else {
+      // Default to UK 999 to match prior behaviour; falls through here when no
+      // country code is stored.
+      return '999';
+    }
+  }
+
+  SharedPreferences? _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted) _prefs = p;
+    });
+  }
+
+  /// Triggered when the user opens the Emergency services view. Fetches the
+  /// user's current location, then fans out nearby Police / Ambulance / Fire
+  /// searches in parallel, updating the UI as each category resolves.
+  Future<void> _fetchRealEmergencyData() async {
+    if (!mounted) return;
+    setState(() {
+      showEmergencyServices = true;
+      isLoading = true;
+      _fetchStarted = true;
+      _loadingCategories.addAll(['Police', 'Ambulance', 'Fire Brigade']);
+      realEmergencyServices = {
+        'Police': [],
+        'Ambulance': [],
+        'Fire Brigade': [],
+      };
+    });
+
+    Position position;
+    try {
+      position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+      _loadFallbackData();
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          _loadingCategories.clear();
+        });
+      }
+      return;
+    }
+
+    void updateCategory(String key, List<EmergencyStation> stations) {
+      if (!mounted) return;
+      setState(() {
+        realEmergencyServices[key] = stations;
+        _loadingCategories.remove(key);
+        if (_loadingCategories.isEmpty) {
+          isLoading = false;
+          // If every category came back empty, show fallback default cards.
+          if (realEmergencyServices.values.every((l) => l.isEmpty)) {
+            _loadFallbackData();
+          }
+        }
+      });
+    }
+
+    // Fire all three independently — UI updates as each one arrives.
+    _emergencyService
+        .fetchNearbyStations(
+          lat: position.latitude,
+          lng: position.longitude,
+          type: 'police',
+        )
+        .then((r) => updateCategory('Police', r));
+    _emergencyService
+        .fetchNearbyStations(
+          lat: position.latitude,
+          lng: position.longitude,
+          type: 'hospital',
+        )
+        .then((r) => updateCategory('Ambulance', r));
+    _emergencyService
+        .fetchNearbyStations(
+          lat: position.latitude,
+          lng: position.longitude,
+          type: 'fire_station',
+        )
+        .then((r) => updateCategory('Fire Brigade', r));
+  }
+
+  /// Default single-card-per-category fallback so the panel is never empty.
+  void _loadFallbackData() {
+    EmergencyStation fallback(String category) => EmergencyStation(
+          name: category,
+          address: 'Default emergency number',
+          phoneNumber: getEmergencyNumber(category),
+          distance: 0.0,
+          lat: 0.0,
+          lng: 0.0,
+        );
+
+    realEmergencyServices = {
+      'Police': [fallback('Police')],
+      'Ambulance': [fallback('Ambulance')],
+      'Fire Brigade': [fallback('Fire Brigade')],
+    };
+  }
 
   Future<void> _makeCall(String phoneNumber) async {
     if (phoneNumber.isEmpty) return;
@@ -109,7 +258,13 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                           const Spacer(),
                           if (!showEmergencyServices)
                             GestureDetector(
-                              onTap: () => setState(() => showEmergencyServices = true),
+                              onTap: () {
+                                if (!_fetchStarted) {
+                                  _fetchRealEmergencyData();
+                                } else {
+                                  setState(() => showEmergencyServices = true);
+                                }
+                              },
                               child: Row(
                                 children: [
                                   Icon(Icons.phone, size: w * 0.04, color: AppColors.primary),
@@ -237,64 +392,169 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     );
   }
 
-  Widget _buildEmergencyServices(double w) {
-    final services = [
-      {'category': 'Police', 'number': '999', 'icon': Icons.local_police},
-      {'category': 'Ambulance', 'number': '999', 'icon': Icons.local_hospital},
-      {'category': 'Fire Brigade', 'number': '999', 'icon': Icons.local_fire_department},
-    ];
+  IconData _categoryIcon(String category) {
+    switch (category) {
+      case 'Police':
+        return Icons.local_police;
+      case 'Ambulance':
+        return Icons.local_hospital;
+      default:
+        return Icons.local_fire_department;
+    }
+  }
 
+  Widget _buildEmergencyServices(double w) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: services.map((s) {
-        return Container(
-          margin: EdgeInsets.only(bottom: w * 0.02),
-          padding: EdgeInsets.all(w * 0.03),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(w * 0.02),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(w * 0.02),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEEEE),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  s['icon'] as IconData,
-                  color: Colors.red,
-                  size: w * 0.05,
+      children: realEmergencyServices.entries.map((entry) {
+        final category = entry.key;
+        final stations = entry.value;
+        final isLoadingCategory = _loadingCategories.contains(category);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: w * 0.02),
+              child: Text(
+                'Contact $category',
+                style: TextStyle(
+                  fontSize: w * 0.032,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
+                  fontFamily: 'AirbnbCereal',
                 ),
               ),
-              SizedBox(width: w * 0.03),
-              Expanded(
+            ),
+            if (isLoadingCategory)
+              Padding(
+                padding: EdgeInsets.only(bottom: w * 0.02),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: w * 0.04,
+                      height: w * 0.04,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.red,
+                      ),
+                    ),
+                    SizedBox(width: w * 0.02),
+                    Text(
+                      'Searching nearby...',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: w * 0.028,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (stations.isEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: w * 0.02),
                 child: Text(
-                  s['category'] as String,
+                  'No nearby ${category.toLowerCase()} found',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: w * 0.028,
+                    fontFamily: 'AirbnbCereal',
+                  ),
+                ),
+              )
+            else
+              ...stations.map((station) => _buildStationCard(w, category, station)),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStationCard(double w, String category, EmergencyStation station) {
+    final dialNumber = station.phoneNumber.isNotEmpty
+        ? station.phoneNumber
+        : getEmergencyNumber(category);
+
+    return Container(
+      margin: EdgeInsets.only(bottom: w * 0.02),
+      padding: EdgeInsets.all(w * 0.03),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(w * 0.02),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(w * 0.02),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFEEEE),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _categoryIcon(category),
+              color: Colors.red,
+              size: w * 0.05,
+            ),
+          ),
+          SizedBox(width: w * 0.03),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  station.name,
                   style: TextStyle(
                     fontSize: w * 0.032,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'AirbnbCereal',
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              GestureDetector(
-                onTap: () => _makeCall(s['number'] as String),
-                child: Container(
-                  padding: EdgeInsets.all(w * 0.015),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.red, width: 1.5),
+                SizedBox(height: w * 0.008),
+                Text(
+                  station.address,
+                  style: TextStyle(
+                    fontSize: w * 0.026,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.grey.shade600,
+                    fontFamily: 'AirbnbCereal',
                   ),
-                  child: Icon(Icons.phone, size: w * 0.035, color: Colors.red),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+                if ((station.distanceStr ?? '').isNotEmpty) ...[
+                  SizedBox(height: w * 0.008),
+                  Text(
+                    station.distanceStr!,
+                    style: TextStyle(
+                      fontSize: w * 0.026,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade500,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        );
-      }).toList(),
+          SizedBox(width: w * 0.02),
+          GestureDetector(
+            onTap: () => _makeCall(dialNumber),
+            child: Container(
+              padding: EdgeInsets.all(w * 0.015),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.red, width: 1.5),
+              ),
+              child: Icon(Icons.phone, size: w * 0.035, color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

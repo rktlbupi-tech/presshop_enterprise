@@ -221,103 +221,119 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
 
           SizedBox(height: 24.h),
 
-          // Live in-app camera preview inside the guide frame
+          // Live in-app camera preview
           Expanded(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 200.w,
-                  height: double.infinity,
-                  margin: EdgeInsets.symmetric(horizontal: 80.w),
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      width: 1.5,
-                    ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 48.w),
+              child: Container(
+                width: double.infinity,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF11162A),
+                  borderRadius: BorderRadius.circular(22.r),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
                   ),
-                  child: (_cameraReady &&
-                          _cameraController != null &&
-                          _cameraController!.value.isInitialized)
-                      ? FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width:
-                                _cameraController!.value.previewSize?.height ?? 1,
-                            height:
-                                _cameraController!.value.previewSize?.width ?? 1,
-                            child: CameraPreview(_cameraController!),
-                          ),
-                        )
-                      : Center(
-                          child: Icon(
-                            LucideIcons.user_round,
-                            size: 130.sp,
-                            color: Colors.white.withValues(alpha: 0.10),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_cameraReady &&
+                        _cameraController != null &&
+                        _cameraController!.value.isInitialized)
+                      FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width:
+                              _cameraController!.value.previewSize?.height ?? 1,
+                          height:
+                              _cameraController!.value.previewSize?.width ?? 1,
+                          child: CameraPreview(_cameraController!),
+                        ),
+                      )
+                    else
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 22.w,
+                              height: 22.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white24),
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+                            Text(
+                              'Starting camera…',
+                              style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: 11.sp,
+                                fontFamily: 'AirbnbCereal',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Active-view chip
+                    Positioned(
+                      top: 12.h,
+                      left: 12.w,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 10.w, vertical: 5.h),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Text(
+                          !_photos.contains(null)
+                              ? 'All views captured'
+                              : _slotLabels[_activeSlot],
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5.sp,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'AirbnbCereal',
                           ),
                         ),
-                ),
-                // Corner brackets for framing effect
-                ..._buildCornerBrackets(),
-                // Center label — shows the view being captured next
-                Positioned(
-                  bottom: 20.h,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 14.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1F5BF6).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      !_photos.contains(null)
-                          ? 'All views captured'
-                          : 'Capturing: ${_slotLabels[_activeSlot]}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.sp,
-                        fontFamily: 'AirbnbCereal',
                       ),
                     ),
-                  ),
+
+                    // Capturing overlay
+                    if (_capturing)
+                      Container(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: 18.h),
+
+          // Progress hint
+          Text(
+            '${_photos.where((p) => p != null).length} of 3 views captured  ·  tap a view below',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 11.5.sp,
+              fontFamily: 'AirbnbCereal',
             ),
           ),
 
           SizedBox(height: 14.h),
-
-          // Shutter — captures the active view from the live preview in-place
-          GestureDetector(
-            onTap: (_cameraReady && _photos.contains(null))
-                ? () => _captureSlot(_activeSlot)
-                : null,
-            child: Container(
-              width: 66.w,
-              height: 66.w,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
-                border: Border.all(color: Colors.white, width: 3),
-              ),
-              child: _capturing
-                  ? Padding(
-                      padding: EdgeInsets.all(18.w),
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Icon(LucideIcons.camera, color: Colors.white, size: 26.sp),
-            ),
-          ),
-
-          SizedBox(height: 16.h),
 
           // Capture slot buttons
           Padding(
@@ -327,18 +343,23 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
 
           SizedBox(height: 24.h),
 
-          // Verify CTA
+          // Verify CTA — enabled once at least one view is captured
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.w),
             child: GestureDetector(
-              onTap: _runVerification,
+              onTap: _photos.any((p) => p != null) ? _runVerification : null,
               child: Container(
                 width: double.infinity,
                 height: 52.h,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2E66FF), Color(0xFF1540C0)],
-                  ),
+                  gradient: _photos.any((p) => p != null)
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2E66FF), Color(0xFF1540C0)],
+                        )
+                      : null,
+                  color: _photos.any((p) => p != null)
+                      ? null
+                      : const Color(0xFF1B2030),
                   borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Row(
@@ -372,148 +393,104 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
 
   Widget _buildSlotButton(int index) {
     final captured = _photos[index] != null;
+    final isActive = !captured && index == _activeSlot;
     return Expanded(
       child: GestureDetector(
         onTap: () => _captureSlot(index),
         child: Container(
           margin: EdgeInsets.symmetric(horizontal: 5.w),
-          height: 88.h,
+          height: 96.h,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: captured
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.white.withValues(alpha: 0.04),
+            color: const Color(0xFF11162A),
             borderRadius: BorderRadius.circular(14.r),
             border: Border.all(
               color: captured
-                  ? const Color(0xFF4CAF50)
-                  : Colors.white.withValues(alpha: 0.15),
-              width: 1.5,
+                  ? const Color(0xFF2FB667)
+                  : isActive
+                      ? const Color(0xFF2E66FF)
+                      : Colors.white.withValues(alpha: 0.10),
+              width: (captured || isActive) ? 1.6 : 1.0,
             ),
           ),
           child: captured
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(13.r),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(_photos[index]!, fit: BoxFit.cover),
-                      Positioned(
-                        top: 4.h,
-                        right: 4.w,
-                        child: Container(
-                          width: 18.w,
-                          height: 18.w,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF4CAF50),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 11.sp,
-                          ),
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(_photos[index]!, fit: BoxFit.cover),
+                    Container(
+                      alignment: Alignment.bottomCenter,
+                      padding: EdgeInsets.only(bottom: 6.h),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.center,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.70),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 4.h),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.65),
-                                Colors.transparent,
-                              ],
-                            ),
-                          ),
-                          child: Text(
-                            _slotLabels[index],
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8.5.sp,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
+                      child: Text(
+                        _slotLabels[index],
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9.5.sp,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'AirbnbCereal',
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Positioned(
+                      top: 6.h,
+                      right: 6.w,
+                      child: Container(
+                        width: 18.w,
+                        height: 18.w,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF2FB667),
+                          shape: BoxShape.circle,
+                        ),
+                        child:
+                            Icon(Icons.check, color: Colors.white, size: 11.sp),
+                      ),
+                    ),
+                  ],
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(_slotIcons[index], color: Colors.white54, size: 22.sp),
-                    SizedBox(height: 6.h),
+                    Icon(
+                      _slotIcons[index],
+                      color: isActive
+                          ? const Color(0xFF6FA0FF)
+                          : Colors.white54,
+                      size: 22.sp,
+                    ),
+                    SizedBox(height: 8.h),
                     Text(
                       _slotLabels[index],
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 9.sp,
+                        color: isActive ? Colors.white : Colors.white60,
+                        fontSize: 10.sp,
+                        fontWeight:
+                            isActive ? FontWeight.w700 : FontWeight.w500,
                         fontFamily: 'AirbnbCereal',
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Icon(
-                      LucideIcons.camera,
-                      color: Colors.white30,
-                      size: 12.sp,
+                    SizedBox(height: 3.h),
+                    Text(
+                      'Tap to capture',
+                      style: TextStyle(
+                        color: Colors.white30,
+                        fontSize: 8.sp,
+                        fontFamily: 'AirbnbCereal',
+                      ),
                     ),
                   ],
                 ),
         ),
-      ),
-    );
-  }
-
-  List<Widget> _buildCornerBrackets() {
-    const color = Color(0xFF2E66FF);
-    const size = 22.0;
-    const thickness = 2.5;
-    return [
-      Positioned(
-        top: 0,
-        left: 80,
-        child: _corner(color, size, thickness, top: true, left: true),
-      ),
-      Positioned(
-        top: 0,
-        right: 80,
-        child: _corner(color, size, thickness, top: true, left: false),
-      ),
-      Positioned(
-        bottom: 0,
-        left: 80,
-        child: _corner(color, size, thickness, top: false, left: true),
-      ),
-      Positioned(
-        bottom: 0,
-        right: 80,
-        child: _corner(color, size, thickness, top: false, left: false),
-      ),
-    ];
-  }
-
-  Widget _corner(
-    Color color,
-    double size,
-    double thickness, {
-    required bool top,
-    required bool left,
-  }) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _CornerPainter(
-        color: color,
-        thickness: thickness,
-        top: top,
-        left: left,
       ),
     );
   }
@@ -775,39 +752,3 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
   }
 }
 
-// ── Corner bracket custom painter ────────────────────────────────────────────
-
-class _CornerPainter extends CustomPainter {
-  final Color color;
-  final double thickness;
-  final bool top;
-  final bool left;
-
-  const _CornerPainter({
-    required this.color,
-    required this.thickness,
-    required this.top,
-    required this.left,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final x = left ? 0.0 : size.width;
-    final y = top ? 0.0 : size.height;
-    final dx = left ? size.width : -size.width;
-    final dy = top ? size.height : -size.height;
-
-    canvas.drawLine(Offset(x, y), Offset(x + dx, y), paint);
-    canvas.drawLine(Offset(x, y), Offset(x, y + dy), paint);
-  }
-
-  @override
-  bool shouldRepaint(_CornerPainter old) =>
-      old.color != color || old.thickness != thickness;
-}

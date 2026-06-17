@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
 
 import '../../data/datasources/settings_remote_datasource.dart';
@@ -141,7 +142,7 @@ class _TermCheckScreenState extends State<TermCheckScreen> {
         showLogo: false,
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingWidget()
           : htmlDataList.isNotEmpty
           ? SingleChildScrollView(
               controller: scrollController,

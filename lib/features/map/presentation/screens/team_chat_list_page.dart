@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:presshop_enterprise/config/di/injection.dart';
 import 'package:presshop_enterprise/core/network/api_client.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
+import 'package:presshop_enterprise/features/team_chat/presentation/screens/team_chat_message_page.dart';
 
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 
@@ -227,23 +228,6 @@ class Membership {
 
   factory Membership.fromJson(Map<String, dynamic> json) =>
       Membership(unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0);
-}
-
-class TeamChatMessagePage extends StatelessWidget {
-  final String name;
-  final bool isGroup;
-  final String image;
-  final String taskId;
-  const TeamChatMessagePage({
-    Key? key,
-    required this.name,
-    this.isGroup = false,
-    required this.image,
-    required this.taskId,
-  }) : super(key: key);
-  @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: Text(name)));
 }
 
 final _sharedPreferences = _MockPrefs();
@@ -523,10 +507,9 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => TeamChatMessagePage(
-                    name: title,
-                    isGroup: true,
+                    conversationId: taskId,
+                    title: title,
                     image: avatarUrl,
-                    taskId: taskId,
                   ),
                 ),
               ).then((_) {
@@ -655,9 +638,9 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => TeamChatMessagePage(
-                    name: item.display.title,
+                    conversationId: item.conversation.id,
+                    title: item.display.title,
                     image: item.display.avatarImage,
-                    taskId: item.conversation.id ?? "",
                   ),
                 ),
               ).then((_) {

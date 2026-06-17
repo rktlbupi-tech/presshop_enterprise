@@ -49,6 +49,8 @@ class AppLogInterceptor extends Interceptor {
       final o = response.requestOptions;
       debugPrint(
           '←  ${response.statusCode}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}');
+      final body = _formatBody(response.data);
+      if (body != null) debugPrint('   resp: $body');
     }
     handler.next(response);
   }
