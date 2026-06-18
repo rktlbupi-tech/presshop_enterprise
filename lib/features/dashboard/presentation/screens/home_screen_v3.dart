@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:presshop_enterprise/features/duties/presentation/screens/duties_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/domain/entities/profile_entity.dart';
@@ -32,6 +33,16 @@ class _HomeScreen3State extends State<HomeScreen3> {
   // Replaced Timer.periodic with a periodic Stream so only the tiny
   // StreamBuilder inside the gauge rebuilds every second — not the whole screen.
   Stream<int>? _dutyTimerStream;
+
+  String _formatDistance(double value) {
+    final isInt = value == value.roundToDouble();
+    final valStr = isInt ? value.toInt().toString() : value.toStringAsFixed(1);
+    return '$valStr ${value == 1.0 ? 'mile' : 'miles'}';
+  }
+
+  String _formatItemsCount(int count) {
+    return 'View $count ${count == 1 ? 'item' : 'items'}';
+  }
 
   void _navigateToTab(int index) {
     context.findAncestorStateOfType<DashboardScreenState>()?.changeTab(index);
@@ -150,7 +161,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
               final siteStr = profile?.currentLocation?.isNotEmpty == true
                   ? profile!.currentLocation!
                   : 'MG Road, Bengaluru';
-              final mileageStr = isCheckedIn ? '18 miles' : '0 miles';
+              final mileageStr = _formatDistance(isCheckedIn ? 18.0 : 0.0);
 
               // ColoredBox + SafeArea instead of nested Scaffold — avoids
               // the layout assertion errors caused by double Scaffold nesting.
@@ -179,7 +190,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                         ),
                         SizedBox(height: 16.h),
                         _buildCameraShortcutCard(),
-                        SizedBox(height: 16.h),
+                        // SizedBox(height: 6.h),
                         _buildTasksCard(),
                         SizedBox(height: 16.h),
                         _buildDutiesCard(),
@@ -231,10 +242,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   color: avatar != null && avatar.isNotEmpty
                       ? Colors.grey.shade100
                       : const Color(0xFF1F5BF6),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: Colors.grey.shade300, width: 1.5),
                   image: avatar != null && avatar.isNotEmpty
                       ? DecorationImage(
                           image: NetworkImage(avatar),
@@ -263,9 +271,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   width: 11.w,
                   height: 11.w,
                   decoration: BoxDecoration(
-                    color: isOnline
-                        ? AppColors.accent
-                        : Colors.grey.shade400,
+                    color: isOnline ? AppColors.accent : Colors.grey.shade400,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
@@ -445,8 +451,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
                           child: CircularProgressIndicator(
                             value: isOnline ? progress : 1.0,
                             strokeWidth: 5.w,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.22),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.22,
+                            ),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Colors.white,
                             ),
@@ -729,52 +736,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
           ),
           SizedBox(height: 14.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Evidence submitted',
-                style: TextStyle(
-                  color: const Color(0xFF5A6373),
-                  fontSize: 11.sp,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-              Text(
-                'View 14 items',
-                style: TextStyle(
-                  color: const Color(0xFF0B0F1A),
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w800,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Row(
-            children: [
-              _buildEvidenceThumb(
-                'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=100&h=100&fit=crop',
-                'Site Visit',
-              ),
-              SizedBox(width: 14.w),
-              _buildEvidenceThumb(
-                'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=100&h=100&fit=crop',
-                'Road Work',
-              ),
-              SizedBox(width: 14.w),
-              _buildEvidenceThumb(
-                'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=100&h=100&fit=crop',
-                'Event Cover',
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
+
           const Divider(height: 1, color: Color(0xFFEFF1F5)),
           SizedBox(height: 12.h),
           Text(
-            'RECENT',
+            'HISTORY',
             style: TextStyle(
               color: const Color(0xFF9AA2B1),
               fontSize: 9.sp,
@@ -799,6 +765,132 @@ class _HomeScreen3State extends State<HomeScreen3> {
             statusColor: const Color(0xFF127A45),
             statusBg: const Color(0xFFEAF5EE),
           ),
+
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'EVIDENCE SUBMITTED',
+                style: TextStyle(
+                  color: const Color(0xFF9AA2B1),
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _navigateToTab(0),
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 24.w,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Align(
+                            widthFactor: 0.6,
+                            child: Container(
+                              width: 24.w,
+                              height: 24.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                                image: const DecorationImage(
+                                  image: NetworkImage(
+                                    'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=50&h=50&fit=crop',
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            widthFactor: 0.6,
+                            child: Container(
+                              width: 24.w,
+                              height: 24.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                                image: const DecorationImage(
+                                  image: NetworkImage(
+                                    'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=50&h=50&fit=crop',
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            widthFactor: 0.6,
+                            child: Container(
+                              width: 24.w,
+                              height: 24.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                                image: const DecorationImage(
+                                  image: NetworkImage(
+                                    'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=50&h=50&fit=crop',
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Text(
+                      _formatItemsCount(14),
+                      style: TextStyle(
+                        decoration: TextDecoration.underline,
+                        color: const Color(0xFF0B0F1A),
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // SizedBox(height: 6.h),
+
+          // Row(
+          //   children: [
+          //     _buildEvidenceThumb(
+          //       'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=100&h=100&fit=crop',
+          //       'Site Visit',
+          //     ),
+          //     SizedBox(width: 14.w),
+          //     _buildEvidenceThumb(
+          //       'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=100&h=100&fit=crop',
+          //       'Road Work',
+          //     ),
+          //     SizedBox(width: 14.w),
+          //     _buildEvidenceThumb(
+          //       'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=100&h=100&fit=crop',
+          //       'Event Cover',
+          //     ),
+          //   ],
+          // ),
+          // SizedBox(height: 14.h),
         ],
       ),
     );
@@ -889,7 +981,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 badgeText: 'June',
                 badgeBgColor: const Color(0xFFEAF1FE),
                 badgeTextColor: const Color(0xFF1F5BF6),
-                value: '248 miles',
+                value: _formatDistance(248.0),
                 title: 'Mileage done',
                 subtitle: 'Reimbursable ₹2,480',
                 onTap: () => Navigator.push(
@@ -1398,7 +1490,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
           GestureDetector(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+              MaterialPageRoute(builder: (_) => const DutiesScreen()),
             ),
             child: Row(
               children: [
@@ -2060,7 +2152,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      '248 miles total · June',
+                      '${_formatDistance(248.0)} total · June',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,

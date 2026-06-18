@@ -46,7 +46,8 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
     if (bloc != null) {
       return BlocBuilder<ProfileBloc, ProfileState>(
         bloc: bloc,
-        buildWhen: (prev, curr) => curr is ProfileLoaded || curr is ProfileLoading,
+        buildWhen: (prev, curr) =>
+            curr is ProfileLoaded || curr is ProfileLoading,
         builder: (context, state) {
           final profile = state is ProfileLoaded ? state.profile : null;
           return _buildWithProfile(context, profile);
@@ -60,17 +61,29 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildWithProfile(BuildContext context, ProfileEntity? profile) {
     final prefs = getIt<SharedPreferences>();
     final firstName =
-        firstNameOverride ?? profile?.firstName ?? prefs.getString('user_first_name') ?? 'Employee';
+        firstNameOverride ??
+        profile?.firstName ??
+        prefs.getString('user_first_name') ??
+        'Employee';
     final lastName =
-        lastNameOverride ?? profile?.lastName ?? prefs.getString('user_last_name') ?? '';
+        lastNameOverride ??
+        profile?.lastName ??
+        prefs.getString('user_last_name') ??
+        '';
     final fullName = '$firstName $lastName'.trim();
     final mediaHouse =
         companyNameOverride ??
         profile?.companyName ??
         prefs.getString('company_name') ??
         'PressHop Enterprise';
-    final avatar = avatarOverride ?? profile?.profileImage ?? prefs.getString('user_avatar');
-    final companyLogo = companyLogoOverride ?? profile?.companyLogo ?? prefs.getString('company_logo');
+    final avatar =
+        avatarOverride ??
+        profile?.profileImage ??
+        prefs.getString('user_avatar');
+    final companyLogo =
+        companyLogoOverride ??
+        profile?.companyLogo ??
+        prefs.getString('company_logo');
 
     return AppBar(
       backgroundColor: AppColors.surface,
@@ -181,10 +194,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
-                border: Border.all(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.grey.shade200, width: 1),
                 image: (companyLogo != null && companyLogo.isNotEmpty)
                     ? DecorationImage(
                         image: NetworkImage(companyLogo),

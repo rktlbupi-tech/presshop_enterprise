@@ -14,6 +14,7 @@ import 'audio_recorder_screen.dart';
 import 'content_submitted_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../main.dart' show sharedPreferences;
+import '../../../../presentation/widgets/loading_widget.dart';
 
 class EmployeePublishContentScreen extends StatefulWidget {
   final PublishData? publishData;
@@ -64,10 +65,13 @@ class _EmployeePublishContentScreenState
         ? widget.publishData!.address
         : sharedPreferences?.getString(currentAddress) ?? '';
     _locationCtrl.text = address;
-    _timestampCtrl.text =
-        DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _fetchTodayTasks());
+    _timestampCtrl.text = DateFormat(
+      'dd MMM yyyy, hh:mm a',
+    ).format(DateTime.now());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchTodayTasks();
+      UploadProgressNotifier.instance.init();
+    });
   }
 
   @override
@@ -84,7 +88,9 @@ class _EmployeePublishContentScreenState
     setState(() => _isTasksLoading = true);
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final tasks = await _taskService.fetchTodayTasks(
-        startDate: today, endDate: today);
+      startDate: today,
+      endDate: today,
+    );
     if (mounted) {
       setState(() {
         _todayTasks = tasks;
@@ -146,8 +152,11 @@ class _EmployeePublishContentScreenState
                     ),
                   ),
                   SizedBox(width: size.width * numD015),
-                  Icon(Icons.assignment_outlined,
-                      size: size.width * numD06, color: Colors.black),
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: size.width * numD06,
+                    color: Colors.black,
+                  ),
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(sheetCtx),
@@ -159,132 +168,129 @@ class _EmployeePublishContentScreenState
               SizedBox(height: size.width * numD035),
               Expanded(
                 child: _isTasksLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                            color: colorEmployeeGreen1))
+                    ? const LoadingWidget()
                     : _todayTasks.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No tasks scheduled for today',
-                              style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: size.width * numD03),
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: _todayTasks.length,
-                            separatorBuilder: (context2, i2) =>
-                                SizedBox(height: size.width * numD02),
-                            itemBuilder: (_, i) {
-                              final task = _todayTasks[i];
-                              final isSelected = _selectedTask?.id == task.id;
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTask =
-                                        isSelected ? null : task;
-                                  });
-                                  Navigator.pop(sheetCtx);
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: size.width * numD025,
-                                    vertical: size.width * numD025,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? const Color(0xFFEEF2FF)
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(
-                                        size.width * numD03),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? colorEmployeeGreen1
-                                          : Colors.grey.shade300,
-                                      width: isSelected ? 1.5 : 1.0,
+                    ? Center(
+                        child: Text(
+                          'No tasks scheduled for today',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: size.width * numD03,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: _todayTasks.length,
+                        separatorBuilder: (context2, i2) =>
+                            SizedBox(height: size.width * numD02),
+                        itemBuilder: (_, i) {
+                          final task = _todayTasks[i];
+                          final isSelected = _selectedTask?.id == task.id;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedTask = isSelected ? null : task;
+                              });
+                              Navigator.pop(sheetCtx);
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: size.width * numD025,
+                                vertical: size.width * numD025,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFFEEF2FF)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(
+                                  size.width * numD03,
+                                ),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? colorEmployeeGreen1
+                                      : Colors.grey.shade300,
+                                  width: isSelected ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: size.width * numD1,
+                                    height: size.width * numD1,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE8EDFF),
+                                      borderRadius: BorderRadius.circular(
+                                        size.width * numD02,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.location_on_outlined,
+                                        size: size.width * numD045,
+                                        color: colorEmployeeGreen1,
+                                      ),
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: size.width * numD1,
-                                        height: size.width * numD1,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE8EDFF),
-                                          borderRadius: BorderRadius.circular(
-                                              size.width * numD02),
+                                  SizedBox(width: size.width * numD025),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          task.title,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: size.width * numD034,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        child: Center(
-                                          child: Icon(
-                                              Icons.location_on_outlined,
-                                              size: size.width * numD045,
-                                              color: colorEmployeeGreen1),
-                                        ),
-                                      ),
-                                      SizedBox(width: size.width * numD025),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              task.title,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize:
-                                                    size.width * numD034,
+                                        if ((task.destinationLabel ?? '')
+                                            .isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on_outlined,
+                                                size: size.width * numD03,
+                                                color: Colors.grey.shade500,
                                               ),
-                                              maxLines: 1,
-                                              overflow:
-                                                  TextOverflow.ellipsis,
-                                            ),
-                                            if ((task.destinationLabel ?? '')
-                                                .isNotEmpty) ...[
-                                              const SizedBox(height: 3),
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                      Icons
-                                                          .location_on_outlined,
-                                                      size: size.width *
-                                                          numD03,
-                                                      color: Colors
-                                                          .grey.shade500),
-                                                  const SizedBox(width: 2),
-                                                  Expanded(
-                                                    child: Text(
-                                                      task.destinationLabel!,
-                                                      style: TextStyle(
-                                                          fontSize:
-                                                              size.width *
-                                                                  numD026,
-                                                          color: Colors
-                                                              .grey
-                                                              .shade500),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow
-                                                          .ellipsis,
-                                                    ),
+                                              const SizedBox(width: 2),
+                                              Expanded(
+                                                child: Text(
+                                                  task.destinationLabel!,
+                                                  style: TextStyle(
+                                                    fontSize:
+                                                        size.width * numD026,
+                                                    color: Colors.grey.shade500,
                                                   ),
-                                                ],
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             ],
-                                          ],
-                                        ),
-                                      ),
-                                      SizedBox(width: size.width * numD02),
-                                      if (isSelected)
-                                        Icon(Icons.check_circle,
-                                            color: colorEmployeeGreen1,
-                                            size: size.width * numD05)
-                                      else
-                                        SizedBox(width: size.width * numD05),
-                                    ],
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                  SizedBox(width: size.width * numD02),
+                                  if (isSelected)
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: colorEmployeeGreen1,
+                                      size: size.width * numD05,
+                                    )
+                                  else
+                                    SizedBox(width: size.width * numD05),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
               SizedBox(height: size.width * numD04),
             ],
@@ -298,17 +304,17 @@ class _EmployeePublishContentScreenState
     if (_selectedTask == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Please select a task to submit with'),
-            backgroundColor: Colors.red),
+          content: Text('Please select a task to submit with'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
     FocusScope.of(context).unfocus();
 
-    final fallbackAddress =
-        (widget.publishData?.address ?? '').isNotEmpty
-            ? widget.publishData!.address
-            : sharedPreferences?.getString(currentAddress) ?? '';
+    final fallbackAddress = (widget.publishData?.address ?? '').isNotEmpty
+        ? widget.publishData!.address
+        : sharedPreferences?.getString(currentAddress) ?? '';
     final fallbackLat = (widget.publishData?.latitude ?? '').isNotEmpty
         ? widget.publishData!.latitude
         : (sharedPreferences?.getDouble(currentLat) ?? 0.0).toString();
@@ -317,30 +323,33 @@ class _EmployeePublishContentScreenState
         : (sharedPreferences?.getDouble(currentLon) ?? 0.0).toString();
 
     final mediaList = (widget.publishData?.mediaList ?? [])
-        .map((e) => CameraTaskMediaData(
-              mediaPath: e.mediaPath,
-              mimeType: e.mimeType,
-              thumbnail: e.thumbnail,
-              latitude: e.latitude.isNotEmpty ? e.latitude : fallbackLat,
-              longitude: e.longitude.isNotEmpty ? e.longitude : fallbackLng,
-              location:
-                  e.location.isNotEmpty ? e.location : fallbackAddress,
-              dateTime: e.dateTime,
-              isLocalMedia: e.isLocalMedia,
-            ))
+        .map(
+          (e) => CameraTaskMediaData(
+            mediaPath: e.mediaPath,
+            mimeType: e.mimeType,
+            thumbnail: e.thumbnail,
+            latitude: e.latitude.isNotEmpty ? e.latitude : fallbackLat,
+            longitude: e.longitude.isNotEmpty ? e.longitude : fallbackLng,
+            location: e.location.isNotEmpty ? e.location : fallbackAddress,
+            dateTime: e.dateTime,
+            isLocalMedia: e.isLocalMedia,
+          ),
+        )
         .toList();
 
     if (_audioPath.isNotEmpty) {
-      mediaList.add(CameraTaskMediaData(
-        mediaPath: _audioPath,
-        mimeType: 'audio',
-        thumbnail: '',
-        latitude: fallbackLat,
-        longitude: fallbackLng,
-        location: fallbackAddress,
-        dateTime: DateTime.now().toIso8601String(),
-        isLocalMedia: true,
-      ));
+      mediaList.add(
+        CameraTaskMediaData(
+          mediaPath: _audioPath,
+          mimeType: 'audio',
+          thumbnail: '',
+          latitude: fallbackLat,
+          longitude: fallbackLng,
+          location: fallbackAddress,
+          dateTime: DateTime.now().toIso8601String(),
+          isLocalMedia: true,
+        ),
+      );
     }
 
     final taskId = _selectedTask!.id;
@@ -384,14 +393,14 @@ class _EmployeePublishContentScreenState
         : 'Uploading task evidence';
 
     Future<bool> doUpload() => _taskService.uploadEvidence(
-          taskId: taskId,
-          mediaList: mediaList,
-          latitude: lat,
-          longitude: lng,
-          address: address,
-          description: description,
-          onProgress: UploadProgressNotifier.instance.updateProgress,
-        );
+      taskId: taskId,
+      mediaList: mediaList,
+      latitude: lat,
+      longitude: lng,
+      address: address,
+      description: description,
+      onProgress: UploadProgressNotifier.instance.updateProgress,
+    );
 
     UploadProgressNotifier.instance.startUpload(
       taskId: taskId,
@@ -407,15 +416,17 @@ class _EmployeePublishContentScreenState
       },
     );
 
-    doUpload().then((success) {
-      if (success) {
-        UploadProgressNotifier.instance.completeUpload();
-      } else {
-        UploadProgressNotifier.instance.failUpload();
-      }
-    }).catchError((_) {
-      UploadProgressNotifier.instance.failUpload();
-    });
+    doUpload()
+        .then((success) {
+          if (success) {
+            UploadProgressNotifier.instance.completeUpload();
+          } else {
+            UploadProgressNotifier.instance.failUpload();
+          }
+        })
+        .catchError((_) {
+          UploadProgressNotifier.instance.failUpload();
+        });
   }
 
   @override
@@ -451,8 +462,9 @@ class _EmployeePublishContentScreenState
 
                 // ── Thumbnail + description ─────────────────────────────
                 Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: size.width * numD04),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: size.width * numD04,
+                  ),
                   child: SizedBox(
                     height: size.width * numD35,
                     child: Row(
@@ -461,8 +473,9 @@ class _EmployeePublishContentScreenState
                         InkWell(
                           onTap: () => Navigator.pop(context),
                           child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(size.width * numD06),
+                            borderRadius: BorderRadius.circular(
+                              size.width * numD06,
+                            ),
                             child: Stack(
                               children: [
                                 _buildThumbnail(size),
@@ -471,12 +484,16 @@ class _EmployeePublishContentScreenState
                                   left: size.width * numD03,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 4, horizontal: 8),
+                                      vertical: 4,
+                                      horizontal: 8,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.5),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.5,
+                                      ),
                                       borderRadius: BorderRadius.circular(
-                                          size.width * numD013),
+                                        size.width * numD013,
+                                      ),
                                     ),
                                     child: Text(
                                       (imageCount + videoCount + audioCount)
@@ -536,8 +553,9 @@ class _EmployeePublishContentScreenState
 
                 // ── Speak (audio narration) ─────────────────────────────
                 Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: size.width * numD04),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: size.width * numD04,
+                  ),
                   child: Row(
                     children: [
                       SizedBox(
@@ -555,16 +573,18 @@ class _EmployeePublishContentScreenState
                         child: InkWell(
                           onTap: () {
                             Navigator.of(context)
-                                .push(MaterialPageRoute(
-                              builder: (_) => const AudioRecorderScreen(),
-                            ))
+                                .push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AudioRecorderScreen(),
+                                  ),
+                                )
                                 .then((value) {
-                              if (value != null) {
-                                _audioPath = value[0].toString();
-                                setState(() {});
-                                _initAudioPlayer(_audioPath);
-                              }
-                            });
+                                  if (value != null) {
+                                    _audioPath = value[0].toString();
+                                    setState(() {});
+                                    _initAudioPlayer(_audioPath);
+                                  }
+                                });
                           },
                           child: Container(
                             padding: EdgeInsets.symmetric(
@@ -573,8 +593,9 @@ class _EmployeePublishContentScreenState
                             ),
                             decoration: BoxDecoration(
                               color: colorLightGrey,
-                              borderRadius:
-                                  BorderRadius.circular(size.width * numD06),
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD06,
+                              ),
                             ),
                             child: Row(
                               children: [
@@ -589,8 +610,10 @@ class _EmployeePublishContentScreenState
                                                 .startPlayer();
                                           }
                                           if (mounted) {
-                                            setState(() => _audioPlaying =
-                                                !_audioPlaying);
+                                            setState(
+                                              () => _audioPlaying =
+                                                  !_audioPlaying,
+                                            );
                                           }
                                         }
                                       : null,
@@ -599,9 +622,11 @@ class _EmployeePublishContentScreenState
                                     child: _audioPath.isEmpty
                                         ? ImageIcon(
                                             const AssetImage(
-                                                'assets/icons/ic_mic.png'),
+                                              'assets/icons/ic_mic.png',
+                                            ),
                                             size: size.width * numD04,
-                                            color: Colors.black)
+                                            color: Colors.black,
+                                          )
                                         : Icon(
                                             _audioPlaying
                                                 ? Icons.pause_circle
@@ -615,7 +640,9 @@ class _EmployeePublishContentScreenState
                                     ? Expanded(
                                         child: AudioFileWaveforms(
                                           size: Size(
-                                              size.width, size.width * numD04),
+                                            size.width,
+                                            size.width * numD04,
+                                          ),
                                           playerController: _playerController,
                                           enableSeekGesture: false,
                                           animationCurve: Curves.bounceIn,
@@ -627,16 +654,22 @@ class _EmployeePublishContentScreenState
                                             spacing: 6,
                                             liveWaveGradient:
                                                 ui.Gradient.linear(
-                                              const Offset(70, 50),
-                                              Offset(size.width / 2, 0),
-                                              [Colors.green, Colors.white70],
-                                            ),
+                                                  const Offset(70, 50),
+                                                  Offset(size.width / 2, 0),
+                                                  [
+                                                    Colors.green,
+                                                    Colors.white70,
+                                                  ],
+                                                ),
                                             fixedWaveGradient:
                                                 ui.Gradient.linear(
-                                              const Offset(70, 50),
-                                              Offset(size.width / 2, 0),
-                                              [Colors.green, Colors.white70],
-                                            ),
+                                                  const Offset(70, 50),
+                                                  Offset(size.width / 2, 0),
+                                                  [
+                                                    Colors.green,
+                                                    Colors.white70,
+                                                  ],
+                                                ),
                                             seekLineColor: colorEmployeeGreen1,
                                             seekLineThickness: 2,
                                             showSeekLine: true,
@@ -646,7 +679,8 @@ class _EmployeePublishContentScreenState
                                       )
                                     : Container(
                                         padding: EdgeInsets.symmetric(
-                                            horizontal: size.width * numD02),
+                                          horizontal: size.width * numD02,
+                                        ),
                                         child: Text(
                                           '00:00',
                                           style: TextStyle(
@@ -720,7 +754,8 @@ class _EmployeePublishContentScreenState
                   onTap: () => _showTaskPicker(size),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                        horizontal: size.width * numD04),
+                      horizontal: size.width * numD04,
+                    ),
                     child: Row(
                       children: [
                         SizedBox(
@@ -742,14 +777,17 @@ class _EmployeePublishContentScreenState
                             ),
                             decoration: BoxDecoration(
                               color: colorLightGrey,
-                              borderRadius:
-                                  BorderRadius.circular(size.width * numD08),
+                              borderRadius: BorderRadius.circular(
+                                size.width * numD08,
+                              ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.assignment_outlined,
-                                    size: size.width * numD04,
-                                    color: Colors.black),
+                                Icon(
+                                  Icons.assignment_outlined,
+                                  size: size.width * numD04,
+                                  color: Colors.black,
+                                ),
                                 SizedBox(width: size.width * numD02),
                                 Expanded(
                                   child: Text(
@@ -785,8 +823,9 @@ class _EmployeePublishContentScreenState
 
                 // ── Buttons ─────────────────────────────────────────────
                 Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: size.width * numD04),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: size.width * numD04,
+                  ),
                   child: Row(
                     children: [
                       if (!widget.hideDraft) ...[
@@ -799,24 +838,23 @@ class _EmployeePublishContentScreenState
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
-                                      size.width * numD03),
+                                    size.width * numD03,
+                                  ),
                                 ),
                               ),
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content:
-                                        Text('Draft successfully saved'),
+                                    content: Text('Draft successfully saved'),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
                                 final nav = Navigator.of(context);
-                                Future.delayed(
-                                    const Duration(seconds: 2), () {
+                                Future.delayed(const Duration(seconds: 2), () {
                                   nav.pushAndRemoveUntil(
                                     MaterialPageRoute(
-                                        builder: (_) =>
-                                            const DashboardScreen()),
+                                      builder: (_) => const DashboardScreen(),
+                                    ),
                                     (r) => false,
                                   );
                                 });
@@ -844,7 +882,8 @@ class _EmployeePublishContentScreenState
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
-                                    size.width * numD03),
+                                  size.width * numD03,
+                                ),
                               ),
                             ),
                             onPressed: _submit,
@@ -867,8 +906,9 @@ class _EmployeePublishContentScreenState
 
                 // ── Legal text ──────────────────────────────────────────
                 Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: size.width * numD04),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: size.width * numD04,
+                  ),
                   child: Text(
                     'Please ensure all submissions comply with your organisation\'s editorial policies, GDPR requirements, and legal guidelines. Content involving privacy breaches, explicit material, minors, or safeguarding concerns is strictly prohibited.',
                     textAlign: TextAlign.justify,
@@ -895,7 +935,8 @@ class _EmployeePublishContentScreenState
     final mList = widget.publishData?.mediaList ?? [];
     final mimeType = widget.publishData?.mimeType ?? '';
 
-    if (mList.isNotEmpty && mList.first.mimeType == 'image' &&
+    if (mList.isNotEmpty &&
+        mList.first.mimeType == 'image' &&
         mList.first.isLocalMedia) {
       return Image.file(
         File(mList.first.mediaPath),
@@ -920,8 +961,11 @@ class _EmployeePublishContentScreenState
         width: size.width * numD30,
         height: size.width * numD35,
         color: colorEmployeeGreen1,
-        child: Icon(Icons.play_arrow_rounded,
-            size: size.width * numD18, color: Colors.white),
+        child: Icon(
+          Icons.play_arrow_rounded,
+          size: size.width * numD18,
+          color: Colors.white,
+        ),
       );
     }
     if (mimeType.contains('pdf')) {
@@ -929,8 +973,11 @@ class _EmployeePublishContentScreenState
         width: size.width * numD30,
         height: size.width * numD35,
         color: colorLightGrey,
-        child: Icon(Icons.picture_as_pdf,
-            size: size.width * numD18, color: Colors.red),
+        child: Icon(
+          Icons.picture_as_pdf,
+          size: size.width * numD18,
+          color: Colors.red,
+        ),
       );
     }
     if (mimeType.contains('doc')) {
@@ -938,8 +985,11 @@ class _EmployeePublishContentScreenState
         width: size.width * numD30,
         height: size.width * numD35,
         color: colorLightGrey,
-        child: Icon(Icons.description,
-            size: size.width * numD18, color: Colors.blue),
+        child: Icon(
+          Icons.description,
+          size: size.width * numD18,
+          color: Colors.blue,
+        ),
       );
     }
     return Container(
@@ -979,14 +1029,19 @@ class _EmployeePublishContentScreenState
   InputDecoration _filledDecoration(Size size, {Widget? prefixIcon}) {
     final borderRadius = BorderRadius.circular(size.width * numD08);
     const side = BorderSide(width: 0, style: BorderStyle.none);
-    final border = OutlineInputBorder(borderRadius: borderRadius, borderSide: side);
+    final border = OutlineInputBorder(
+      borderRadius: borderRadius,
+      borderSide: side,
+    );
     return InputDecoration(
       filled: true,
       fillColor: colorLightGrey,
       prefixIcon: prefixIcon != null
           ? Padding(
               padding: EdgeInsets.only(
-                  left: size.width * numD04, right: size.width * numD02),
+                left: size.width * numD04,
+                right: size.width * numD02,
+              ),
               child: prefixIcon,
             )
           : null,

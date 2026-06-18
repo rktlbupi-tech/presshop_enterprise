@@ -200,6 +200,9 @@ class _UploadProgressOverlayState extends State<UploadProgressOverlay>
                           backgroundColor: AppColors.hopperPink,
                           foregroundColor: Colors.white,
                           elevation: 0,
+                          // Prevents the tap-target padding from forcing an
+                          // infinite width when laid out inside the Row.
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           padding: EdgeInsets.symmetric(
                               horizontal: 12.w, vertical: 6.h),
                           shape: RoundedRectangleBorder(

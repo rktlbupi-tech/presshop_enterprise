@@ -3,27 +3,33 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/network/interceptors.dart';
 import '../data/models/camera_data.dart';
 
 class CameraTaskService {
   late final Dio _dio;
 
   CameraTaskService() {
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 60),
-    ));
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('auth_token');
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+    _dio.interceptors.addAll([
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+      AppLogInterceptor(),
+    ]);
   }
 
   Future<List<CameraTaskModel>> fetchTodayTasks({
@@ -51,9 +57,6 @@ class CameraTaskService {
     }
   }
 
-  /// Uploads task evidence using the same two-step API as the legacy app:
-  ///   1. POST `enterprise/tasks/{taskId}/evidence-sessions`  → returns sessionId
-  ///   2. POST `enterprise/evidence-sessions/{sessionId}/files` (multipart)
   Future<bool> uploadEvidence({
     required String taskId,
     required List<CameraTaskMediaData> mediaList,
@@ -64,10 +67,9 @@ class CameraTaskService {
     void Function(double)? onProgress,
   }) async {
     if (taskId.isEmpty) return false;
-    final assignmentId = taskId; // legacy app uses the same value for both.
+    final assignmentId = taskId;
 
     try {
-      // Collect the local files to upload.
       final files = <File>[];
       for (final media in mediaList) {
         if (media.mediaPath.startsWith('http')) continue;
@@ -77,8 +79,10 @@ class CameraTaskService {
       if (files.isEmpty) return false;
 
       final captureLocation = {
-        'type': 'Point',
-        'coordinates': [longitude, latitude],
+        'point': {
+          'type': 'Point',
+          'coordinates': [longitude, latitude],
+        },
       };
       final captureAddress = {
         'line1': address,
@@ -90,7 +94,7 @@ class CameraTaskService {
           ? description
           : 'Uploaded from app';
 
-      // ── Step 1: start the evidence session ──────────────────────────────
+      // ── Step 1: start  evidence session ──────────────────────────────
       final sessionRes = await _dio.post(
         'enterprise/tasks/$taskId/evidence-sessions',
         data: {
@@ -113,8 +117,8 @@ class CameraTaskService {
         return false;
       }
       final sessionData = sessionRes.data['data'] ?? {};
-      final sessionId =
-          (sessionData['id'] ?? sessionData['_id'] ?? '').toString();
+      final sessionId = (sessionData['id'] ?? sessionData['_id'] ?? '')
+          .toString();
       if (sessionRes.data['success'] != true || sessionId.isEmpty) {
         return false;
       }
@@ -122,22 +126,23 @@ class CameraTaskService {
       // ── Step 2: upload the files to the session ─────────────────────────
       final formData = FormData();
       for (final file in files) {
-        formData.files.add(MapEntry(
-          'files',
-          await MultipartFile.fromFile(file.path),
-        ));
+        formData.files.add(
+          MapEntry('files', await MultipartFile.fromFile(file.path)),
+        );
       }
       final fileMetadata = mediaList
           .where((m) => !m.mediaPath.startsWith('http'))
-          .map((m) => {
-                'title': 'Evidence ${m.mediaPath.split('/').last}',
-                'description': (description != null && description.isNotEmpty)
-                    ? description
-                    : 'Captured at $address',
-                'assignmentId': assignmentId,
-                'captureLocation': captureLocation,
-                'captureAddress': captureAddress,
-              })
+          .map(
+            (m) => {
+              'title': 'Evidence ${m.mediaPath.split('/').last}',
+              'description': (description != null && description.isNotEmpty)
+                  ? description
+                  : 'Captured at $address',
+              'assignmentId': assignmentId,
+              'captureLocation': captureLocation,
+              'captureAddress': captureAddress,
+            },
+          )
           .toList();
       formData.fields.add(MapEntry('fileMetadata', jsonEncode(fileMetadata)));
 

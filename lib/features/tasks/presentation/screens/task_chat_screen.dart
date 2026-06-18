@@ -24,6 +24,7 @@ import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../camera/data/models/camera_data.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import '../../data/models/employee_task_model.dart';
+import '../../../../presentation/widgets/loading_widget.dart';
 
 class TaskChatScreen extends StatefulWidget {
   final EmployeeTaskModel? taskDetail;
@@ -924,7 +925,7 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                   ? const SizedBox(
                       width: 44,
                       height: 44,
-                      child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor))),
+                      child: LoadingWidget(size: 20),
                     )
                   : _inputIconButton(icon: LucideIcons.plus, onTap: _showAttachmentOptions),
               const SizedBox(width: 8),
@@ -1061,7 +1062,7 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         actions: const [CompanyLogoAction()],
       ),
       body: _chatLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const LoadingWidget()
           : Column(
               children: [
                 if (_isUploading) _buildUploadProgress(size),
@@ -1121,9 +1122,9 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       child: Row(
         children: [
           SizedBox(
-            width: size.width * 0.04,
-            height: size.width * 0.04,
-            child: CircularProgressIndicator(value: _uploadProgress, strokeWidth: 2.5, color: Colors.blue, backgroundColor: Colors.blue.shade100),
+            width: size.width * 0.05,
+            height: size.width * 0.05,
+            child: LoadingWidget(size: size.width * 0.05),
           ),
           SizedBox(width: size.width * 0.025),
           Text('Uploading • $pct%', style: TextStyle(fontSize: size.width * 0.031, fontFamily: 'AirbnbCereal', fontWeight: FontWeight.w600, color: Colors.black87)),

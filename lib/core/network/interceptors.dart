@@ -97,6 +97,5 @@ class AppLogInterceptor extends Interceptor {
     }
   }
 
-  String _truncate(String s, int max) =>
-      s.length > max ? '${s.substring(0, max)}…' : s;
+  String _truncate(String s, int max) => s;
 }

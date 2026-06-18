@@ -5,6 +5,7 @@ import 'package:dots_indicator/dots_indicator.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../../presentation/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
@@ -62,7 +63,8 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 
   void _scrollListener() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       if (!_isLoading && _hasMore) {
         _loadFeed();
       }
@@ -81,7 +83,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
 
     try {
       final apiClient = getIt<ApiClient>();
-      
+
       // Build query parameters
       final Map<String, dynamic> queryParams = {
         'page': _page,
@@ -498,7 +500,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             const Divider(height: 1, thickness: 0.5, color: Color(0xFFE0E0E0)),
             Expanded(
               child: _isLoading && _feedList.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const LoadingWidget()
                   : RefreshIndicator(
                       onRefresh: () => _loadFeed(refresh: true),
                       child: _feedList.isNotEmpty
@@ -511,12 +513,13 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                                 horizontal: 16.w,
                                 vertical: 16.h,
                               ),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 0.72,
-                                mainAxisSpacing: 16.w,
-                                crossAxisSpacing: 16.w,
-                              ),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.72,
+                                    mainAxisSpacing: 16.w,
+                                    crossAxisSpacing: 16.w,
+                                  ),
                               itemCount: _feedList.length,
                               itemBuilder: (context, index) {
                                 return InkWell(
@@ -548,7 +551,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             if (_isLoading && _feedList.isNotEmpty)
               Padding(
                 padding: EdgeInsets.all(8.r),
-                child: const CircularProgressIndicator(),
+                child: LoadingWidget(size: 40.w),
               ),
           ],
         ),
@@ -559,11 +562,13 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   Widget _feedCard(EnterpriseFeedItem item) {
     final firstContent = item.content.isNotEmpty ? item.content.first : null;
     final imageUrl = firstContent?.previewUrl ?? '';
-    final location = (firstContent?.captureAddressLine1 != null &&
+    final location =
+        (firstContent?.captureAddressLine1 != null &&
             firstContent!.captureAddressLine1.isNotEmpty)
         ? firstContent.captureAddressLine1
         : 'Location Not Captured';
-    final capturedAt = (firstContent?.capturedAt != null &&
+    final capturedAt =
+        (firstContent?.capturedAt != null &&
             firstContent!.capturedAt.isNotEmpty)
         ? firstContent.capturedAt
         : (firstContent?.createdAt ?? item.task.createdAt);
@@ -677,9 +682,11 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
     );
   }
 
-  Widget _feedThumbnail(String imageUrl, List<EnterpriseFeedContent> contentList) {
-    final firstContent =
-        contentList.isNotEmpty ? contentList.first : null;
+  Widget _feedThumbnail(
+    String imageUrl,
+    List<EnterpriseFeedContent> contentList,
+  ) {
+    final firstContent = contentList.isNotEmpty ? contentList.first : null;
     final showImage = _isDisplayableImage(firstContent);
     final placeholderType = firstContent?.evidenceType ?? "image";
     return ClipRRect(
@@ -736,11 +743,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       width: double.infinity,
       color: Colors.grey[300],
       child: Center(
-        child: Icon(
-          _evidenceTypeIcon(type),
-          size: 40.w,
-          color: Colors.grey,
-        ),
+        child: Icon(_evidenceTypeIcon(type), size: 40.w, color: Colors.grey),
       ),
     );
   }
@@ -784,9 +787,21 @@ bool _isDisplayableImage(EnterpriseFeedContent? content) {
   // Guard against a mislabeled type by also rejecting known non-image
   // extensions (handles URLs with or without query strings).
   const nonImageExtensions = [
-    '.m4a', '.mp3', '.wav', '.aac', '.ogg', '.flac',
-    '.mp4', '.mov', '.webm', '.m4v', '.avi', '.mkv',
-    '.pdf', '.doc', '.docx',
+    '.m4a',
+    '.mp3',
+    '.wav',
+    '.aac',
+    '.ogg',
+    '.flac',
+    '.mp4',
+    '.mov',
+    '.webm',
+    '.m4v',
+    '.avi',
+    '.mkv',
+    '.pdf',
+    '.doc',
+    '.docx',
   ];
   if (nonImageExtensions.any((ext) => url.contains(ext))) return false;
 
@@ -839,12 +854,16 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final firstContent = widget.item.content.isNotEmpty ? widget.item.content.first : null;
-    final location = (firstContent?.captureAddressLine1 != null &&
+    final firstContent = widget.item.content.isNotEmpty
+        ? widget.item.content.first
+        : null;
+    final location =
+        (firstContent?.captureAddressLine1 != null &&
             firstContent!.captureAddressLine1.isNotEmpty)
         ? firstContent.captureAddressLine1
         : 'Location Not Captured';
-    final capturedAt = (firstContent?.capturedAt != null &&
+    final capturedAt =
+        (firstContent?.capturedAt != null &&
             firstContent!.capturedAt.isNotEmpty)
         ? firstContent.capturedAt
         : (firstContent?.createdAt ?? widget.item.task.createdAt);
@@ -958,7 +977,6 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
                           Expanded(
                             child: Text(
                               location,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11.sp,
                                 color: Colors.grey[600],
@@ -999,9 +1017,8 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder: (context) => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          builder: (context) =>
+                              Center(child: LoadingWidget(size: 80.w)),
                         );
                         try {
                           final response = await getIt<ApiClient>().get(
@@ -1010,13 +1027,14 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
                           if (context.mounted) {
                             Navigator.pop(context); // dismiss loading
                           }
-                          if (response.statusCode == 200 && response.data != null) {
+                          if (response.statusCode == 200 &&
+                              response.data != null) {
                             final raw = response.data;
                             final data = (raw['data'] is Map<String, dynamic>)
                                 ? raw['data'] as Map<String, dynamic>
                                 : raw as Map<String, dynamic>;
                             final task = EmployeeTaskModel.fromJson(data);
-                            
+
                             if (context.mounted) {
                               Navigator.push(
                                 context,
@@ -1031,7 +1049,9 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
                           } else {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Failed to load task details')),
+                                const SnackBar(
+                                  content: Text('Failed to load task details'),
+                                ),
                               );
                             }
                           }
@@ -1140,9 +1160,7 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
                       Positioned(
                         right: 8.w,
                         top: 8.w,
-                        child: Column(
-                          children: _getMediaCountList(),
-                        ),
+                        child: Column(children: _getMediaCountList()),
                       ),
                     ],
                   ),
@@ -1168,9 +1186,15 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
 
   List<Widget> _getMediaCountList() {
     final contents = widget.item.content;
-    final imageCount = contents.where((c) => c.evidenceType.toLowerCase() == 'image').length;
-    final videoCount = contents.where((c) => c.evidenceType.toLowerCase() == 'video').length;
-    final audioCount = contents.where((c) => c.evidenceType.toLowerCase() == 'audio').length;
+    final imageCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'image')
+        .length;
+    final videoCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'video')
+        .length;
+    final audioCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'audio')
+        .length;
     final docCount = contents.where((c) {
       final t = c.evidenceType.toLowerCase();
       return t == 'doc' || t == 'document' || t == 'pdf';
@@ -1220,10 +1244,10 @@ class _EvidenceDetailsScreenState extends State<_EvidenceDetailsScreen> {
             type == 'image'
                 ? 'assets/icons/ic_camera_publish.png'
                 : type == 'video'
-                    ? 'assets/icons/ic_v_cam.png'
-                    : type == 'audio'
-                        ? 'assets/icons/new_audio.png'
-                        : 'assets/icons/doc_icon.png',
+                ? 'assets/icons/ic_v_cam.png'
+                : type == 'audio'
+                ? 'assets/icons/new_audio.png'
+                : 'assets/icons/doc_icon.png',
             color: Colors.white,
             height: type == 'image' ? 10.w : 14.w,
             width: type == 'image' ? 10.w : 14.w,

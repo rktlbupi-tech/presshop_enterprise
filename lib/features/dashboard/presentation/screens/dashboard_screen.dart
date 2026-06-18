@@ -15,14 +15,15 @@ import '../../../menu/presentation/screens/menu_screen.dart';
 import '../../../../config/di/injection.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int initialIndex;
+  const DashboardScreen({super.key, this.initialIndex = 2});
 
   @override
   State<DashboardScreen> createState() => DashboardScreenState();
 }
 
 class DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 2;
+  late int _currentIndex;
 
   // One-shot intents to deep-link the Team map into SOS / Share Alert
   // (used by the Menu tab — mirrors the old app's openSos / openShareAlert).
@@ -45,6 +46,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _attendanceBloc = getIt<AttendanceBloc>()..add(const FetchAttendanceLog());
     _profileBloc = getIt<ProfileBloc>()..add(const FetchProfile());
     _mapCubit = MapCubit();
@@ -92,7 +94,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final iconSize = 24.sp;
+    final iconSize = 22.sp;
     // Only TeamMapScreen needs isScreenActive updated dynamically.
     final screens = [
       _evidenceScreen,
@@ -119,38 +121,61 @@ class DashboardScreenState extends State<DashboardScreen> {
       child: Scaffold(
         backgroundColor: AppColors.surface,
         body: IndexedStack(index: _currentIndex, children: screens),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: AppColors.surface,
-          currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
-          type: BottomNavigationBarType.fixed,
-          showUnselectedLabels: true,
-          showSelectedLabels: true,
-          elevation: 0,
-          iconSize: iconSize,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: Colors.black,
-          selectedFontSize: 11.sp,
-          unselectedFontSize: 11.sp,
-          selectedLabelStyle: TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'AirbnbCereal',
+        bottomNavigationBar: Container(
+          height: MediaQuery.of(context).padding.bottom + 68.h,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + 4.h,
+            top: 6.h,
+            left: 8.w,
+            right: 8.w,
           ),
-          unselectedLabelStyle: const TextStyle(fontFamily: 'AirbnbCereal'),
-          items: [
-            _navItem('${_iconsPath}ic_content1.png', 'Evidence', 0, iconSize),
-            _navItem('${_iconsPath}ic_task1.png', 'Task', 1, iconSize),
-            _navItem('${_iconsPath}ic_home.svg', 'Home', 2, iconSize),
-            _navItem('${_iconsPath}ic_teams2.png', 'Team', 3, iconSize),
-            _navItem('${_iconsPath}menu3.png', 'Menu', 4, iconSize, scale: 1.2),
-          ],
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              top: BorderSide(color: const Color(0xFFEFF1F5), width: 1.w),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildCustomNavItem(
+                '${_iconsPath}ic_content1.png',
+                'Evidence',
+                0,
+                iconSize,
+              ),
+              _buildCustomNavItem(
+                '${_iconsPath}ic_task1.png',
+                'Tasks',
+                1,
+                iconSize,
+              ),
+              _buildCustomNavItem(
+                '${_iconsPath}ic_home.svg',
+                'Home',
+                2,
+                iconSize,
+              ),
+              _buildCustomNavItem(
+                '${_iconsPath}ic_teams2.png',
+                'Team',
+                3,
+                iconSize,
+              ),
+              _buildCustomNavItem(
+                '${_iconsPath}menu3.png',
+                'Menu',
+                4,
+                iconSize,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  BottomNavigationBarItem _navItem(
+  Widget _buildCustomNavItem(
     dynamic iconSource,
     String label,
     int index,
@@ -158,7 +183,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     double scale = 1.0,
   }) {
     final selected = _currentIndex == index;
-    final color = selected ? AppColors.primary : Colors.black;
+    final color = selected ? Colors.white : Colors.black87;
 
     Widget iconWidget;
     if (iconSource is IconData) {
@@ -178,9 +203,34 @@ class DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    return BottomNavigationBarItem(
-      label: label,
-      icon: Transform.scale(scale: scale, child: iconWidget),
+    return GestureDetector(
+      onTap: () => changeTab(index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 58.w,
+        height: 58.w,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Transform.scale(scale: scale, child: iconWidget),
+            SizedBox(height: 3.h),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11.sp,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                fontFamily: 'AirbnbCereal',
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../utils/camera_constants.dart';
 
 class AudioRecorderScreen extends StatefulWidget {
@@ -42,12 +43,23 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
   }
 
   Future<void> _startRecording() async {
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) return;
-    final dir = await getTemporaryDirectory();
-    final path = "${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a";
-    await _recorder.start(const RecordConfig(), path: path);
-    await _waveController.record();
+    // Use the recorder's own permission check (matches what actually gates
+    // recording); permission_handler can report denied on iOS even when granted.
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required')),
+        );
+      }
+      return;
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    final path =
+        "${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a";
+    // Record through the waveform controller only — running a second recorder
+    // (the `record` plugin) at the same time fights over the mic and fails.
+    await _waveController.record(path: path);
     _startTime = DateTime.now();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_startTime != null && mounted) {
@@ -61,8 +73,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
 
   Future<void> _stopRecording() async {
     _timer?.cancel();
-    final path = await _recorder.stop();
-    await _waveController.stop();
+    final path = await _waveController.stop();
     if (mounted) {
       setState(() {
         _isRecording = false;
@@ -73,7 +84,6 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
 
   void _discardRecording() {
     _timer?.cancel();
-    _recorder.stop();
     _waveController.stop();
     if (mounted) {
       setState(() {
@@ -116,11 +126,17 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
               recorderController: _waveController,
               enableGesture: false,
               backgroundColor: Colors.transparent,
-              waveStyle: const WaveStyle(
-                waveColor: colorEmployeeGreen1,
+              shouldCalculateScrolledPosition: true,
+              waveStyle: WaveStyle(
+                waveColor: AppColors.hopperPink,
                 extendWaveform: true,
                 showMiddleLine: false,
                 showDurationLabel: false,
+                gradient: ui.Gradient.linear(
+                  const Offset(70, 50),
+                  Offset(size.width / 2, 0),
+                  [Colors.red, Colors.green],
+                ),
               ),
             ),
           Text(
@@ -158,20 +174,21 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
                     }
                   },
                   child: Container(
-                    padding: EdgeInsets.all(size.width * numD01),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
+                    padding: EdgeInsets.all(size.width * numD04),
+                    decoration: const BoxDecoration(
+                      color: AppColors.hopperPink,
                       shape: BoxShape.circle,
-                      border: Border.all(color: colorEmployeeGreen1),
                     ),
                     child: Icon(
                       _isRecording
-                          ? Icons.stop_circle_outlined
+                          ? Icons.square
                           : _recordedPath != null
-                              ? Icons.check_circle
-                              : Icons.circle,
-                      color: colorEmployeeGreen1,
-                      size: size.width * numD13,
+                              ? Icons.check
+                              : Icons.mic_none_outlined,
+                      color: Colors.white,
+                      size: _isRecording
+                          ? size.width * numD07
+                          : size.width * numD1,
                     ),
                   ),
                 ),

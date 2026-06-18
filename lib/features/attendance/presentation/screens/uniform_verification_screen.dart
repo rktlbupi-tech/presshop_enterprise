@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -18,20 +19,14 @@ class UniformVerificationScreen extends StatefulWidget {
 }
 
 class _UniformVerificationScreenState extends State<UniformVerificationScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   CameraController? _cameraController;
   bool _cameraReady = false;
   bool _capturing = false;
-  int _activeSlot = 0; // which view is captured next on shutter tap
+  File? _selfiePhoto;
 
-  // Three capture slots: Front, Side, Full Body
-  final List<File?> _photos = [null, null, null];
-  static const _slotLabels = ['Front View', 'Side View', 'Full Body'];
-  static const _slotIcons = [
-    LucideIcons.user,
-    LucideIcons.scan_face,
-    LucideIcons.scan,
-  ];
+  bool _scanning = true;
+  bool _detected = false;
 
   _Step _step = _Step.capture;
   int _scanProgressIndex = 0; // 0-4 scanning sub-steps
@@ -44,6 +39,8 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
   ];
 
   late final AnimationController _rotateController;
+  late final AnimationController _scanLineController;
+  late final Animation<double> _scanLineAnimation;
 
   @override
   void initState() {
@@ -52,6 +49,16 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
+    _scanLineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _scanLineAnimation = Tween<double>(begin: 0.15, end: 0.85).animate(
+      CurvedAnimation(parent: _scanLineController, curve: Curves.easeInOut),
+    );
+
     _initCamera();
   }
 
@@ -66,44 +73,53 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
       desc,
       ResolutionPreset.medium,
       enableAudio: false,
-      imageFormatGroup:
-          Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.jpeg,
+      imageFormatGroup: Platform.isIOS
+          ? ImageFormatGroup.bgra8888
+          : ImageFormatGroup.jpeg,
     );
     _cameraController = controller;
     try {
       await controller.initialize();
-      if (mounted) setState(() => _cameraReady = true);
+      if (!mounted) return;
+      setState(() => _cameraReady = true);
+      _startAutoDetection();
     } catch (_) {
       if (mounted) setState(() => _cameraReady = false);
     }
   }
 
+  void _startAutoDetection() {
+    Timer(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+
+      // Auto capture photo silently
+      final c = _cameraController;
+      if (c != null && c.value.isInitialized) {
+        try {
+          final XFile shot = await c.takePicture();
+          if (mounted) {
+            setState(() {
+              _selfiePhoto = File(shot.path);
+            });
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {
+          _scanning = false;
+          _detected = true;
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _rotateController.dispose();
+    _scanLineController.dispose();
     _cameraController?.dispose();
     super.dispose();
-  }
-
-  /// Captures the given view directly from the live in-app preview — no
-  /// device camera app is opened.
-  Future<void> _captureSlot(int index) async {
-    final c = _cameraController;
-    if (c == null || !c.value.isInitialized || _capturing) return;
-    setState(() => _capturing = true);
-    try {
-      final XFile shot = await c.takePicture();
-      if (!mounted) return;
-      setState(() {
-        _photos[index] = File(shot.path);
-        // Advance to the next empty slot so the next shutter tap fills it.
-        final next = _photos.indexWhere((p) => p == null);
-        _activeSlot = next == -1 ? index : next;
-      });
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _capturing = false);
-    }
   }
 
   Future<void> _runVerification() async {
@@ -151,346 +167,298 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
   // ── Step 1 : Capture ─────────────────────────────────────────────────────
 
   Widget _buildCapturePage() {
-    return SafeArea(
+    final size = MediaQuery.of(context).size;
+    return Stack(
       key: const ValueKey('capture'),
-      child: Column(
-        children: [
-          // Top bar
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.white,
-                    size: 20,
+      fit: StackFit.expand,
+      children: [
+        // Live camera preview (full screen) or captured photo preview (full screen)
+        _selfiePhoto != null
+            ? Image.file(_selfiePhoto!, fit: BoxFit.cover)
+            : (_cameraReady &&
+                  _cameraController != null &&
+                  _cameraController!.value.isInitialized)
+            ? FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _cameraController!.value.previewSize?.height ?? 1,
+                  height: _cameraController!.value.previewSize?.width ?? 1,
+                  child: CameraPreview(_cameraController!),
+                ),
+              )
+            : Container(
+                color: const Color(0xFF080C18),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 32.w,
+                        height: 32.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white24,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Starting camera…',
+                        style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 13.sp,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: Text(
-                    'Uniform Check',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'AirbnbCereal',
-                    ),
+              ),
+
+        // Animated laser scan line
+        if (_scanning && _cameraReady)
+          AnimatedBuilder(
+            animation: _scanLineAnimation,
+            builder: (context, child) {
+              return Positioned(
+                top: size.height * _scanLineAnimation.value,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FFCC),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00FFCC).withValues(alpha: 0.8),
+                        blurRadius: 14,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(width: 48.w),
-              ],
-            ),
+              );
+            },
           ),
 
-          // Instruction banner
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+        // Dark gradients overlay for UI text readability
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.65),
+                  Colors.transparent,
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.75),
+                ],
+                stops: const [0.0, 0.20, 0.70, 1.0],
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.info,
-                    color: const Color(0xFF7AABFF),
-                    size: 16.sp,
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: Text(
-                      'Take at least one clear photo of your uniform before logging on duty.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11.sp,
-                        height: 1.4,
-                        fontFamily: 'AirbnbCereal',
+            ),
+          ),
+        ),
+
+        // UI Controls Layer
+        SafeArea(
+          child: Column(
+            children: [
+              // Top Navigation Bar
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.white,
+                        size: 20,
                       ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: Text(
+                        'Uniform Check',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 48.w),
+                  ],
+                ),
               ),
-            ),
-          ),
 
-          SizedBox(height: 24.h),
-
-          // Live in-app camera preview
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 48.w),
-              child: Container(
-                width: double.infinity,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF11162A),
-                  borderRadius: BorderRadius.circular(22.r),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.10),
+              // Instruction Banner
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        LucideIcons.info,
+                        color: const Color(0xFF7AABFF),
+                        size: 18.sp,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          "Please take a quick selfie scan to confirm you're smartly presented, and ready to deliver a professional customer experience",
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.95),
+                            fontSize: 12.sp,
+                            height: 1.45,
+                            fontFamily: 'AirbnbCereal',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (_cameraReady &&
-                        _cameraController != null &&
-                        _cameraController!.value.isInitialized)
-                      FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width:
-                              _cameraController!.value.previewSize?.height ?? 1,
-                          height:
-                              _cameraController!.value.previewSize?.width ?? 1,
-                          child: CameraPreview(_cameraController!),
-                        ),
-                      )
-                    else
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 22.w,
-                              height: 22.w,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white24),
+              ),
+
+              // Scanner State Indicator
+              if (_cameraReady)
+                Padding(
+                  padding: EdgeInsets.only(top: 10.h),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _detected
+                          ? const Color(0xFF0F3D1C).withValues(alpha: 0.85)
+                          : const Color(0xFF1E293B).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(
+                        color: _detected
+                            ? const Color(0xFF52C41A)
+                            : const Color(0xFF94A3B8),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _detected
+                            ? const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF52C41A),
+                                size: 16,
+                              )
+                            : SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  color: Colors.blue.shade300,
+                                ),
                               ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          _detected
+                              ? 'Uniform Detected Successfully'
+                              : 'Auto-scanning uniform...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.sp,
+                            fontFamily: 'AirbnbCereal',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const Spacer(),
+
+              // Bottom Control Buttons
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Verify & Log On Duty button (enabled only when uniform is auto-detected)
+                    GestureDetector(
+                      onTap: _detected ? _runVerification : null,
+                      child: Container(
+                        width: double.infinity,
+                        height: 52.h,
+                        decoration: BoxDecoration(
+                          gradient: _detected
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFF2E66FF),
+                                    Color(0xFF1540C0),
+                                  ],
+                                )
+                              : null,
+                          color: _detected ? null : const Color(0xFF1B2030),
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: _detected
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF2E66FF,
+                                    ).withValues(alpha: 0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              LucideIcons.shield_check,
+                              color: _detected ? Colors.white : Colors.white30,
+                              size: 20.sp,
                             ),
-                            SizedBox(height: 12.h),
+                            SizedBox(width: 10.w),
                             Text(
-                              'Starting camera…',
+                              'Log On Duty',
                               style: TextStyle(
-                                color: Colors.white38,
-                                fontSize: 11.sp,
+                                color: _detected
+                                    ? Colors.white
+                                    : Colors.white30,
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w700,
                                 fontFamily: 'AirbnbCereal',
                               ),
                             ),
                           ],
                         ),
                       ),
-
-                    // Active-view chip
-                    Positioned(
-                      top: 12.h,
-                      left: 12.w,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10.w, vertical: 5.h),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(20.r),
-                        ),
-                        child: Text(
-                          !_photos.contains(null)
-                              ? 'All views captured'
-                              : _slotLabels[_activeSlot],
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10.5.sp,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Capturing overlay
-                    if (_capturing)
-                      Container(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),            ),
-          ),
-
-          SizedBox(height: 18.h),
-
-          // Progress hint
-          Text(
-            '${_photos.where((p) => p != null).length} of 3 views captured  ·  tap a view below',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 11.5.sp,
-              fontFamily: 'AirbnbCereal',
-            ),
-          ),
-
-          SizedBox(height: 14.h),
-
-          // Capture slot buttons
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            child: Row(children: List.generate(3, (i) => _buildSlotButton(i))),
-          ),
-
-          SizedBox(height: 24.h),
-
-          // Verify CTA — enabled once at least one view is captured
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w),
-            child: GestureDetector(
-              onTap: _photos.any((p) => p != null) ? _runVerification : null,
-              child: Container(
-                width: double.infinity,
-                height: 52.h,
-                decoration: BoxDecoration(
-                  gradient: _photos.any((p) => p != null)
-                      ? const LinearGradient(
-                          colors: [Color(0xFF2E66FF), Color(0xFF1540C0)],
-                        )
-                      : null,
-                  color: _photos.any((p) => p != null)
-                      ? null
-                      : const Color(0xFF1B2030),
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      LucideIcons.shield_check,
-                      color: Colors.white,
-                      size: 18.sp,
-                    ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      'Verify & Log On Duty',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'AirbnbCereal',
-                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-          SizedBox(height: 28.h),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSlotButton(int index) {
-    final captured = _photos[index] != null;
-    final isActive = !captured && index == _activeSlot;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _captureSlot(index),
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 5.w),
-          height: 96.h,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFF11162A),
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(
-              color: captured
-                  ? const Color(0xFF2FB667)
-                  : isActive
-                      ? const Color(0xFF2E66FF)
-                      : Colors.white.withValues(alpha: 0.10),
-              width: (captured || isActive) ? 1.6 : 1.0,
-            ),
-          ),
-          child: captured
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(_photos[index]!, fit: BoxFit.cover),
-                    Container(
-                      alignment: Alignment.bottomCenter,
-                      padding: EdgeInsets.only(bottom: 6.h),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.center,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.70),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                      child: Text(
-                        _slotLabels[index],
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 9.5.sp,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 6.h,
-                      right: 6.w,
-                      child: Container(
-                        width: 18.w,
-                        height: 18.w,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF2FB667),
-                          shape: BoxShape.circle,
-                        ),
-                        child:
-                            Icon(Icons.check, color: Colors.white, size: 11.sp),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _slotIcons[index],
-                      color: isActive
-                          ? const Color(0xFF6FA0FF)
-                          : Colors.white54,
-                      size: 22.sp,
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      _slotLabels[index],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.white60,
-                        fontSize: 10.sp,
-                        fontWeight:
-                            isActive ? FontWeight.w700 : FontWeight.w500,
-                        fontFamily: 'AirbnbCereal',
-                      ),
-                    ),
-                    SizedBox(height: 3.h),
-                    Text(
-                      'Tap to capture',
-                      style: TextStyle(
-                        color: Colors.white30,
-                        fontSize: 8.sp,
-                        fontFamily: 'AirbnbCereal',
-                      ),
-                    ),
-                  ],
-                ),
         ),
-      ),
+      ],
     );
   }
 
@@ -722,32 +690,19 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
 
           SizedBox(height: 36.h),
 
-          // Captured photo row
-          SizedBox(
-            height: 64.h,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 40.w),
-              shrinkWrap: true,
-              itemCount: _photos.where((f) => f != null).length,
-              separatorBuilder: (_, i) => SizedBox(width: 8.w),
-              itemBuilder: (_, i) {
-                final nonNull = _photos.where((f) => f != null).toList();
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(10.r),
-                  child: Image.file(
-                    nonNull[i]!,
-                    width: 64.w,
-                    height: 64.h,
-                    fit: BoxFit.cover,
-                  ),
-                );
-              },
+          // Captured photo
+          if (_selfiePhoto != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12.r),
+              child: Image.file(
+                _selfiePhoto!,
+                width: 80.w,
+                height: 80.w,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
-

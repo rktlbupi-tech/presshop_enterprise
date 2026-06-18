@@ -16,18 +16,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:presshop_enterprise/features/map/presentation/widgets/message_button.dart';
 import 'package:presshop_enterprise/main.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:presshop_enterprise/core/constants/app_text_styles.dart';
 import 'package:presshop_enterprise/presentation/widgets/employee_app_bar.dart';
 
 import 'package:presshop_enterprise/features/map/presentation/widgets/alert_button_map.dart';
 import 'package:presshop_enterprise/features/map/data/models/map_models.dart';
-import 'package:presshop_enterprise/features/map/data/models/map_models.dart';
+
 import 'package:presshop_enterprise/features/map/presentation/widgets/alert_panel.dart';
 import 'package:presshop_enterprise/features/map/presentation/widgets/sos_button.dart';
 import 'package:presshop_enterprise/features/map/core/map_socket_constants.dart';
-import 'package:presshop_enterprise/features/map/core/map_socket_client.dart';
-import 'package:presshop_enterprise/features/map/data/services/sos_service.dart';
 import 'package:presshop_enterprise/features/map/presentation/bloc/map_cubit.dart';
 import 'package:presshop_enterprise/features/map/presentation/bloc/employee_map_cubit.dart';
 
@@ -1391,7 +1387,9 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         title: const Text(
           'Report unavailable',
           style: TextStyle(
-              fontWeight: FontWeight.bold, fontFamily: 'AirbnbCereal'),
+            fontWeight: FontWeight.bold,
+            fontFamily: 'AirbnbCereal',
+          ),
         ),
         content: Text(
           'Report $name as not available right now? Your organiser will be notified.',
