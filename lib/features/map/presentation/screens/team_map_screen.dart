@@ -17,9 +17,11 @@ import 'package:presshop_enterprise/features/map/presentation/widgets/message_bu
 import 'package:presshop_enterprise/main.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/presentation/widgets/employee_app_bar.dart';
+import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
 
 import 'package:presshop_enterprise/features/map/presentation/widgets/alert_button_map.dart';
-import 'package:presshop_enterprise/features/map/data/models/map_models.dart';
+import 'package:presshop_enterprise/features/map/data/models/map_models.dart'
+    hide EmployeeMapState;
 
 import 'package:presshop_enterprise/features/map/presentation/widgets/alert_panel.dart';
 import 'package:presshop_enterprise/features/map/presentation/widgets/sos_button.dart';
@@ -494,7 +496,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         anchor: const Offset(0.5, 0.5),
         zIndex: 2,
         onTap: () async {
-          // _customInfoWindowController.hideInfoWindow?.call();
+          _customInfoWindowController.hideInfoWindow?.call();
           final controller = await _controller.future;
           controller.animateCamera(CameraUpdate.newLatLng(_currentPosition!));
         },
@@ -1902,410 +1904,446 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         : bottomBarHeight + 62.h + bottomOffset;
     final mapState = context.watch<EmployeeMapCubit>().state;
     final employeeMapNotifier = BlocProvider.of<EmployeeMapCubit>(context);
+    return BlocListener<EmployeeMapCubit, EmployeeMapState>(
+      listenWhen: (previous, current) {
+        return previous.workers != current.workers ||
+            previous.alertMarkers != current.alertMarkers ||
+            previous.newlyCreatedAlert != current.newlyCreatedAlert;
+      },
+      listener: (context, state) {
+        if (!mounted || _isDisposed) return;
+        if (!widget.isScreenActive) return;
+        _filterAndRenderMapData();
+        _updateMyLocationMarker();
+        if (state.newlyCreatedAlert != null) {
+          _addBurst(
+            state.newlyCreatedAlert!.position,
+            state.newlyCreatedAlert!.type,
+          );
+        }
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: EmployeeAppBar(
+          onProfileTap: () {
+            context.push('/menu');
+          },
+          onFilterTap: () {
+            // Scaffold.of(context).openEndDrawer();
+          },
+          isOnline: true,
+        ),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: _locationDenied
+              ? LocationErrorScreenMapNews(
+                  onTapSettings: () {
+                    setState(() => _locationDenied = false);
+                    _initLocation();
+                  },
+                )
+              : _currentPosition == null
+              ? const LoadingWidget()
+              : AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    final double pulseVal = _pulseController.value;
+                    final double opacity = 1.0 - pulseVal;
+                    final double baseRadius = 150.0;
+                    final double scaleFactor = pow(
+                      2,
+                      15 - _currentZoom.roundToDouble(),
+                    ).toDouble();
+                    final double radius = baseRadius * scaleFactor * pulseVal;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: EmployeeAppBar(
-        onProfileTap: () {
-          context.push('/menu');
-        },
-        onFilterTap: () {
-          // Scaffold.of(context).openEndDrawer();
-        },
-        isOnline: true,
-      ),
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        behavior: HitTestBehavior.translucent,
-        child: _locationDenied
-            ? LocationErrorScreenMapNews(
-                onTapSettings: () {
-                  setState(() => _locationDenied = false);
-                  _initLocation();
-                },
-              )
-            : _currentPosition == null
-            ? const Center(child: CircularProgressIndicator())
-            : AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
-                  final double pulseVal = _pulseController.value;
-                  final double opacity = 1.0 - pulseVal;
-                  final double baseRadius = 150.0;
-                  final double scaleFactor = pow(
-                    2,
-                    15 - _currentZoom.roundToDouble(),
-                  ).toDouble();
-                  final double radius = baseRadius * scaleFactor * pulseVal;
+                    Set<Circle> pulseCircles = {};
 
-                  Set<Circle> pulseCircles = {};
-
-                  if (_currentPosition != null) {
-                    pulseCircles.add(
-                      Circle(
-                        circleId: const CircleId("my_location_pulse"),
-                        center: _currentPosition!,
-                        radius: radius,
-                        fillColor: colorThemePink.withValues(
-                          alpha: opacity * 0.3,
-                        ),
-                        strokeColor: colorThemePink.withValues(alpha: opacity),
-                        strokeWidth: 1,
-                      ),
-                    );
-                  }
-
-                  return Stack(
-                    children: [
-                      Positioned.fill(
-                        child: GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: _currentPosition!,
-                            zoom: _currentZoom,
+                    if (_currentPosition != null) {
+                      pulseCircles.add(
+                        Circle(
+                          circleId: const CircleId("my_location_pulse"),
+                          center: _currentPosition!,
+                          radius: radius,
+                          fillColor: colorThemePink.withValues(
+                            alpha: opacity * 0.3,
                           ),
-                          padding: const EdgeInsets.only(top: 220, bottom: 120),
-                          onMapCreated: (controller) {
-                            _googleMapController = controller;
-                            _customInfoWindowController.googleMapController =
-                                controller;
-                            if (!_controller.isCompleted) {
-                              _controller.complete(controller);
-                            }
-                            for (var ctrl in _markerAlertControllers.values) {
-                              ctrl.googleMapController = controller;
-                              ctrl.onCameraMove?.call();
-                            }
-                            final state = context
-                                .read<EmployeeMapCubit>()
-                                .state;
-                            _syncAnimatedAlertMarkers(state.alertMarkers);
-                          },
-                          onCameraMove: (position) {
-                            _currentZoom = position.zoom;
-                            _customInfoWindowController.onCameraMove?.call();
-                            for (var ctrl in _markerAlertControllers.values) {
-                              if (ctrl.googleMapController != null) {
+                          strokeColor: colorThemePink.withValues(
+                            alpha: opacity,
+                          ),
+                          strokeWidth: 1,
+                        ),
+                      );
+                    }
+
+                    return Stack(
+                      children: [
+                        Positioned.fill(
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: _currentPosition!,
+                              zoom: _currentZoom,
+                            ),
+                            padding: const EdgeInsets.only(
+                              top: 220,
+                              bottom: 120,
+                            ),
+                            onMapCreated: (controller) {
+                              _googleMapController = controller;
+                              _customInfoWindowController.googleMapController =
+                                  controller;
+                              if (!_controller.isCompleted) {
+                                _controller.complete(controller);
+                              }
+                              for (var ctrl in _markerAlertControllers.values) {
+                                ctrl.googleMapController = controller;
                                 ctrl.onCameraMove?.call();
                               }
-                            }
-                          },
-                          onCameraIdle: () {
-                            _customInfoWindowController.onCameraMove?.call();
-                          },
-                          markers: {
-                            if (_myLocationMarker != null) _myLocationMarker!,
-                            ..._markers,
-                            if (_destinationMarker != null) _destinationMarker!,
-                            if (_searchedPlaceMarker != null)
-                              _searchedPlaceMarker!,
-                          },
-                          polylines: context.watch<MapCubit>().state.polylines,
-                          circles: pulseCircles,
-                          myLocationEnabled: false,
-                          myLocationButtonEnabled: false,
-                          zoomControlsEnabled: false,
-                          onTap: (position) async {
-                            FocusScope.of(context).unfocus();
-                            if (!mounted || _isDisposed) return;
-                            // _customInfoWindowController.hideInfoWindow?.call();
-
-                            final empState = context
-                                .read<EmployeeMapCubit>()
-                                .state;
-                            if (empState.isAlertPanelOpen) {
-                              context
+                              final state = context
                                   .read<EmployeeMapCubit>()
-                                  .closeAlertPanel();
-                            }
-                            if (empState.isGetDirectionOpen) {
-                              final mapCtrl = context.read<MapCubit>();
-                              final address = await mapCtrl
-                                  .getAddressFromCoordinates(position);
+                                  .state;
+                              _syncAnimatedAlertMarkers(state.alertMarkers);
+                            },
+                            onCameraMove: (position) {
+                              _currentZoom = position.zoom;
+                              _customInfoWindowController.onCameraMove?.call();
+                              for (var ctrl in _markerAlertControllers.values) {
+                                if (ctrl.googleMapController != null) {
+                                  ctrl.onCameraMove?.call();
+                                }
+                              }
+                            },
+                            onCameraIdle: () {
+                              _customInfoWindowController.onCameraMove?.call();
+                            },
+                            markers: {
+                              if (_myLocationMarker != null) _myLocationMarker!,
+                              ..._markers,
+                              if (_destinationMarker != null)
+                                _destinationMarker!,
+                              if (_searchedPlaceMarker != null)
+                                _searchedPlaceMarker!,
+                            },
+                            polylines: context
+                                .watch<MapCubit>()
+                                .state
+                                .polylines,
+                            circles: pulseCircles,
+                            myLocationEnabled: false,
+                            myLocationButtonEnabled: false,
+                            zoomControlsEnabled: false,
+                            onTap: (position) async {
+                              FocusScope.of(context).unfocus();
                               if (!mounted || _isDisposed) return;
-                              mapCtrl.setMapSelectedLocation(
-                                position: position,
-                                address: address,
-                                isOrigin: false,
-                              );
-                              setState(() {
-                                _destinationMarker = Marker(
-                                  markerId: const MarkerId('destination'),
+                              _customInfoWindowController.hideInfoWindow
+                                  ?.call();
+
+                              final empState = context
+                                  .read<EmployeeMapCubit>()
+                                  .state;
+                              if (empState.isAlertPanelOpen) {
+                                context
+                                    .read<EmployeeMapCubit>()
+                                    .closeAlertPanel();
+                              }
+                              if (empState.isGetDirectionOpen) {
+                                final mapCtrl = context.read<MapCubit>();
+                                final address = await mapCtrl
+                                    .getAddressFromCoordinates(position);
+                                if (!mounted || _isDisposed) return;
+                                mapCtrl.setMapSelectedLocation(
                                   position: position,
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                                    BitmapDescriptor.hueRed,
-                                  ),
+                                  address: address,
+                                  isOrigin: false,
                                 );
-                              });
-                              return;
-                            }
-                          },
-                        ),
-                      ),
-
-                      // Per-alert floating animated GIF icons (hopper-style)
-                      if (mounted)
-                        ..._markerAlertControllers.entries.map((entry) {
-                          return KeyedSubtree(
-                            key: ValueKey('alert_ciw_${entry.key}'),
-                            child: ciw.CustomInfoWindow(
-                              controller: entry.value,
-                              height: responsiveWidth * 0.095,
-                              width: responsiveWidth * 0.095,
-                              offset: 4,
-                            ),
-                          );
-                        }),
-
-                      // Main info window for worker / alert taps
-                      ciw.CustomInfoWindow(
-                        controller: _customInfoWindowController,
-                        height: 185,
-                        width: 240,
-                        offset: 1,
-                      ),
-
-                      // Burst animation overlay
-                      IgnorePointer(
-                        child: AnimatedBuilder(
-                          animation: _burstController,
-                          builder: (context, _) => CustomPaint(
-                            painter: BurstPainter(_particles, _burstImage),
-                            size: MediaQuery.of(context).size,
+                                setState(() {
+                                  _destinationMarker = Marker(
+                                    markerId: const MarkerId('destination'),
+                                    position: position,
+                                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                                      BitmapDescriptor.hueRed,
+                                    ),
+                                  );
+                                });
+                                return;
+                              }
+                            },
                           ),
                         ),
-                      ),
 
-                      // Search bar + dropdown
-                      Positioned(
-                        top: searchBarTop,
-                        left: 0,
-                        right: 0,
-                        child: SizedBox(
-                          height: 320,
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              SearchAndFilterBar(
-                                isFromEmployeeMap: true,
-                                searchController: _searchController,
-                                searchFocusNode: _searchFocusNode,
-                                onPressedOnNavigation: () {
-                                  employeeMapNotifier.toggleGetDirection();
-                                },
-                                onChange: _searchAll,
-                                selectedDistance: _selectedDistance,
-                                selectedAlertType: _selectedAlertType,
-                                onDistanceChanged: (value) async {
-                                  if (value != null) {
+                        // Per-alert floating animated GIF icons (hopper-style)
+                        if (mounted)
+                          ..._markerAlertControllers.entries.map((entry) {
+                            return KeyedSubtree(
+                              key: ValueKey('alert_ciw_${entry.key}'),
+                              child: ciw.CustomInfoWindow(
+                                controller: entry.value,
+                                height: responsiveWidth * 0.095,
+                                width: responsiveWidth * 0.095,
+                                offset: 4,
+                              ),
+                            );
+                          }),
+
+                        // Main info window for worker / alert taps
+                        ciw.CustomInfoWindow(
+                          controller: _customInfoWindowController,
+                          height: 185,
+                          width: 240,
+                          offset: 1,
+                        ),
+
+                        // Burst animation overlay
+                        IgnorePointer(
+                          child: AnimatedBuilder(
+                            animation: _burstController,
+                            builder: (context, _) => CustomPaint(
+                              painter: BurstPainter(_particles, _burstImage),
+                              size: MediaQuery.of(context).size,
+                            ),
+                          ),
+                        ),
+
+                        // Search bar + dropdown
+                        Positioned(
+                          top: searchBarTop,
+                          left: 0,
+                          right: 0,
+                          child: SizedBox(
+                            height: 320,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                SearchAndFilterBar(
+                                  isFromEmployeeMap: true,
+                                  searchController: _searchController,
+                                  searchFocusNode: _searchFocusNode,
+                                  onPressedOnNavigation: () {
+                                    employeeMapNotifier.toggleGetDirection();
+                                  },
+                                  onChange: _searchAll,
+                                  selectedDistance: _selectedDistance,
+                                  selectedAlertType: _selectedAlertType,
+                                  onDistanceChanged: (value) async {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedDistance = value;
+                                      });
+                                      _filterAndRenderMapData();
+
+                                      final newZoom = _getZoomForDistance(
+                                        value,
+                                      );
+                                      final ctrl = await _controller.future;
+                                      ctrl.animateCamera(
+                                        CameraUpdate.zoomTo(newZoom),
+                                      );
+
+                                      _loadEmployeeMapData();
+                                    }
+                                  },
+                                  onAlertTypeChanged: (value) {
                                     setState(() {
-                                      _selectedDistance = value;
+                                      _selectedAlertType = value ?? '';
                                     });
                                     _filterAndRenderMapData();
-
-                                    final newZoom = _getZoomForDistance(value);
-                                    final ctrl = await _controller.future;
-                                    ctrl.animateCamera(
-                                      CameraUpdate.zoomTo(newZoom),
-                                    );
-
                                     _loadEmployeeMapData();
-                                  }
-                                },
-                                onAlertTypeChanged: (value) {
-                                  setState(() {
-                                    _selectedAlertType = value ?? '';
-                                  });
-                                  _filterAndRenderMapData();
-                                  _loadEmployeeMapData();
-                                },
-                              ),
-                              if (_showSearchDropdown &&
-                                  _searchResults.isNotEmpty)
-                                Positioned(
-                                  left: 16,
-                                  right: 56,
-                                  top: 50,
-                                  child: Material(
-                                    elevation: 6,
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: Colors.white,
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        maxHeight: 240,
-                                      ),
-                                      child: ListView.separated(
-                                        shrinkWrap: true,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 4,
-                                        ),
-                                        itemCount: _searchResults.length,
-                                        separatorBuilder: (_, __) => Divider(
-                                          height: 1,
-                                          color: Colors.grey.shade200,
-                                        ),
-                                        itemBuilder: (context, index) =>
-                                            _buildSearchResultItem(
-                                              _searchResults[index],
-                                            ),
-                                      ),
-                                    ),
-                                  ),
+                                  },
                                 ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Get direction card
-                      Positioned(
-                        top: 180,
-                        right: responsiveWidth * numD05,
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 300),
-                          opacity: mapState.isGetDirectionOpen ? 1 : 0,
-                          child: AnimatedScale(
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeOutBack,
-                            alignment: Alignment.topRight,
-                            scale: mapState.isGetDirectionOpen ? 1 : 0.0,
-                            child: IgnorePointer(
-                              ignoring: !mapState.isGetDirectionOpen,
-                              child: const GetDirectionCard(),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Side zoom / location panel
-                      Positioned(
-                        right: responsiveWidth * numD05,
-                        bottom: zoomPanelBottom,
-                        child: SideActionPanel(
-                          onCurrentLocation: _onCurrentLocation,
-                          onZoomIn: _onZoomIn,
-                          onZoomOut: _onZoomOut,
-                        ),
-                      ),
-
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: bottomOffset,
-                        child: _buildNavigationBar(size),
-                      ),
-
-                      // Bottom action bar — hidden during navigation
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 12.h,
-                        child: IgnorePointer(
-                          ignoring: context
-                              .watch<MapCubit>()
-                              .state
-                              .isNavigating,
-                          child: AnimatedOpacity(
-                            duration: const Duration(milliseconds: 300),
-                            opacity:
-                                context.watch<MapCubit>().state.isNavigating
-                                ? 0.0
-                                : 1.0,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 300),
-                                  opacity: mapState.isAlertPanelOpen ? 1 : 0,
-                                  child: AnimatedScale(
-                                    duration: const Duration(milliseconds: 400),
-                                    curve: Curves.easeOutBack,
-                                    alignment: Alignment.bottomLeft,
-                                    scale: mapState.isAlertPanelOpen ? 1 : 0.0,
-                                    child: IgnorePointer(
-                                      ignoring: !mapState.isAlertPanelOpen,
-                                      child: RepaintBoundary(
-                                        child: AlertPanelEmployee(
-                                          onClose: employeeMapNotifier
-                                              .closeAlertPanel,
-                                          onAlertSelected: (type) async {
-                                            if (_currentPosition != null) {
-                                              await employeeMapNotifier
-                                                  .addAlertMarker(
-                                                    type,
-                                                    _currentPosition!,
-                                                  );
-                                            }
-                                          },
+                                if (_showSearchDropdown &&
+                                    _searchResults.isNotEmpty)
+                                  Positioned(
+                                    left: 16,
+                                    right: 56,
+                                    top: 50,
+                                    child: Material(
+                                      elevation: 6,
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: Colors.white,
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxHeight: 240,
+                                        ),
+                                        child: ListView.separated(
+                                          shrinkWrap: true,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          itemCount: _searchResults.length,
+                                          separatorBuilder: (_, __) => Divider(
+                                            height: 1,
+                                            color: Colors.grey.shade200,
+                                          ),
+                                          itemBuilder: (context, index) =>
+                                              _buildSearchResultItem(
+                                                _searchResults[index],
+                                              ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Center(
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: responsiveWidth,
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: responsiveWidth * numD04,
-                                      ),
-                                      child: Row(
-                                        spacing: 8,
-                                        children: [
-                                          Expanded(
-                                            child: GestureDetector(
-                                              onTap: employeeMapNotifier
-                                                  .toggleAlertPanel,
-                                              child:
-                                                  const AlertButtonMapForEmployee(),
-                                            ),
-                                          ),
-                                          SosButton(
-                                            size: responsiveWidth * 0.122,
-                                            fontSize: responsiveWidth * numD035,
-                                            getPosition: () => _currentPosition,
-                                            triggerSosDirectly:
-                                                _triggerSosDirectly,
-                                            onSosStarted: (session) {
-                                              if (mounted) {
-                                                setState(
-                                                  () => _triggerSosDirectly =
-                                                      false,
-                                                );
-                                              }
-                                            },
-                                          ),
-                                          Expanded(
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const TeamChatListPage(),
-                                                  ),
-                                                );
-                                              },
-                                              child:
-                                                  const MessageButtonForMap(),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+
+                        // Get direction card
+                        Positioned(
+                          top: 180,
+                          right: responsiveWidth * numD05,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 300),
+                            opacity: mapState.isGetDirectionOpen ? 1 : 0,
+                            child: AnimatedScale(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOutBack,
+                              alignment: Alignment.topRight,
+                              scale: mapState.isGetDirectionOpen ? 1 : 0.0,
+                              child: IgnorePointer(
+                                ignoring: !mapState.isGetDirectionOpen,
+                                child: const GetDirectionCard(),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Side zoom / location panel
+                        Positioned(
+                          right: responsiveWidth * numD05,
+                          bottom: zoomPanelBottom,
+                          child: SideActionPanel(
+                            onCurrentLocation: _onCurrentLocation,
+                            onZoomIn: _onZoomIn,
+                            onZoomOut: _onZoomOut,
+                          ),
+                        ),
+
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: bottomOffset,
+                          child: _buildNavigationBar(size),
+                        ),
+
+                        // Bottom action bar — hidden during navigation
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 12.h,
+                          child: IgnorePointer(
+                            ignoring: context
+                                .watch<MapCubit>()
+                                .state
+                                .isNavigating,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 300),
+                              opacity:
+                                  context.watch<MapCubit>().state.isNavigating
+                                  ? 0.0
+                                  : 1.0,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 300),
+                                    opacity: mapState.isAlertPanelOpen ? 1 : 0,
+                                    child: AnimatedScale(
+                                      duration: const Duration(
+                                        milliseconds: 400,
+                                      ),
+                                      curve: Curves.easeOutBack,
+                                      alignment: Alignment.bottomLeft,
+                                      scale: mapState.isAlertPanelOpen
+                                          ? 1
+                                          : 0.0,
+                                      child: IgnorePointer(
+                                        ignoring: !mapState.isAlertPanelOpen,
+                                        child: RepaintBoundary(
+                                          child: AlertPanelEmployee(
+                                            onClose: employeeMapNotifier
+                                                .closeAlertPanel,
+                                            onAlertSelected: (type) async {
+                                              if (_currentPosition != null) {
+                                                await employeeMapNotifier
+                                                    .addAlertMarker(
+                                                      type,
+                                                      _currentPosition!,
+                                                    );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Center(
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxWidth: responsiveWidth,
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: responsiveWidth * numD04,
+                                        ),
+                                        child: Row(
+                                          spacing: 8,
+                                          children: [
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: employeeMapNotifier
+                                                    .toggleAlertPanel,
+                                                child:
+                                                    const AlertButtonMapForEmployee(),
+                                              ),
+                                            ),
+                                            SosButton(
+                                              size: responsiveWidth * 0.122,
+                                              fontSize:
+                                                  responsiveWidth * numD035,
+                                              getPosition: () =>
+                                                  _currentPosition,
+                                              triggerSosDirectly:
+                                                  _triggerSosDirectly,
+                                              onSosStarted: (session) {
+                                                if (mounted) {
+                                                  setState(
+                                                    () => _triggerSosDirectly =
+                                                        false,
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          const TeamChatListPage(),
+                                                    ),
+                                                  );
+                                                },
+                                                child:
+                                                    const MessageButtonForMap(),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+        ),
       ),
     );
   }

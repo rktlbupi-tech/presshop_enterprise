@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:presshop_enterprise/features/map/data/models/map_models.dart';
 import 'package:presshop_enterprise/features/map/data/services/heatmap_service.dart';
 
@@ -96,6 +97,16 @@ class EmployeeMapCubit extends Cubit<EmployeeMapState> {
     if (isClosed) return;
     emit(state.copyWith(isLoading: true));
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      if (token.isNotEmpty) {
+        _socket.connect(token);
+        _socket.clearListeners();
+        _socket.onSnapshot(handleSnapshot);
+        _socket.onWorkerUpdated(handleWorkerUpdated);
+        _socket.onAlertCreated(handleNewAlert);
+      }
+
       final workers = await _api.getWorkers(
         lat: lat,
         lng: lng,
@@ -119,6 +130,13 @@ class EmployeeMapCubit extends Cubit<EmployeeMapState> {
       debugPrint('EmployeeMapCubit.loadInitialData error: $e');
       if (!isClosed) emit(state.copyWith(isLoading: false));
     }
+  }
+
+  @override
+  Future<void> close() {
+    _socket.clearListeners();
+    _socket.unsubscribe();
+    return super.close();
   }
 
   void handleSnapshot(Map<String, dynamic> snapshot) {
@@ -195,6 +213,7 @@ class EmployeeMapCubit extends Cubit<EmployeeMapState> {
   }
 
   Future<void> addAlertMarker(String type, LatLng position) async {
+    print('[EmployeeMapCubit] addAlertMarker event triggered: type=$type, lat=${position.latitude}, lng=${position.longitude}');
     if (isClosed) return;
     try {
       Map<String, dynamic> addressData = {};

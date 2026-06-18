@@ -8,6 +8,7 @@ import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/features/team_chat/presentation/screens/team_chat_message_page.dart';
 
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
 
 // Real conversations endpoint chat modes (mirrors the legacy app).
 const String _kTeamChatModes =
@@ -246,7 +247,7 @@ class PresshopColors {
 }
 
 Widget showAnimatedLoader(Size size) =>
-    const Center(child: CircularProgressIndicator());
+    LoadingWidget(size: size.width * 0.25);
 
 // Mock userRoleProvider since Riverpod is removed
 enum UserRole { employee, enterprise }

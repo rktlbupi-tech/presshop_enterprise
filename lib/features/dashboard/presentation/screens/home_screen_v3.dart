@@ -16,6 +16,7 @@ import '../../../attendance/presentation/screens/attendance_screen.dart';
 import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../../presentation/widgets/coming_soon_screen.dart';
+import '../../../../presentation/widgets/employee_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_icons.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
@@ -136,13 +137,6 @@ class _HomeScreen3State extends State<HomeScreen3> {
           final profile = profileState is ProfileLoaded
               ? profileState.profile
               : null;
-          final firstName = profile?.firstName ?? 'Rohit';
-          final lastName = profile?.lastName ?? 'Sharma';
-          final fullName = '$firstName $lastName'.trim();
-          final initials =
-              '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
-                  .toUpperCase();
-
           return BlocBuilder<AttendanceBloc, AttendanceState>(
             builder: (context, attendanceState) {
               final isCheckedIn = attendanceState is AttendanceLoaded
@@ -163,49 +157,46 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   : 'MG Road, Bengaluru';
               final mileageStr = _formatDistance(isCheckedIn ? 18.0 : 0.0);
 
-              // ColoredBox + SafeArea instead of nested Scaffold — avoids
-              // the layout assertion errors caused by double Scaffold nesting.
-              return ColoredBox(
-                color: const Color(0xFFF2F4F8),
-                child: SafeArea(
-                  bottom: false,
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.only(
-                      left: 16.w,
-                      right: 16.w,
-                      top: 12.h,
-                      bottom: 96.h,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(profile, fullName, initials, isCheckedIn),
-                        SizedBox(height: 16.h),
-                        _buildDutyCard(
-                          isCheckedIn,
-                          checkInTimeStr,
-                          siteStr,
-                          mileageStr,
-                        ),
-                        SizedBox(height: 16.h),
-                        _buildCameraShortcutCard(),
-                        // SizedBox(height: 6.h),
-                        _buildTasksCard(),
-                        SizedBox(height: 16.h),
-                        _buildDutiesCard(),
-                        SizedBox(height: 16.h),
-                        // _buildStatsGrid(),
-                        // SizedBox(height: 16.h),
-                        _buildRecentAttendanceCard(),
-                        SizedBox(height: 16.h),
-                        _buildRecentEarningsCard(),
-                        SizedBox(height: 16.h),
-                        _buildRecentMileageCard(),
-                        SizedBox(height: 16.h),
-                        _buildAttentionSection(),
-                      ],
-                    ),
+              return Scaffold(
+                backgroundColor: const Color(0xFFF2F4F8),
+                appBar: EmployeeAppBar(
+                  onProfileTap: () => _navigateToTab(4),
+                  isOnline: isCheckedIn,
+                ),
+                body: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    left: 16.w,
+                    right: 16.w,
+                    top: 16.h,
+                    bottom: 96.h,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDutyCard(
+                        isCheckedIn,
+                        checkInTimeStr,
+                        siteStr,
+                        mileageStr,
+                      ),
+                      SizedBox(height: 16.h),
+                      _buildCameraShortcutCard(),
+                      // SizedBox(height: 6.h),
+                      _buildTasksCard(),
+                      SizedBox(height: 16.h),
+                      _buildDutiesCard(),
+                      SizedBox(height: 16.h),
+                      // _buildStatsGrid(),
+                      // SizedBox(height: 16.h),
+                      _buildRecentAttendanceCard(),
+                      SizedBox(height: 16.h),
+                      _buildRecentEarningsCard(),
+                      SizedBox(height: 16.h),
+                      _buildRecentMileageCard(),
+                      SizedBox(height: 16.h),
+                      _buildAttentionSection(),
+                    ],
                   ),
                 ),
               );
@@ -213,134 +204,6 @@ class _HomeScreen3State extends State<HomeScreen3> {
           );
         },
       ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(
-    ProfileEntity? profile,
-    String fullName,
-    String initials,
-    bool isOnline,
-  ) {
-    final avatar = profile?.profileImage;
-    final companyName = profile?.companyName ?? 'PressHop Enterprise';
-    final companyLogo = profile?.companyLogo;
-
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => _navigateToTab(4),
-          child: Stack(
-            children: [
-              Container(
-                width: 42.w,
-                height: 42.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: avatar != null && avatar.isNotEmpty
-                      ? Colors.grey.shade100
-                      : const Color(0xFF1F5BF6),
-                  border: Border.all(color: Colors.grey.shade300, width: 1.5),
-                  image: avatar != null && avatar.isNotEmpty
-                      ? DecorationImage(
-                          image: NetworkImage(avatar),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: avatar == null || avatar.isEmpty
-                    ? Center(
-                        child: Text(
-                          initials.isNotEmpty ? initials : 'RS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 11.w,
-                  height: 11.w,
-                  decoration: BoxDecoration(
-                    color: isOnline ? AppColors.accent : Colors.grey.shade400,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                fullName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w800,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-              Text(
-                companyName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w400,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          width: 40.w,
-          height: 40.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade200, width: 1),
-            image: companyLogo != null && companyLogo.isNotEmpty
-                ? DecorationImage(
-                    image: NetworkImage(companyLogo),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-          ),
-          child: companyLogo == null || companyLogo.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.all(6.w),
-                  child: Image.asset(
-                    AppIcons.appLogo,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.business,
-                      color: AppColors.primary,
-                      size: 20.sp,
-                    ),
-                  ),
-                )
-              : null,
-        ),
-      ],
     );
   }
 

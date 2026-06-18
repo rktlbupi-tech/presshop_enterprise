@@ -48,6 +48,13 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
                     width: 24.w,
                     height: 24.w,
                     color: AppColors.textPrimary,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 22.sp,
+                        color: AppColors.textPrimary,
+                      );
+                    },
                   ),
                   onPressed: onBackTap ?? () => Navigator.pop(context),
                 )

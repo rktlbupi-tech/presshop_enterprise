@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:dio/dio.dart';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,9 @@ import 'content_submitted_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../main.dart' show sharedPreferences;
 import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/network/socket/socket_manager.dart';
 
 class EmployeePublishContentScreen extends StatefulWidget {
   final PublishData? publishData;
@@ -358,75 +362,255 @@ class _EmployeePublishContentScreenState
     final lng = double.tryParse(fallbackLng) ?? 0.0;
 
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ContentSubmittedScreen(publishData: widget.publishData),
-      ),
-      (r) => false,
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: LoadingWidget()),
     );
 
-    sharedPreferences?.remove('ev_notify_10');
-    sharedPreferences?.remove('ev_notify_40');
-    sharedPreferences?.remove('ev_notify_90');
-
-    _runUploadInBackground(
-      taskId: taskId,
-      mediaList: mediaList,
-      lat: lat,
-      lng: lng,
-      address: fallbackAddress,
-      description: description,
-    );
-  }
-
-  void _runUploadInBackground({
-    required String taskId,
-    required List<CameraTaskMediaData> mediaList,
-    required double lat,
-    required double lng,
-    required String address,
-    String? description,
-  }) {
-    final title = (description != null && description.isNotEmpty)
+    final title = (description.isNotEmpty)
         ? description
         : 'Uploading task evidence';
 
-    Future<bool> doUpload() => _taskService.uploadEvidence(
-      taskId: taskId,
-      mediaList: mediaList,
-      latitude: lat,
-      longitude: lng,
-      address: address,
-      description: description,
-      onProgress: UploadProgressNotifier.instance.updateProgress,
-    );
+    UploadProgressNotifier.instance.startUpload(taskId: taskId, title: title);
 
-    UploadProgressNotifier.instance.startUpload(
-      taskId: taskId,
-      title: title,
-      onRetry: () async {
-        final ok = await doUpload();
-        if (ok) {
-          UploadProgressNotifier.instance.completeUpload();
-        } else {
-          UploadProgressNotifier.instance.failUpload();
+    try {
+      final success = await _taskService.uploadEvidence(
+        taskId: taskId,
+        mediaList: mediaList,
+        latitude: lat,
+        longitude: lng,
+        address: fallbackAddress,
+        description: description,
+        onProgress: UploadProgressNotifier.instance.updateProgress,
+      );
+
+      if (success) {
+        UploadProgressNotifier.instance.completeUpload();
+        sharedPreferences?.remove('ev_notify_10');
+        sharedPreferences?.remove('ev_notify_40');
+        sharedPreferences?.remove('ev_notify_90');
+
+        await _sendContentNotificationToTaskChat(
+          taskId: taskId,
+          mediaList: mediaList,
+          address: fallbackAddress,
+        );
+
+        if (mounted) {
+          Navigator.pop(context); // Dismiss loading dialog
         }
-        return ok;
-      },
-    );
 
-    doUpload()
-        .then((success) {
-          if (success) {
-            UploadProgressNotifier.instance.completeUpload();
-          } else {
-            UploadProgressNotifier.instance.failUpload();
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  ContentSubmittedScreen(publishData: widget.publishData),
+            ),
+            (r) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          Navigator.pop(context); // Dismiss loading dialog
+        }
+        UploadProgressNotifier.instance.failUpload();
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Submission Failed'),
+              content: const Text(
+                'Could not submit evidence. Please try again.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      UploadProgressNotifier.instance.failUpload();
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loading dialog
+      }
+
+      String errorMessage = 'Failed to submit evidence. Please try again.';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else if (data is Map && data['error'] != null) {
+          errorMessage = data['error'].toString();
+        } else if (e.message != null) {
+          errorMessage = e.message!;
+        }
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Submission Error'),
+            content: Text(errorMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendContentNotificationToTaskChat({
+    required String taskId,
+    required List<CameraTaskMediaData> mediaList,
+    required String address,
+  }) async {
+    try {
+      final localFiles = mediaList
+          .where((e) => !e.mediaPath.startsWith('http'))
+          .map((e) => File(e.mediaPath))
+          .toList();
+      if (localFiles.isEmpty) return;
+
+      final apiClient = getIt<ApiClient>();
+      final convResp = await apiClient.get(
+        'chat-v2/enterprise/tasks/$taskId/conversation',
+      );
+      if (convResp.statusCode != 200 || convResp.data == null) return;
+
+      final raw = convResp.data;
+      final data = (raw is Map && raw['data'] != null) ? raw['data'] : raw;
+      final conversation = data['conversation'];
+      final conversationId =
+          conversation?['_id']?.toString() ?? conversation?['id']?.toString();
+      if (conversationId == null || conversationId.isEmpty) return;
+
+      final items = localFiles
+          .map(
+            (f) => {
+              'fileName': f.path.split('/').last,
+              'contentType': _getMimeType(f.path),
+              'size': f.lengthSync(),
+            },
+          )
+          .toList();
+
+      final resp = await apiClient.post(
+        'chat-v2/media/prepare',
+        data: {'conversationId': conversationId, 'items': items},
+      );
+      if (resp.statusCode != 200 && resp.statusCode != 201) return;
+
+      final prepRaw = resp.data;
+      final prepData = prepRaw is Map && prepRaw['data'] != null
+          ? prepRaw['data']
+          : prepRaw;
+      final list = prepData is List ? prepData : (prepData['items'] as List);
+
+      final List<String> assetIds = [];
+      for (int i = 0; i < list.length; i++) {
+        final asset = list[i];
+        final uploadUrl = asset['uploadUrl'] as String;
+        final assetId = asset['assetId'] as String;
+        final file = localFiles[i];
+        final contentType = _getMimeType(file.path);
+
+        final uploadDio = Dio();
+        final bytes = await file.readAsBytes();
+        final putResp = await uploadDio.put(
+          uploadUrl,
+          data: bytes,
+          options: Options(
+            headers: {'Content-Type': contentType},
+            followRedirects: false,
+            validateStatus: (s) => s != null && s < 400,
+          ),
+        );
+        if (putResp.statusCode != null && putResp.statusCode! < 400) {
+          // Confirm the media upload
+          final confirmResp = await apiClient.post(
+            'chat-v2/media/$assetId/confirm',
+          );
+          if (confirmResp.statusCode == 200 || confirmResp.statusCode == 201) {
+            assetIds.add(assetId);
           }
-        })
-        .catchError((_) {
-          UploadProgressNotifier.instance.failUpload();
-        });
+        }
+      }
+
+      if (assetIds.isEmpty) return;
+
+      final socket = SocketManager.instance.chatSocket;
+      if (!socket.isConnected) {
+        final token = sharedPreferences?.getString('auth_token') ?? '';
+        if (token.isNotEmpty) {
+          socket.connect(token);
+        }
+      }
+
+      int retries = 0;
+      while (!socket.isConnected && retries < 10) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        retries++;
+      }
+
+      if (socket.isConnected) {
+        // Subscribe to the task conversation room
+        socket.emitWithAck(
+          'conversation.subscribe',
+          {"conversationId": conversationId, "afterSeq": 0, "limit": 10},
+          ack: (ack) {
+            debugPrint('Content task conversation subscribe ack: $ack');
+          },
+        );
+
+        // Wait a short moment for subscription registration
+        await Future.delayed(const Duration(milliseconds: 200));
+
+        final clientMessageId = "msg-${DateTime.now().millisecondsSinceEpoch}";
+        final Map<String, dynamic> payload = {"text": ""};
+        if (address.isNotEmpty) payload["location"] = address;
+
+        socket.emitWithAck(
+          'message.send',
+          {
+            "conversationId": conversationId,
+            "clientMessageId": clientMessageId,
+            "kind": "media",
+            "payload": payload,
+            "mediaAssetIds": assetIds,
+          },
+          ack: (ack) {
+            debugPrint('Content task chat notification ack: $ack');
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('Error in _sendContentNotificationToTaskChat: $e');
+    }
+  }
+
+  String _getMimeType(String filePath) {
+    final ext = filePath.split('.').last.toLowerCase();
+    if (ext == 'jpg' || ext == 'jpeg') return 'image/jpeg';
+    if (ext == 'png') return 'image/png';
+    if (ext == 'gif') return 'image/gif';
+    if (ext == 'mp4') return 'video/mp4';
+    if (ext == 'mov') return 'video/quicktime';
+    if (ext == 'mp3') return 'audio/mpeg';
+    if (ext == 'm4a') return 'audio/mp4';
+    if (ext == 'wav') return 'audio/wav';
+    if (ext == 'pdf') return 'application/pdf';
+    return 'application/octet-stream';
   }
 
   @override

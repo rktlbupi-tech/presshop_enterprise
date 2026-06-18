@@ -155,8 +155,8 @@ class CameraTaskService {
       );
 
       return uploadRes.statusCode == 200 || uploadRes.statusCode == 201;
-    } catch (_) {
-      return false;
+    } catch (e) {
+      rethrow;
     }
   }
 }

@@ -9,7 +9,9 @@ class MapSocketClient {
   static io.Socket? get heatmapSocket => _heatmapSocket;
 
   static io.Socket connectHeatmap(String token) {
+    print('[MapSocketClient] connectHeatmap called with token: ${token.substring(0, (token.length > 10 ? 10 : token.length))}...');
     if (_heatmapSocket != null && _heatmapSocket!.connected) {
+      print('[MapSocketClient] Already connected to heatmap socket.');
       return _heatmapSocket!;
     }
 
@@ -26,13 +28,13 @@ class MapSocketClient {
     );
 
     _heatmapSocket?.onConnect((_) {
-      if (kDebugMode) debugPrint('[MapSocket] Connected [${_heatmapSocket?.id}]');
+      print('[MapSocketClient] Connected to heatmap socket [${_heatmapSocket?.id}]');
     });
     _heatmapSocket?.onDisconnect((reason) {
-      if (kDebugMode) debugPrint('[MapSocket] Disconnected [$reason]');
+      print('[MapSocketClient] Disconnected from heatmap socket [$reason]');
     });
     _heatmapSocket?.onConnectError((error) {
-      if (kDebugMode) debugPrint('[MapSocket] Error [$error]');
+      print('[MapSocketClient] Connection Error on heatmap socket [$error]');
     });
 
     _heatmapSocket?.connect();

@@ -14,6 +14,7 @@ import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../presentation/widgets/company_logo_widget.dart';
+import '../../../../presentation/widgets/loading_widget.dart';
 import '../../data/models/employee_task_model.dart';
 import 'task_chat_screen.dart';
 
@@ -28,6 +29,7 @@ class TaskDetailsScreen extends StatefulWidget {
 class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   late final ApiClient _apiClient;
   EmployeeTaskModel? _task;
+  List<dynamic> _evidenceList = [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -108,6 +110,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         if (mounted) _startTimer();
         if (mounted) _updateMapMarker();
         if (mounted) _fetchDistanceMatrix();
+        _loadTaskEvidences();
       } else {
         _errorMessage = 'Failed to load task details';
       }
@@ -115,6 +118,26 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       _errorMessage = 'Failed to load task details';
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadTaskEvidences() async {
+    try {
+      final response = await _apiClient.get(
+        'enterprise/tasks/${widget.taskId}/evidences',
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final resData = response.data['data'];
+        if (resData is Map && resData['data'] is List) {
+          if (mounted) {
+            setState(() {
+              _evidenceList = resData['data'] as List<dynamic>;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading evidences: $e');
     }
   }
 
@@ -282,7 +305,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: LoadingWidget(),
       ),
     );
     try {
@@ -461,7 +484,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       return Scaffold(
         appBar: _buildAppBar(size),
         body: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: LoadingWidget(),
         ),
       );
     }
@@ -637,8 +660,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                   else
                                     Container(
                                       color: Colors.grey.shade200,
-                                      child: const Center(
-                                        child: CircularProgressIndicator(),
+                                      child: Center(
+                                        child: LoadingWidget(size: 40.w),
                                       ),
                                     ),
                                   InkWell(
@@ -995,6 +1018,129 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   const Divider(thickness: 1, color: Color(0xFFEEEEEE)),
                   SizedBox(height: size.width * 0.035),
 
+                  if (_evidenceList.isNotEmpty) ...[
+                    Text(
+                      'UPLOADED CONTENT',
+                      style: TextStyle(
+                        fontSize: size.width * 0.035,
+                        color: Colors.black,
+                        fontFamily: 'AirbnbCereal',
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: size.width * 0.03),
+                    GridView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: _evidenceList.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        mainAxisSpacing: size.width * 0.018,
+                        crossAxisSpacing: size.width * 0.018,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = _evidenceList[index];
+                        final rawType = item['evidenceType'] ?? item['mediaType'] ?? '';
+                        final mediaType = rawType.toString().toLowerCase();
+
+                        String? url;
+                        if (item['previewUrl'] != null && item['previewUrl'].toString().isNotEmpty) {
+                          url = item['previewUrl'].toString();
+                        } else if (item['processedUrl'] != null && item['processedUrl'].toString().isNotEmpty) {
+                          url = item['processedUrl'].toString();
+                        } else {
+                          url = item['originalUrl']?.toString();
+                        }
+
+                        String? thumbnail;
+                        if (item['thumbnailUrl'] != null && item['thumbnailUrl'].toString().isNotEmpty) {
+                          thumbnail = item['thumbnailUrl'].toString();
+                        } else if (item['previewUrl'] != null && item['previewUrl'].toString().isNotEmpty) {
+                          thumbnail = item['previewUrl'].toString();
+                        } else if (item['processedUrl'] != null && item['processedUrl'].toString().isNotEmpty) {
+                          thumbnail = item['processedUrl'].toString();
+                        } else {
+                          thumbnail = item['originalUrl']?.toString();
+                        }
+
+                        final displayUrl = url ?? '';
+                        final displayThumb = thumbnail ?? '';
+
+                        return Stack(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                if (mediaType == 'image' && displayUrl.isNotEmpty) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => _FullImageScreen(url: displayUrl),
+                                    ),
+                                  );
+                                } else if (displayUrl.isNotEmpty) {
+                                  launchUrl(Uri.parse(displayUrl), mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(size.width * 0.02),
+                                child: mediaType == 'audio'
+                                    ? Container(
+                                        height: size.width * 0.25,
+                                        width: size.width * 0.25,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF9A825),
+                                          borderRadius: BorderRadius.circular(size.width * 0.02),
+                                        ),
+                                        child: Center(
+                                          child: Icon(
+                                            Icons.play_arrow_rounded,
+                                            color: Colors.white,
+                                            size: size.width * 0.1,
+                                          ),
+                                        ),
+                                      )
+                                    : (mediaType == 'video' || mediaType == 'image') && displayThumb.isNotEmpty
+                                        ? Image.network(
+                                            displayThumb,
+                                            fit: BoxFit.cover,
+                                            height: size.width * 0.25,
+                                            width: size.width * 0.25,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: Colors.grey.shade200,
+                                            height: size.width * 0.25,
+                                            width: size.width * 0.25,
+                                            child: Icon(
+                                              mediaType == 'video'
+                                                  ? Icons.video_library
+                                                  : Icons.insert_drive_file,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                              ),
+                            ),
+                            if (mediaType == 'video')
+                              const IgnorePointer(
+                                child: Center(
+                                  child: Icon(
+                                    Icons.play_circle_outline,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    SizedBox(height: size.width * 0.04),
+                  ],
+
                   // ── Buttons ───────────────────────────────────────────
                   Row(
                     children: [
@@ -1109,7 +1255,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             Container(
               color: Colors.black.withValues(alpha: 0.3),
               child: const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
+                child: LoadingWidget(),
               ),
             ),
         ],
@@ -1168,5 +1314,37 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       return '${l.day.toString().padLeft(2, '0')} ${months[l.month - 1]} ${l.year}';
     }
     return rawDate;
+  }
+}
+
+class _FullImageScreen extends StatelessWidget {
+  final String url;
+  const _FullImageScreen({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            errorBuilder: (_, e, s) => const Icon(
+              Icons.broken_image,
+              color: Colors.white,
+              size: 60,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

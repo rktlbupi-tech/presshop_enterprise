@@ -204,6 +204,8 @@ class _LoginViewState extends State<_LoginView> {
                     },
                   ),
                   SizedBox(height: 22.h),
+                  // Commented out: employees only log in and cannot sign up.
+                  /*
                   Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -225,6 +227,7 @@ class _LoginViewState extends State<_LoginView> {
                       ],
                     ),
                   ),
+                  */
                   SizedBox(height: 32.h),
                 ],
               ),

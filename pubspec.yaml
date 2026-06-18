@@ -41,6 +41,7 @@ dependencies:
   image_picker: ^1.0.4
   google_places_flutter: ^2.0.8
   qr_flutter: ^4.1.0
+  otp_pin_field: ^1.1.2+2
 
   # Utils
   logger: ^2.4.0

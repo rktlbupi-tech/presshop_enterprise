@@ -105,7 +105,9 @@ class UploadProgressNotifier extends ChangeNotifier {
           ),
           iOS: DarwinNotificationDetails(
             presentSound: true,
-            presentAlert: true,
+            presentBanner: true,
+            presentList: true,
+            presentBadge: true,
           ),
         ),
       );
@@ -131,7 +133,9 @@ class UploadProgressNotifier extends ChangeNotifier {
           ),
           iOS: DarwinNotificationDetails(
             presentSound: true,
-            presentAlert: true,
+            presentBanner: true,
+            presentList: true,
+            presentBadge: true,
           ),
         ),
       );
@@ -157,7 +161,9 @@ class UploadProgressNotifier extends ChangeNotifier {
         ),
         iOS: DarwinNotificationDetails(
           presentSound: false,
-          presentAlert: progressPct == 0,
+          presentBanner: progressPct == 0,
+          presentList: true,
+          presentBadge: false,
         ),
       ),
     );

@@ -207,60 +207,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   // Skip / pill button / Next row.
                   SizedBox(
                     height: size.width * 0.12,
-                    child: Stack(
-                      alignment: Alignment.center,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (index == 0)
-                          Positioned(
-                            left: 0,
-                            child: InkWell(
-                              onTap: _finish,
-                              splashColor: Colors.grey.shade300,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: size.width * 0.02,
-                                  vertical: size.width * 0.03,
-                                ),
-                                child: Text(
-                                  'Skip',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.normal,
-                                    fontFamily: 'AirbnbCereal',
-                                    fontSize: size.width * 0.03,
+                        // Skip text button
+                        SizedBox(
+                          width: size.width * 0.15,
+                          child: index == 0
+                              ? InkWell(
+                                  onTap: _finish,
+                                  splashColor: Colors.grey.shade300,
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: size.width * 0.03,
+                                      ),
+                                      child: Text(
+                                        'Skip',
+                                        style: TextStyle(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.normal,
+                                          fontFamily: 'AirbnbCereal',
+                                          fontSize: size.width * 0.03,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        // Pill button (centered)
+                        Expanded(
+                          child: Center(
+                            child: item.showButton
+                                ? ElevatedButton(
+                                    onPressed: _finish,
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: Size(0, size.width * 0.1),
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: size.width * 0.012,
+                                        horizontal: size.width * 0.05,
+                                      ),
+                                      backgroundColor: AppColors.primary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          size.width * 0.05,
+                                        ),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: Text(
+                                      item.buttonText,
+                                      style: TextStyle(
+                                        fontSize: size.width * 0.035,
+                                        color: Colors.white,
+                                        fontFamily: 'AirbnbCereal',
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
-                        if (item.showButton)
-                          ElevatedButton(
-                            onPressed: _finish,
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                vertical: size.width * 0.012,
-                                horizontal: size.width * 0.04,
-                              ),
-                              backgroundColor: AppColors.employeeBlue,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  size.width * 0.05,
-                                ),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              item.buttonText,
-                              style: TextStyle(
-                                fontSize: size.width * 0.035,
-                                color: Colors.white,
-                                fontFamily: 'AirbnbCereal',
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        Positioned(
-                          right: 0,
+                        ),
+                        // Next text button
+                        SizedBox(
+                          width: size.width * 0.15,
                           child: InkWell(
                             onTap: () {
                               if (index == walkthroughList.length - 1) {
@@ -274,18 +286,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               }
                             },
                             splashColor: Colors.grey.shade300,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: size.width * 0.02,
-                                vertical: size.width * 0.03,
-                              ),
-                              child: Text(
-                                'Next',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: size.width * 0.03,
-                                  fontWeight: FontWeight.normal,
-                                  fontFamily: 'AirbnbCereal',
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: size.width * 0.03,
+                                ),
+                                child: Text(
+                                  'Next',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: size.width * 0.03,
+                                    fontWeight: FontWeight.normal,
+                                    fontFamily: 'AirbnbCereal',
+                                  ),
                                 ),
                               ),
                             ),

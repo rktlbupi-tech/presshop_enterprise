@@ -1,24 +1,74 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/map/data/services/emergency_service.dart';
 
 const List<Map<String, String>> alertTypesForEmployee = [
-  {'type': 'contact-my-family', 'icon': 'assets/markers/gifs/contact-family.gif', 'label': 'Contact my family'},
-  {'type': 'need-help', 'icon': 'assets/markers/gifs/need-help.gif', 'label': 'Need help'},
-  {'type': 'send-backup', 'icon': 'assets/markers/gifs/send-backup.gif', 'label': 'Send backup'},
-  {'type': 'call-police', 'icon': 'assets/markers/gifs/call police.gif', 'label': 'Call police'},
-  {'type': 'call-ambulance', 'icon': 'assets/markers/gifs/medicine.webp', 'label': 'Call ambulance'},
-  {'type': 'under_threat', 'icon': 'assets/markers/gifs/vandalism.webp', 'label': 'Under threat'},
-  {'type': 'being-followed', 'icon': 'assets/markers/gifs/being-followed.gif', 'label': 'Being followed'},
-  {'type': 'get_me_out', 'icon': 'assets/markers/gifs/get-me-out.gif', 'label': 'Get me out'},
-  {'type': 'im_safe', 'icon': 'assets/markers/gifs/i-am-safe.gif', 'label': "I'm safe"},
-  {'type': 'send-support', 'icon': 'assets/markers/gifs/safe.gif', 'label': 'Send support'},
-  {'type': 'no-signal', 'icon': 'assets/markers/gifs/no-signal .gif', 'label': 'No signal'},
-  {'type': 'low-battery', 'icon': 'assets/markers/gifs/low-battery .gif', 'label': 'Low battery'},
+  {
+    'type': 'contact-my-family',
+    'icon': 'assets/markers/gifs/contact-family.gif',
+    'label': 'Contact my family',
+  },
+  {
+    'type': 'need-help',
+    'icon': 'assets/markers/gifs/need-help.gif',
+    'label': 'Need help',
+  },
+  {
+    'type': 'send-backup',
+    'icon': 'assets/markers/gifs/send-backup.gif',
+    'label': 'Send backup',
+  },
+  {
+    'type': 'call-police',
+    'icon': 'assets/markers/gifs/call police.gif',
+    'label': 'Call police',
+  },
+  {
+    'type': 'call-ambulance',
+    'icon': 'assets/markers/gifs/medicine.webp',
+    'label': 'Call ambulance',
+  },
+  {
+    'type': 'under-threat',
+    'icon': 'assets/markers/gifs/vandalism.webp',
+    'label': 'Under threat',
+  },
+  {
+    'type': 'being-followed',
+    'icon': 'assets/markers/gifs/being-followed.gif',
+    'label': 'Being followed',
+  },
+  {
+    'type': 'get-me-out',
+    'icon': 'assets/markers/gifs/get-me-out.gif',
+    'label': 'Get me out',
+  },
+  {
+    'type': 'im-safe',
+    'icon': 'assets/markers/gifs/i-am-safe.gif',
+    'label': "I'm safe",
+  },
+  {
+    'type': 'send-support',
+    'icon': 'assets/markers/gifs/safe.gif',
+    'label': 'Send support',
+  },
+  {
+    'type': 'no-signal',
+    'icon': 'assets/markers/gifs/no-signal .gif',
+    'label': 'No signal',
+  },
+  {
+    'type': 'low-battery',
+    'icon': 'assets/markers/gifs/low-battery .gif',
+    'label': 'Low battery',
+  },
 ];
 
 class AlertPanelEmployee extends StatefulWidget {
@@ -169,13 +219,13 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
   /// Default single-card-per-category fallback so the panel is never empty.
   void _loadFallbackData() {
     EmergencyStation fallback(String category) => EmergencyStation(
-          name: category,
-          address: 'Default emergency number',
-          phoneNumber: getEmergencyNumber(category),
-          distance: 0.0,
-          lat: 0.0,
-          lng: 0.0,
-        );
+      name: category,
+      address: 'Default emergency number',
+      phoneNumber: getEmergencyNumber(category),
+      distance: 0.0,
+      lat: 0.0,
+      lng: 0.0,
+    );
 
     realEmergencyServices = {
       'Police': [fallback('Police')],
@@ -193,6 +243,29 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     } catch (_) {}
   }
 
+  Future<void> _navigateToLocation(double lat, double lng) async {
+    final String googleMapsUrl =
+        "https://www.google.com/maps/search/?api=1&query=$lat,$lng";
+    final String appleMapsUrl = "https://maps.apple.com/?q=$lat,$lng";
+
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
+        await launchUrl(
+          Uri.parse(appleMapsUrl),
+          mode: LaunchMode.externalApplication,
+        );
+        return;
+      }
+    }
+
+    if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
+      await launchUrl(
+        Uri.parse(googleMapsUrl),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -203,10 +276,7 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
         Align(
           alignment: Alignment.bottomLeft,
           child: Container(
-            margin: EdgeInsets.only(
-              left: w * 0.04,
-              bottom: w * 0.042,
-            ),
+            margin: EdgeInsets.only(left: w * 0.04, bottom: w * 0.042),
             width: w * 0.70,
             decoration: BoxDecoration(
               color: Colors.white,
@@ -236,16 +306,24 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                         children: [
                           GestureDetector(
                             onTap: showEmergencyServices
-                                ? () => setState(() => showEmergencyServices = false)
+                                ? () => setState(
+                                    () => showEmergencyServices = false,
+                                  )
                                 : null,
                             child: Row(
                               children: [
                                 if (showEmergencyServices) ...[
-                                  Icon(Icons.arrow_back_ios, size: w * 0.04, color: Colors.black),
+                                  Icon(
+                                    Icons.arrow_back_ios,
+                                    size: w * 0.04,
+                                    color: Colors.black,
+                                  ),
                                   SizedBox(width: w * 0.02),
                                 ],
                                 Text(
-                                  showEmergencyServices ? 'Emergency services' : 'Share Alerts',
+                                  showEmergencyServices
+                                      ? 'Emergency services'
+                                      : 'Share Alerts',
                                   style: TextStyle(
                                     fontSize: w * 0.032,
                                     fontWeight: FontWeight.w500,
@@ -267,7 +345,11 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                               },
                               child: Row(
                                 children: [
-                                  Icon(Icons.phone, size: w * 0.04, color: AppColors.primary),
+                                  Icon(
+                                    Icons.phone,
+                                    size: w * 0.04,
+                                    color: AppColors.primary,
+                                  ),
                                   SizedBox(width: w * 0.02),
                                   Text(
                                     'Emergency services',
@@ -313,12 +395,13 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                           padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: alertTypesForEmployee.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            childAspectRatio: 0.85,
-                            crossAxisSpacing: w * 0.012,
-                            mainAxisSpacing: w * 0.012,
-                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 0.85,
+                                crossAxisSpacing: w * 0.012,
+                                mainAxisSpacing: w * 0.012,
+                              ),
                           itemBuilder: (context, i) {
                             final item = alertTypesForEmployee[i];
                             return GestureDetector(
@@ -330,8 +413,12 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(w * 0.021),
-                                  border: Border.all(color: Colors.grey.shade200),
+                                  borderRadius: BorderRadius.circular(
+                                    w * 0.021,
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                  ),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -392,17 +479,6 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     );
   }
 
-  IconData _categoryIcon(String category) {
-    switch (category) {
-      case 'Police':
-        return Icons.local_police;
-      case 'Ambulance':
-        return Icons.local_hospital;
-      default:
-        return Icons.local_fire_department;
-    }
-  }
-
   Widget _buildEmergencyServices(double w) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -434,9 +510,8 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                     SizedBox(
                       width: w * 0.04,
                       height: w * 0.04,
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.red,
+                      child: LoadingWidget(
+                        size: w * 0.04,
                       ),
                     ),
                     SizedBox(width: w * 0.02),
@@ -464,14 +539,20 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                 ),
               )
             else
-              ...stations.map((station) => _buildStationCard(w, category, station)),
+              ...stations.map(
+                (station) => _buildStationCard(w, category, station),
+              ),
           ],
         );
       }).toList(),
     );
   }
 
-  Widget _buildStationCard(double w, String category, EmergencyStation station) {
+  Widget _buildStationCard(
+    double w,
+    String category,
+    EmergencyStation station,
+  ) {
     final dialNumber = station.phoneNumber.isNotEmpty
         ? station.phoneNumber
         : getEmergencyNumber(category);
@@ -487,19 +568,6 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.all(w * 0.02),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFEEEE),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _categoryIcon(category),
-              color: Colors.red,
-              size: w * 0.05,
-            ),
-          ),
-          SizedBox(width: w * 0.03),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,6 +610,24 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
             ),
           ),
           SizedBox(width: w * 0.02),
+          if (station.lat != 0.0 && station.lng != 0.0) ...[
+            GestureDetector(
+              onTap: () => _navigateToLocation(station.lat, station.lng),
+              child: Container(
+                padding: EdgeInsets.all(w * 0.015),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 1.5),
+                ),
+                child: Icon(
+                  LucideIcons.corner_up_right,
+                  size: w * 0.035,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            SizedBox(width: w * 0.015),
+          ],
           GestureDetector(
             onTap: () => _makeCall(dialNumber),
             child: Container(

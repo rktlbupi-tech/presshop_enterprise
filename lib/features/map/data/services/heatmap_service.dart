@@ -123,6 +123,14 @@ class HeatmapSocketService {
     );
   }
 
+  void unsubscribe() {
+    MapSocketClient.heatmapSocket?.emitWithAck(
+      MapSocketConstants.heatmapUnsubscribe,
+      {},
+      ack: (_) {},
+    );
+  }
+
   void shareAlert({
     required String type,
     required String severity,
@@ -132,18 +140,28 @@ class HeatmapSocketService {
     Map<String, dynamic>? address,
     Map<String, dynamic>? metadata,
   }) {
-    MapSocketClient.heatmapSocket?.emitWithAck(
+    final socket = MapSocketClient.heatmapSocket;
+    print('[HeatmapSocketService] shareAlert: socket connected? ${socket?.connected}');
+    if (socket == null) {
+      print('[HeatmapSocketService] ERROR: heatmapSocket is null!');
+      return;
+    }
+    final payload = {
+      'type': type,
+      'severity': severity,
+      'lat': lat,
+      'lng': lng,
+      'description': description,
+      'address': address,
+      'metadata': metadata ?? {},
+    };
+    print('[HeatmapSocketService] Emitting event: ${MapSocketConstants.heatmapAlertShare} with payload: $payload');
+    socket.emitWithAck(
       MapSocketConstants.heatmapAlertShare,
-      {
-        'type': type,
-        'severity': severity,
-        'lat': lat,
-        'lng': lng,
-        'description': description,
-        'address': address,
-        'metadata': metadata ?? {},
+      payload,
+      ack: (ackData) {
+        print('[HeatmapSocketService] shareAlert ACK received: $ackData');
       },
-      ack: (_) {},
     );
   }
 

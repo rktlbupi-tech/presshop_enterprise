@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/features/map/presentation/bloc/map_cubit.dart';
+import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
 
 class GetDirectionCard extends StatefulWidget {
   const GetDirectionCard({super.key});
@@ -471,11 +472,8 @@ class _GetDirectionCardState extends State<GetDirectionCard> {
                         ? SizedBox(
                             width: responsiveWidth * numD04,
                             height: responsiveWidth * numD04,
-                            child: CircularProgressIndicator(
-                              strokeWidth: responsiveWidth * numD005,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
+                            child: LoadingWidget(
+                              size: responsiveWidth * numD04,
                             ),
                           )
                         : Text(

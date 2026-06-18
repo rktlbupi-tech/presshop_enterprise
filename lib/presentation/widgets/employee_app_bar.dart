@@ -186,7 +186,12 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
             if (onFilterTap != null)
               IconButton(
                 onPressed: onFilterTap,
-                icon: Icon(Icons.tune, color: Colors.black87, size: 22.sp),
+                icon: Image.asset(
+                  'assets/icons/filter_new.png',
+                  width: 22.sp,
+                  height: 22.sp,
+                  fit: BoxFit.contain,
+                ),
               ),
             Container(
               height: 40.w,
