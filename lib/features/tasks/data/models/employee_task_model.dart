@@ -124,9 +124,20 @@ class EmployeeTaskModel {
       industry: json['industry']?.toString() ?? '',
       tags: json['tags'] as List<dynamic>? ?? [],
       taskDestination: json['taskDestination'] != null
-          ? TaskDestination.fromJson(json['taskDestination'] as Map<String, dynamic>)
+          ? TaskDestination.fromJson(
+              json['taskDestination'] as Map<String, dynamic>,
+            )
           : null,
-      dueAt: json['dueAt']?.toString(),
+      dueAt:
+          (json['dueAt'] != null &&
+              json['dueAt'].toString() != 'null' &&
+              json['dueAt'].toString().isNotEmpty)
+          ? json['dueAt'].toString()
+          : (json['endWindowAt'] != null &&
+                json['endWindowAt'].toString() != 'null' &&
+                json['endWindowAt'].toString().isNotEmpty)
+          ? json['endWindowAt'].toString()
+          : null,
       scheduledFor: json['scheduledFor']?.toString(),
       startWindowAt: json['startWindowAt']?.toString(),
       endWindowAt: json['endWindowAt']?.toString(),
@@ -139,7 +150,8 @@ class EmployeeTaskModel {
       creatorSummary: json['creatorSummary'] != null
           ? CreatorSummary.fromJson(
               json['creatorSummary'] as Map<String, dynamic>,
-              creatorProfileImage: json['metadata']?['creatorProfileImage']?.toString(),
+              creatorProfileImage: json['metadata']?['creatorProfileImage']
+                  ?.toString(),
             )
           : null,
     );
@@ -173,10 +185,7 @@ class GeoPoint {
   final String type;
   final List<double> coordinates;
 
-  GeoPoint({
-    required this.type,
-    required this.coordinates,
-  });
+  GeoPoint({required this.type, required this.coordinates});
 
   factory GeoPoint.fromJson(Map<String, dynamic> json) {
     return GeoPoint(
@@ -230,7 +239,10 @@ class CreatorSummary {
     required this.profileImage,
   });
 
-  factory CreatorSummary.fromJson(Map<String, dynamic> json, {String? creatorProfileImage}) {
+  factory CreatorSummary.fromJson(
+    Map<String, dynamic> json, {
+    String? creatorProfileImage,
+  }) {
     return CreatorSummary(
       id: json['id']?.toString() ?? '',
       model: json['model']?.toString() ?? '',
@@ -238,7 +250,8 @@ class CreatorSummary {
       email: json['email']?.toString() ?? '',
       countryCode: json['countryCode']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
-      profileImage: (creatorProfileImage != null && creatorProfileImage.isNotEmpty)
+      profileImage:
+          (creatorProfileImage != null && creatorProfileImage.isNotEmpty)
           ? creatorProfileImage
           : (json['profileImage']?.toString() ?? ''),
     );

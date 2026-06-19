@@ -15,6 +15,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isOnline;
   final VoidCallback? onProfileTap;
   final VoidCallback? onFilterTap;
+  final VoidCallback? onBackTap;
   final String? firstNameOverride;
   final String? lastNameOverride;
   final String? companyNameOverride;
@@ -26,6 +27,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.isOnline = true,
     this.onProfileTap,
     this.onFilterTap,
+    this.onBackTap,
     this.firstNameOverride,
     this.lastNameOverride,
     this.companyNameOverride,
@@ -90,9 +92,18 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
       elevation: 0.5,
       shadowColor: Colors.black.withValues(alpha: 0.1),
       automaticallyImplyLeading: false,
+      leading: onBackTap != null
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: onBackTap,
+            )
+          : null,
       titleSpacing: 0,
       title: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        padding: EdgeInsets.only(
+          left: onBackTap != null ? 0 : 16.w,
+          right: 16.w,
+        ),
         child: Row(
           children: [
             Expanded(

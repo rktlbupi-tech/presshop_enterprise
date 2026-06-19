@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_screen.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 
@@ -49,7 +50,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
   }
 
   final List<Map<String, dynamic>> _ongoingTasks = [
-    {'name': 'Check in at site', 'done': true, 'statusText': 'Completed'},
+    {'name': 'Log on at site', 'done': true, 'statusText': 'Completed'},
     {'name': 'Complete first patrol', 'done': false, 'statusText': 'Pending'},
     {'name': 'Upload site photos', 'done': false, 'statusText': 'Pending'},
     {
@@ -95,7 +96,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppAppBar(
-        title: _isOnDuty ? "Duties" : "Check In",
+        title: _isOnDuty ? "Duties" : "Log on",
         elevation: 0,
         centerTitle: false,
         titleSpacing: 0,
@@ -120,6 +121,8 @@ class _DutiesScreenState extends State<DutiesScreen> {
                   _buildCurrentAssignmentCard(),
                   const SizedBox(height: 20),
                   _buildThisMonthSection(),
+                  const SizedBox(height: 20),
+                  _buildHistoryCard(),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -601,6 +604,30 @@ class _DutiesScreenState extends State<DutiesScreen> {
                   ),
                 ],
               ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: () => _showHandoverReportDialog(context),
+                  icon: const Icon(
+                    LucideIcons.triangle_alert,
+                    size: 16,
+                    color: Color(0xFFFF3B30),
+                  ),
+                  label: const Text(
+                    "Report Handover Issue (Next Shift)",
+                    style: TextStyle(
+                      color: Color(0xFFFF3B30),
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -926,6 +953,291 @@ class _DutiesScreenState extends State<DutiesScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showHandoverReportDialog(BuildContext context) {
+    final locationController = TextEditingController(
+      text: "ABC Corporate Office, Sector 62, Noida",
+    );
+    final detailsController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        bool isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: const [
+                  Icon(
+                    LucideIcons.triangle_alert,
+                    color: Color(0xFFFF3B30),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "Report Handover Issue",
+                    style: TextStyle(
+                      fontFamily: 'AirbnbCereal',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Notify your supervisor if the next shift guard has not arrived or if there is a handover delay.",
+                        style: TextStyle(
+                          color: Colors.black54,
+                          fontSize: 13,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Location / Site Name",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.black87,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: locationController,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Enter location name",
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return "Location cannot be empty";
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Report Details / Comments",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.black87,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: detailsController,
+                        maxLines: 4,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                        decoration: InputDecoration(
+                          hintText: "Describe the issue (e.g. Relief guard has not arrived yet, shift ended but relief not here, etc.)",
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12.5,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return "Please enter report details";
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (formKey.currentState?.validate() ?? false) {
+                            setDialogState(() {
+                              isSubmitting = true;
+                            });
+
+                            // Simulate submission
+                            await Future.delayed(const Duration(milliseconds: 1500));
+
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              _showToast("Handover report submitted successfully.");
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF3B30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text(
+                          "Submit Report",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DutiesHistoryScreen()),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF1FE),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                LucideIcons.history,
+                color: Color(0xFF1877F2),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "View Shift History",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    "Inspect all past duties and shift details",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.grey,
+              size: 20,
+            ),
+          ],
+        ),
       ),
     );
   }

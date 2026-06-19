@@ -1,16 +1,16 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:presshop_enterprise/features/duties/presentation/screens/duties_screen.dart';
+import 'package:presshop_enterprise/features/duties/data/models/duty_shift_model.dart';
+import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_screen.dart';
+import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_details_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
-import '../../../profile/domain/entities/profile_entity.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
-import '../../../attendance/presentation/screens/uniform_verification_screen.dart';
 import '../../../attendance/presentation/screens/uniform_verification_screen.dart';
 import '../../../attendance/presentation/screens/attendance_screen.dart';
 import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
@@ -18,7 +18,6 @@ import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../../presentation/widgets/coming_soon_screen.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_icons.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -1417,28 +1416,54 @@ class _HomeScreen3State extends State<HomeScreen3> {
           SizedBox(height: 14.h),
           const Divider(height: 1, color: Color(0xFFEFF1F5)),
           SizedBox(height: 10.h),
-          Text(
-            'HISTORY',
-            style: TextStyle(
-              color: const Color(0xFF9AA2B1),
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-              fontFamily: 'AirbnbCereal',
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'HISTORY',
+                style: TextStyle(
+                  color: const Color(0xFF9AA2B1),
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DutiesHistoryScreen()),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4.h),
+                  child: Text(
+                    'View All',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: 10.h),
-          _buildDutyLogRow(
-            'Mon, Jun 16',
-            '9:03 AM',
-            '6:31 PM',
-            '9h 28m',
-            isToday: true,
+          Builder(
+            builder: (context) {
+              final mockShifts = DutyShiftHistory.getMockShifts();
+              return Column(
+                children: [
+                  _buildDutyLogRow(mockShifts[0], isToday: true),
+                  SizedBox(height: 8.h),
+                  _buildDutyLogRow(mockShifts[1]),
+                  SizedBox(height: 8.h),
+                  _buildDutyLogRow(mockShifts[2]),
+                ],
+              );
+            }
           ),
-          SizedBox(height: 8.h),
-          _buildDutyLogRow('Sat, Jun 14', '8:57 AM', '6:04 PM', '9h 07m'),
-          SizedBox(height: 8.h),
-          _buildDutyLogRow('Fri, Jun 13', '9:15 AM', '6:45 PM', '9h 30m'),
         ],
       ),
     );
@@ -1470,73 +1495,79 @@ class _HomeScreen3State extends State<HomeScreen3> {
     );
   }
 
-  Widget _buildDutyLogRow(
-    String date,
-    String checkIn,
-    String checkOut,
-    String duration, {
-    bool isToday = false,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 28.w,
-          height: 28.w,
-          decoration: BoxDecoration(
-            color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: Icon(
-            LucideIcons.clock,
-            color: isToday ? const Color(0xFF127A45) : const Color(0xFF9AA2B1),
-            size: 13.sp,
-          ),
+  Widget _buildDutyLogRow(DutyShiftHistory shift, {bool isToday = false}) {
+    final formattedDate = DateFormat('EEE, MMM d').format(shift.date);
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DutiesHistoryDetailsScreen(shift: shift),
         ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                date,
+      ),
+      child: Container(
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            Container(
+              width: 28.w,
+              height: 28.w,
+              decoration: BoxDecoration(
+                color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Icon(
+                LucideIcons.clock,
+                color: isToday ? const Color(0xFF127A45) : const Color(0xFF9AA2B1),
+                size: 13.sp,
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      color: const Color(0xFF0B0F1A),
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    '${shift.checkInTime} – ${shift.checkOutTime}',
+                    style: TextStyle(
+                      color: const Color(0xFF9AA2B1),
+                      fontSize: 10.sp,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+              decoration: BoxDecoration(
+                color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
+                borderRadius: BorderRadius.circular(6.r),
+              ),
+              child: Text(
+                shift.duration,
                 style: TextStyle(
-                  color: const Color(0xFF0B0F1A),
-                  fontSize: 11.5.sp,
+                  color: isToday
+                      ? const Color(0xFF127A45)
+                      : const Color(0xFF5A6373),
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.w700,
                   fontFamily: 'AirbnbCereal',
                 ),
               ),
-              SizedBox(height: 2.h),
-              Text(
-                '$checkIn – $checkOut',
-                style: TextStyle(
-                  color: const Color(0xFF9AA2B1),
-                  fontSize: 10.sp,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-          decoration: BoxDecoration(
-            color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
-            borderRadius: BorderRadius.circular(6.r),
-          ),
-          child: Text(
-            duration,
-            style: TextStyle(
-              color: isToday
-                  ? const Color(0xFF127A45)
-                  : const Color(0xFF5A6373),
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'AirbnbCereal',
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

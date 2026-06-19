@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/location_error_screen_map_news.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/team_chat_list_page.dart';
 import 'package:http/http.dart' as http;
@@ -100,12 +101,14 @@ class _TeamMapScreenState extends State<TeamMapScreen>
 
   bool _triggerSosDirectly = false;
   bool _triggerShareAlertDirectly = false;
+  bool _sosFromMenu = false;
 
   @override
   void initState() {
     super.initState();
     _triggerSosDirectly = widget.openSosDirectly;
     _triggerShareAlertDirectly = widget.openShareAlertDirectly;
+    _sosFromMenu = widget.openSosDirectly;
 
     if (_triggerShareAlertDirectly) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -253,7 +256,10 @@ class _TeamMapScreenState extends State<TeamMapScreen>
     }
 
     if (widget.openSosDirectly && !oldWidget.openSosDirectly) {
-      setState(() => _triggerSosDirectly = true);
+      setState(() {
+        _triggerSosDirectly = true;
+        _sosFromMenu = true;
+      });
     }
     if (widget.openShareAlertDirectly && !oldWidget.openShareAlertDirectly) {
       setState(() => _triggerShareAlertDirectly = true);
@@ -575,6 +581,9 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                 phone: worker.phone,
               ),
               position,
+              1.0,
+              142.0,
+              240.0,
             );
             if (!mounted || _isDisposed) return;
             final ctrl = await _controller.future;
@@ -1324,48 +1333,35 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                     bottom: Radius.circular(16),
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionBtn(
-                            icon: LucideIcons.message_circle,
-                            label: "Chat",
-                            color: colorThemePink,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TeamChatListPage(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildActionBtn(
-                            icon: LucideIcons.phone,
-                            label: "Call",
-                            color: const Color(0xFF3178D1),
-                            onTap: () {
-                              debugPrint(
-                                "CALL BUTTON CLICKED - First Phone Number: $phone",
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                    Expanded(
+                      child: _buildActionBtn(
+                        icon: LucideIcons.message_circle,
+                        label: "Chat",
+                        color: colorThemePink,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TeamChatListPage(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    _buildActionBtn(
-                      icon: Icons.person_off_outlined,
-                      label: "Report unavailable",
-                      color: const Color(0xFFC23B36),
-                      onTap: () => _reportUnavailable(id, name),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildActionBtn(
+                        icon: LucideIcons.phone,
+                        label: "Call",
+                        color: const Color(0xFF3178D1),
+                        onTap: () {
+                          debugPrint(
+                            "CALL BUTTON CLICKED - First Phone Number: $phone",
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -1378,52 +1374,6 @@ class _TeamMapScreenState extends State<TeamMapScreen>
           painter: _TrianglePainter(color: Colors.grey[50]!),
         ),
       ],
-    );
-  }
-
-  void _reportUnavailable(String id, String name) {
-    _customInfoWindowController.hideInfoWindow?.call();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Report unavailable',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'AirbnbCereal',
-          ),
-        ),
-        content: Text(
-          'Report $name as not available right now? Your organiser will be notified.',
-          style: const TextStyle(fontFamily: 'AirbnbCereal'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC23B36),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              // TODO: wire to backend report endpoint when available.
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Reported $name as unavailable'),
-                    backgroundColor: const Color(0xFFC23B36),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: const Text('Report'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1791,6 +1741,9 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         phone: worker.phone,
       ),
       position,
+      1.0,
+      142.0,
+      240.0,
     );
     if (mounted && !_isDisposed) {
       setState(() {
@@ -1925,6 +1878,18 @@ class _TeamMapScreenState extends State<TeamMapScreen>
       child: Scaffold(
         extendBodyBehindAppBar: true,
         appBar: EmployeeAppBar(
+          onBackTap: _triggerShareAlertDirectly
+              ? () {
+                  final dashboardState = context
+                      .findAncestorStateOfType<DashboardScreenState>();
+                  if (dashboardState != null) {
+                    setState(() {
+                      _triggerShareAlertDirectly = false;
+                    });
+                    dashboardState.changeTab(4);
+                  }
+                }
+              : null,
           onProfileTap: () {
             context.push('/menu');
           },
@@ -2311,6 +2276,27 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                                                     () => _triggerSosDirectly =
                                                         false,
                                                   );
+                                                }
+                                              },
+                                              onSosStopped: () {
+                                                if (mounted) {
+                                                  if (_sosFromMenu) {
+                                                    setState(() {
+                                                      _sosFromMenu = false;
+                                                      _triggerSosDirectly =
+                                                          false;
+                                                    });
+                                                    final dashboardState = context
+                                                        .findAncestorStateOfType<
+                                                          DashboardScreenState
+                                                        >();
+                                                    if (dashboardState !=
+                                                        null) {
+                                                      dashboardState.changeTab(
+                                                        4,
+                                                      );
+                                                    }
+                                                  }
                                                 }
                                               },
                                             ),

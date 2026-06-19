@@ -242,7 +242,7 @@ class _ProfileViewState extends State<_ProfileView> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "My Profile",
+          "My profile",
           style: TextStyle(
             color: Colors.black,
             fontSize: size.width * numD05,
@@ -255,6 +255,25 @@ class _ProfileViewState extends State<_ProfileView> {
         actions: [
           BlocBuilder<ProfileBloc, ProfileState>(
             builder: (context, state) {
+              if (state is ProfileLoading || state is ProfileInitial) {
+                final double logoSize =
+                    (size.width > 600 ? 500 : size.width) * 0.11;
+                return Padding(
+                  padding: EdgeInsets.only(right: size.width * numD04),
+                  child: Center(
+                    child: SizedBox(
+                      width: logoSize,
+                      height: logoSize,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
               final companyLogo = state is ProfileLoaded
                   ? state.profile.companyLogo
                   : null;
@@ -570,41 +589,41 @@ class _ProfileViewState extends State<_ProfileView> {
                     const SizedBox(height: 30),
 
                     // Fields (Hopper Style)
-                    _buildFieldLabel(size, "First Name"),
+                    _buildFieldLabel(size, "First name"),
                     _buildTextField(
                       size: size,
                       controller: _firstNameController,
-                      hint: "Enter First Name",
+                      hint: "Enter first name",
                       icon: "ic_user.png",
                       readOnly: !_isEditMode,
                     ),
                     const SizedBox(height: 20),
 
-                    _buildFieldLabel(size, "Last Name"),
+                    _buildFieldLabel(size, "Last name"),
                     _buildTextField(
                       size: size,
                       controller: _lastNameController,
-                      hint: "Enter Last Name",
+                      hint: "Enter last name",
                       icon: "ic_user.png",
                       readOnly: !_isEditMode,
                     ),
                     const SizedBox(height: 20),
 
-                    _buildFieldLabel(size, "Phone Number"),
+                    _buildFieldLabel(size, "Phone number"),
                     _buildTextField(
                       size: size,
                       controller: _phoneController,
-                      hint: "Enter Phone Number",
+                      hint: "Enter phone number",
                       icon: "ic_phone.png",
                       readOnly: !_isEditMode,
                     ),
                     const SizedBox(height: 20),
 
-                    _buildFieldLabel(size, "Email Address"),
+                    _buildFieldLabel(size, "Email address"),
                     _buildTextField(
                       size: size,
                       controller: _emailController,
-                      hint: "Enter Email Address",
+                      hint: "Enter email address",
                       icon: "ic_email.png",
                       readOnly: true,
                       scale: 0.9,
@@ -636,7 +655,7 @@ class _ProfileViewState extends State<_ProfileView> {
                               ),
                               inputDecoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: "Enter City",
+                                hintText: "Enter city",
                                 hintStyle: TextStyle(
                                   color: colorHint,
                                   fontSize: size.width * numD035,
@@ -680,7 +699,7 @@ class _ProfileViewState extends State<_ProfileView> {
                           ),
                     const SizedBox(height: 20),
 
-                    _buildFieldLabel(size, "Postal Code"),
+                    _buildFieldLabel(size, "Postal code"),
                     _isEditMode
                         ? Container(
                             height: size.width * numD12,
@@ -705,7 +724,7 @@ class _ProfileViewState extends State<_ProfileView> {
                               ),
                               inputDecoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: "Enter Postal Code",
+                                hintText: "Enter postal code",
                                 hintStyle: TextStyle(
                                   color: colorHint,
                                   fontSize: size.width * numD035,
@@ -743,7 +762,7 @@ class _ProfileViewState extends State<_ProfileView> {
                         : _buildTextField(
                             size: size,
                             controller: _postCodeController,
-                            hint: "Enter Postal Code",
+                            hint: "Enter postal code",
                             icon: "ic_location.png",
                             readOnly: true,
                           ),
@@ -774,7 +793,7 @@ class _ProfileViewState extends State<_ProfileView> {
                               ),
                               inputDecoration: InputDecoration(
                                 border: InputBorder.none,
-                                hintText: "Enter Address",
+                                hintText: "Enter address",
                                 hintStyle: TextStyle(
                                   color: colorHint,
                                   fontSize: size.width * numD035,
@@ -818,11 +837,11 @@ class _ProfileViewState extends State<_ProfileView> {
                           ),
                     const SizedBox(height: 20),
 
-                    _buildFieldLabel(size, "Current Location"),
+                    _buildFieldLabel(size, "Current location"),
                     _buildTextField(
                       size: size,
                       controller: _currentLocationController,
-                      hint: "Current Location",
+                      hint: "Current location",
                       icon: "ic_location.png",
                       readOnly: true,
                     ),
@@ -1032,7 +1051,7 @@ class _ProfileViewState extends State<_ProfileView> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildFieldLabel(size, 'Emergency Contacts'),
+            _buildFieldLabel(size, 'Emergency contacts'),
             if (_isEditMode)
               GestureDetector(
                 onTap: () => _showAddEditContactSheet(context, size),
@@ -1225,8 +1244,8 @@ class _ProfileViewState extends State<_ProfileView> {
                   const SizedBox(height: 14),
                   Text(
                     existing == null
-                        ? 'Add Emergency Contact'
-                        : 'Edit Emergency Contact',
+                        ? 'Add emergency contact'
+                        : 'Edit emergency contact',
                     style: commonTextStyle(
                       size: size,
                       fontSize: size.width * numD04,
@@ -1253,7 +1272,7 @@ class _ProfileViewState extends State<_ProfileView> {
                     readOnly: false,
                   ),
                   const SizedBox(height: 14),
-                  _buildFieldLabel(size, 'Phone Number'),
+                  _buildFieldLabel(size, 'Phone number'),
                   Row(
                     children: [
                       SizedBox(
@@ -1378,6 +1397,17 @@ Widget emilyLogoWidgetForPagesForEmployee(double size, String? companyLogo) {
             ? Image.network(
                 companyLogo,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
+                    ),
+                  );
+                },
                 errorBuilder: (ctx, e, st) => Image.asset(
                   'assets/images/app_logo.png',
                   fit: BoxFit.contain,

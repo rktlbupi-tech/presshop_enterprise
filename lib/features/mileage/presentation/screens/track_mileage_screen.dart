@@ -124,7 +124,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppAppBar(
-        title: "Track Mileage",
+        title: "Track mileage",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,

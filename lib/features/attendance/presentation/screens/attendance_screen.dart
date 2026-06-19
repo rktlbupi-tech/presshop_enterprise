@@ -49,7 +49,7 @@ class _AttendanceViewState extends State<_AttendanceView>
     'Traffic Delay',
     'Personal Emergency',
     'App / Check-In Issue',
-    'Other Reason'
+    'Other Reason',
   ];
 
   // Local list of submitted issues (mock database)
@@ -60,7 +60,7 @@ class _AttendanceViewState extends State<_AttendanceView>
       'type': 'Missing Clock Out',
       'status': 'Approved',
       'description': 'Forgot to clock out on Thursday. Left shift at 6:00 PM.',
-      'adminComment': 'Log updated successfully to 6:00 PM.'
+      'adminComment': 'Log updated successfully to 6:00 PM.',
     },
     {
       'id': 'Q-9850',
@@ -69,7 +69,7 @@ class _AttendanceViewState extends State<_AttendanceView>
       'status': 'Pending',
       'description':
           'System registered late arrival but I was here at 8:55 AM, had issues with the app scanner.',
-      'adminComment': ''
+      'adminComment': '',
     },
   ];
 
@@ -105,8 +105,9 @@ class _AttendanceViewState extends State<_AttendanceView>
         });
         _queryDetailsController.clear();
         _queryDate = DateTime.now();
-        _queryDateController.text =
-            DateFormat('dd MMM yyyy').format(_queryDate);
+        _queryDateController.text = DateFormat(
+          'dd MMM yyyy',
+        ).format(_queryDate);
         _queryType = 'Medical Issue';
       });
 
@@ -156,16 +157,21 @@ class _AttendanceViewState extends State<_AttendanceView>
     if (picked != null && picked != _queryDate) {
       setState(() {
         _queryDate = picked;
-        _queryDateController.text =
-            DateFormat('dd MMM yyyy').format(_queryDate);
+        _queryDateController.text = DateFormat(
+          'dd MMM yyyy',
+        ).format(_queryDate);
       });
     }
   }
 
   void _showAttendanceActions(dynamic log) {
     final dateStr = DateFormat('dd MMM yyyy').format(log.date as DateTime);
-    final checkInStr = log.checkIn != null ? DateFormat('hh:mm a').format(log.checkIn as DateTime) : '--';
-    final checkOutStr = log.checkOut != null ? DateFormat('hh:mm a').format(log.checkOut as DateTime) : '--';
+    final checkInStr = log.checkIn != null
+        ? DateFormat('hh:mm a').format(log.checkIn as DateTime)
+        : '--';
+    final checkOutStr = log.checkOut != null
+        ? DateFormat('hh:mm a').format(log.checkOut as DateTime)
+        : '--';
 
     showModalBottomSheet(
       context: context,
@@ -181,7 +187,11 @@ class _AttendanceViewState extends State<_AttendanceView>
             ),
           ),
           padding: EdgeInsets.fromLTRB(
-              24, 16, 24, 24 + MediaQuery.of(context).padding.bottom),
+            24,
+            16,
+            24,
+            24 + MediaQuery.of(context).padding.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,11 +219,17 @@ class _AttendanceViewState extends State<_AttendanceView>
               const SizedBox(height: 20),
               ListTile(
                 leading: const Icon(LucideIcons.log_in, color: Colors.blue),
-                title: const Text("View Check-In Details",
-                    style: TextStyle(fontFamily: 'AirbnbCereal')),
-                subtitle: Text("Clocked in at $checkInStr",
-                    style: const TextStyle(
-                        fontFamily: 'AirbnbCereal', fontSize: 12)),
+                title: const Text(
+                  "View Check-In Details",
+                  style: TextStyle(fontFamily: 'AirbnbCereal'),
+                ),
+                subtitle: Text(
+                  "Clocked in at $checkInStr",
+                  style: const TextStyle(
+                    fontFamily: 'AirbnbCereal',
+                    fontSize: 12,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _showCheckInDetails(log);
@@ -221,11 +237,17 @@ class _AttendanceViewState extends State<_AttendanceView>
               ),
               ListTile(
                 leading: const Icon(LucideIcons.log_out, color: Colors.indigo),
-                title: const Text("View Check-Out Details",
-                    style: TextStyle(fontFamily: 'AirbnbCereal')),
-                subtitle: Text("Clocked out at $checkOutStr",
-                    style: const TextStyle(
-                        fontFamily: 'AirbnbCereal', fontSize: 12)),
+                title: const Text(
+                  "View Check-Out Details",
+                  style: TextStyle(fontFamily: 'AirbnbCereal'),
+                ),
+                subtitle: Text(
+                  "Clocked out at $checkOutStr",
+                  style: const TextStyle(
+                    fontFamily: 'AirbnbCereal',
+                    fontSize: 12,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _showCheckOutDetails(log);
@@ -233,15 +255,18 @@ class _AttendanceViewState extends State<_AttendanceView>
               ),
               ListTile(
                 leading: const Icon(LucideIcons.circle, color: Colors.orange),
-                title: const Text("Raise Correction Query",
-                    style: TextStyle(fontFamily: 'AirbnbCereal')),
+                title: const Text(
+                  "Raise Correction Query",
+                  style: TextStyle(fontFamily: 'AirbnbCereal'),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _tabController.animateTo(1);
                   setState(() {
                     _queryDate = log.date as DateTime;
-                    _queryDateController.text =
-                        DateFormat('dd MMM yyyy').format(_queryDate);
+                    _queryDateController.text = DateFormat(
+                      'dd MMM yyyy',
+                    ).format(_queryDate);
                     _queryType = 'Other Reason';
                     _queryDetailsController.text =
                         "Issue regarding shift hours on $dateStr. Registered check-in: $checkInStr, check-out: $checkOutStr.";
@@ -257,22 +282,29 @@ class _AttendanceViewState extends State<_AttendanceView>
 
   void _showCheckInDetails(dynamic log) {
     final dateStr = DateFormat('dd MMM yyyy').format(log.date as DateTime);
-    final checkInStr = log.checkIn != null ? DateFormat('hh:mm a').format(log.checkIn as DateTime) : '--';
+    final checkInStr = log.checkIn != null
+        ? DateFormat('hh:mm a').format(log.checkIn as DateTime)
+        : '--';
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(LucideIcons.log_in, color: Colors.green),
               SizedBox(width: 10),
-              Text("Check-In Details",
-                  style: TextStyle(
-                      fontFamily: 'AirbnbCereal', fontWeight: FontWeight.bold)),
+              Text(
+                "Check-In Details",
+                style: TextStyle(
+                  fontFamily: 'AirbnbCereal',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -281,16 +313,21 @@ class _AttendanceViewState extends State<_AttendanceView>
             children: [
               _buildDetailRow("Date", dateStr),
               _buildDetailRow("Time", checkInStr),
-              _buildDetailRow("Location",
-                  "Verified Work Location (Office GPS Coords)"),
+              _buildDetailRow(
+                "Location",
+                "Verified Work Location (Office GPS Coords)",
+              ),
               _buildDetailRow("Status", log.status as String),
               const SizedBox(height: 10),
-              const Text("Selfie Verification",
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      fontFamily: 'AirbnbCereal')),
+              const Text(
+                "Selfie Verification",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
               const SizedBox(height: 6),
               Container(
                 height: 120,
@@ -305,11 +342,14 @@ class _AttendanceViewState extends State<_AttendanceView>
                   children: [
                     Icon(LucideIcons.image, color: Colors.grey, size: 32),
                     SizedBox(height: 6),
-                    Text("Verified Photo",
-                        style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                            fontFamily: 'AirbnbCereal')),
+                    Text(
+                      "Verified Photo",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -318,10 +358,13 @@ class _AttendanceViewState extends State<_AttendanceView>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Close",
-                  style: TextStyle(
-                      fontFamily: 'AirbnbCereal',
-                      color: AppColors.primary)),
+              child: const Text(
+                "Close",
+                style: TextStyle(
+                  fontFamily: 'AirbnbCereal',
+                  color: AppColors.primary,
+                ),
+              ),
             ),
           ],
         );
@@ -331,7 +374,9 @@ class _AttendanceViewState extends State<_AttendanceView>
 
   void _showCheckOutDetails(dynamic log) {
     final dateStr = DateFormat('dd MMM yyyy').format(log.date as DateTime);
-    final checkOutStr = log.checkOut != null ? DateFormat('hh:mm a').format(log.checkOut as DateTime) : '--';
+    final checkOutStr = log.checkOut != null
+        ? DateFormat('hh:mm a').format(log.checkOut as DateTime)
+        : '--';
     final hrsStr = log.workedHours != null ? '${log.workedHours} hrs' : '--';
 
     showDialog(
@@ -339,15 +384,20 @@ class _AttendanceViewState extends State<_AttendanceView>
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(LucideIcons.log_out, color: Colors.red),
               SizedBox(width: 10),
-              Text("Check-Out Details",
-                  style: TextStyle(
-                      fontFamily: 'AirbnbCereal', fontWeight: FontWeight.bold)),
+              Text(
+                "Check-Out Details",
+                style: TextStyle(
+                  fontFamily: 'AirbnbCereal',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -356,16 +406,21 @@ class _AttendanceViewState extends State<_AttendanceView>
             children: [
               _buildDetailRow("Date", dateStr),
               _buildDetailRow("Time", checkOutStr),
-              _buildDetailRow("Location",
-                  "Verified Work Location (Office GPS Coords)"),
+              _buildDetailRow(
+                "Location",
+                "Verified Work Location (Office GPS Coords)",
+              ),
               _buildDetailRow("Shift Hours", hrsStr),
               const SizedBox(height: 10),
-              const Text("Selfie Verification",
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      fontFamily: 'AirbnbCereal')),
+              const Text(
+                "Selfie Verification",
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
               const SizedBox(height: 6),
               Container(
                 height: 120,
@@ -380,11 +435,14 @@ class _AttendanceViewState extends State<_AttendanceView>
                   children: [
                     Icon(LucideIcons.image, color: Colors.grey, size: 32),
                     SizedBox(height: 6),
-                    Text("Verified Photo",
-                        style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 12,
-                            fontFamily: 'AirbnbCereal')),
+                    Text(
+                      "Verified Photo",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -393,10 +451,13 @@ class _AttendanceViewState extends State<_AttendanceView>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Close",
-                  style: TextStyle(
-                      fontFamily: 'AirbnbCereal',
-                      color: AppColors.primary)),
+              child: const Text(
+                "Close",
+                style: TextStyle(
+                  fontFamily: 'AirbnbCereal',
+                  color: AppColors.primary,
+                ),
+              ),
             ),
           ],
         );
@@ -412,19 +473,25 @@ class _AttendanceViewState extends State<_AttendanceView>
         children: [
           SizedBox(
             width: 80,
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'AirbnbCereal')),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'AirbnbCereal',
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    fontFamily: 'AirbnbCereal')),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                fontFamily: 'AirbnbCereal',
+              ),
+            ),
           ),
         ],
       ),
@@ -437,10 +504,7 @@ class _AttendanceViewState extends State<_AttendanceView>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppAppBar(
-        title: 'Attendance Log',
-        showBack: true,
-      ),
+      appBar: AppAppBar(title: 'Attendance log', showBack: true),
       body: BlocBuilder<AttendanceBloc, AttendanceState>(
         builder: (context, state) {
           if (state is AttendanceLoading) {
@@ -451,16 +515,18 @@ class _AttendanceViewState extends State<_AttendanceView>
               icon: Icons.error_outline,
               title: state.message,
               buttonLabel: 'Retry',
-              onButtonTap: () => context
-                  .read<AttendanceBloc>()
-                  .add(const FetchAttendanceLog()),
+              onButtonTap: () => context.read<AttendanceBloc>().add(
+                const FetchAttendanceLog(),
+              ),
             );
           }
 
           // Safe extract of state data
           final logs = state is AttendanceLoaded ? state.logs : [];
           final summary = state is AttendanceLoaded ? state.summary : null;
-          final isCheckedIn = state is AttendanceLoaded ? state.isCheckedIn : false;
+          final isCheckedIn = state is AttendanceLoaded
+              ? state.isCheckedIn
+              : false;
 
           final hoursWeek = logs.isNotEmpty
               ? '${logs.map((e) => e.workedHours ?? 0.0).fold(0.0, (a, b) => a + b).toStringAsFixed(1)} / 40h'
@@ -468,111 +534,131 @@ class _AttendanceViewState extends State<_AttendanceView>
           final attRate = summary != null && summary.totalDays > 0
               ? '${(summary.present / summary.totalDays * 100).toStringAsFixed(1)}%'
               : '96.08%';
-          final lateCount = summary != null ? '${summary.late} arrivals' : '11.2h';
+          final lateCount = summary != null
+              ? '${summary.late} arrivals'
+              : '11.2h';
           final dutyDays = summary != null
               ? '${summary.present} / ${summary.totalDays}d'
               : '24 / 26d';
 
           return NestedScrollView(
-            headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-              return <Widget>[
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      // Statistics summary card
-                      Container(
-                        color: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                            horizontal: size.width * 0.04,
-                            vertical: size.width * 0.03),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.grey.shade100),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
+            headerSliverBuilder:
+                (BuildContext context, bool innerBoxIsScrolled) {
+                  return <Widget>[
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          // Statistics summary card
+                          Container(
+                            color: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: size.width * 0.04,
+                              vertical: size.width * 0.03,
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: Colors.grey.shade100),
+                              ),
+                              child: Column(
                                 children: [
-                                  Expanded(
-                                    child: _buildStatItem(
-                                        "Hours This Week",
-                                        hoursWeek,
-                                        LucideIcons.calendar_clock,
-                                        Colors.blue),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildStatItem(
+                                          "Hours This Week",
+                                          hoursWeek,
+                                          LucideIcons.calendar_clock,
+                                          Colors.blue,
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 40,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 16,
+                                          ),
+                                          child: _buildStatItem(
+                                            "Attendance Rate",
+                                            attRate,
+                                            LucideIcons.clock,
+                                            AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Container(
-                                      width: 1,
-                                      height: 40,
-                                      color: Colors.grey.shade300),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(left: 16),
-                                      child: _buildStatItem(
-                                          "Attendance Rate",
-                                          attRate,
-                                          LucideIcons.clock,
-                                          AppColors.primary),
-                                    ),
+                                  const SizedBox(height: 12),
+                                  const Divider(
+                                    color: Color(0xFFEEEEEE),
+                                    height: 1,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildStatItem(
+                                          "Late Arrivals",
+                                          lateCount,
+                                          LucideIcons.timer,
+                                          Colors.red,
+                                          iconSize: 26,
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 40,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 16,
+                                          ),
+                                          child: _buildStatItem(
+                                            "Duty Days",
+                                            dutyDays,
+                                            LucideIcons.calendar_days,
+                                            Colors.green,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              const Divider(color: Color(0xFFEEEEEE), height: 1),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildStatItem(
-                                        "Late Arrivals",
-                                        lateCount,
-                                        LucideIcons.timer,
-                                        Colors.red,
-                                        iconSize: 26),
-                                  ),
-                                  Container(
-                                      width: 1,
-                                      height: 40,
-                                      color: Colors.grey.shade300),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(left: 16),
-                                      child: _buildStatItem(
-                                          "Duty Days",
-                                          dutyDays,
-                                          LucideIcons.calendar_days,
-                                          Colors.green),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
 
-                      // Custom Sliding Tabs
-                      Container(
-                        color: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: size.width * 0.04,
-                          vertical: size.width * 0.02,
-                        ),
-                        child: SlidingTabs(
-                          selectedIndex: _tabController.index,
-                          onTabChanged: (index) {
-                            _tabController.animateTo(index);
-                          },
-                          tabs: const ["Attendance Log", "Attendance Issues"],
-                        ),
+                          // Custom Sliding Tabs
+                          Container(
+                            color: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: size.width * 0.04,
+                              vertical: size.width * 0.02,
+                            ),
+                            child: SlidingTabs(
+                              selectedIndex: _tabController.index,
+                              onTabChanged: (index) {
+                                _tabController.animateTo(index);
+                              },
+                              tabs: const [
+                                "Attendance Log",
+                                "Attendance Issues",
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ];
-            },
+                    ),
+                  ];
+                },
             body: TabBarView(
               controller: _tabController,
               children: [
@@ -586,8 +672,13 @@ class _AttendanceViewState extends State<_AttendanceView>
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color,
-      {double iconSize = 22}) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color, {
+    double iconSize = 22,
+  }) {
     return Row(
       children: [
         SizedBox(
@@ -626,12 +717,16 @@ class _AttendanceViewState extends State<_AttendanceView>
               ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
 
-  Widget _buildAttendanceLogTab(Size size, bool isCheckedIn, List<dynamic> logs) {
+  Widget _buildAttendanceLogTab(
+    Size size,
+    bool isCheckedIn,
+    List<dynamic> logs,
+  ) {
     return ListView.builder(
       padding: EdgeInsets.all(size.width * 0.04),
       itemCount: logs.length + 1,
@@ -693,7 +788,9 @@ class _AttendanceViewState extends State<_AttendanceView>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isCheckedIn ? "You are Logged In" : "You are Logged Out",
+                          isCheckedIn
+                              ? "You are Logged In"
+                              : "You are Logged Out",
                           style: TextStyle(
                             fontFamily: "AirbnbCereal",
                             fontSize: size.width * 0.038,
@@ -725,7 +822,9 @@ class _AttendanceViewState extends State<_AttendanceView>
                         ),
                       );
                       if (context.mounted) {
-                        context.read<AttendanceBloc>().add(const FetchAttendanceLog());
+                        context.read<AttendanceBloc>().add(
+                          const FetchAttendanceLog(),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -733,7 +832,9 @@ class _AttendanceViewState extends State<_AttendanceView>
                           ? Colors.orange
                           : AppColors.primary,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       minimumSize: const Size(0, 0),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -756,10 +857,18 @@ class _AttendanceViewState extends State<_AttendanceView>
         }
 
         final log = logs[index - 1];
-        final formattedDate = DateFormat('dd MMM yyyy').format(log.date as DateTime);
-        final checkInStr = log.checkIn != null ? DateFormat('hh:mm a').format(log.checkIn as DateTime) : '--';
-        final checkOutStr = log.checkOut != null ? DateFormat('hh:mm a').format(log.checkOut as DateTime) : '--';
-        final workedHoursStr = log.workedHours != null ? '${log.workedHours} hrs' : '0.0 hrs';
+        final formattedDate = DateFormat(
+          'dd MMM yyyy',
+        ).format(log.date as DateTime);
+        final checkInStr = log.checkIn != null
+            ? DateFormat('hh:mm a').format(log.checkIn as DateTime)
+            : '--';
+        final checkOutStr = log.checkOut != null
+            ? DateFormat('hh:mm a').format(log.checkOut as DateTime)
+            : '--';
+        final workedHoursStr = log.workedHours != null
+            ? '${log.workedHours} hrs'
+            : '0.0 hrs';
 
         Color statusColor = AppColors.success;
         if (log.status == 'late') statusColor = Colors.orange;
@@ -795,8 +904,11 @@ class _AttendanceViewState extends State<_AttendanceView>
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(LucideIcons.log_in,
-                                size: 13, color: Colors.grey),
+                            const Icon(
+                              LucideIcons.log_in,
+                              size: 13,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               "In: $checkInStr",
@@ -807,8 +919,11 @@ class _AttendanceViewState extends State<_AttendanceView>
                               ),
                             ),
                             const SizedBox(width: 15),
-                            const Icon(LucideIcons.log_out,
-                                size: 13, color: Colors.grey),
+                            const Icon(
+                              LucideIcons.log_out,
+                              size: 13,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               "Out: $checkOutStr",
@@ -841,13 +956,19 @@ class _AttendanceViewState extends State<_AttendanceView>
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              log.status == 'present' ? 'On Time' : log.status == 'late' ? 'Late Arrival' : 'Absent',
+                              log.status == 'present'
+                                  ? 'On Time'
+                                  : log.status == 'late'
+                                  ? 'Late Arrival'
+                                  : 'Absent',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -859,8 +980,11 @@ class _AttendanceViewState extends State<_AttendanceView>
                         ],
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.chevron_right,
-                          color: Colors.grey.shade400, size: 20),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Colors.grey.shade400,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ],
@@ -914,10 +1038,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                     width: double.infinity,
                     buttonWidth: size.width * 0.8,
                     buttonColor: Colors.grey.shade50,
-                    icon: const Icon(
-                      Icons.arrow_drop_down,
-                      color: Colors.grey,
-                    ),
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
                     itemBuilder: (val, isSelected) {
                       return Text(
                         val,
@@ -950,11 +1071,27 @@ class _AttendanceViewState extends State<_AttendanceView>
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       hintText: "Select Date",
-                      prefixIcon: const Icon(LucideIcons.calendar, color: Colors.grey, size: 18),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                      prefixIcon: const Icon(
+                        LucideIcons.calendar,
+                        color: Colors.grey,
+                        size: 18,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -970,11 +1107,27 @@ class _AttendanceViewState extends State<_AttendanceView>
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       hintText: "Provide details about the issue...",
-                      prefixIcon: const Icon(LucideIcons.message_square, color: Colors.grey, size: 18),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.primary)),
+                      prefixIcon: const Icon(
+                        LucideIcons.message_square,
+                        color: Colors.grey,
+                        size: 18,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
                     ),
                     validator: (value) =>
                         value!.trim().isEmpty ? 'Enter details' : null,
@@ -987,7 +1140,9 @@ class _AttendanceViewState extends State<_AttendanceView>
                       onPressed: _submitQuery,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       child: const Text(
                         "Submit",
@@ -1057,13 +1212,15 @@ class _AttendanceViewState extends State<_AttendanceView>
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: isApproved
                                 ? Colors.green.shade50
                                 : isRejected
-                                    ? Colors.red.shade50
-                                    : Colors.amber.shade50,
+                                ? Colors.red.shade50
+                                : Colors.amber.shade50,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1074,8 +1231,8 @@ class _AttendanceViewState extends State<_AttendanceView>
                               color: isApproved
                                   ? Colors.green.shade700
                                   : isRejected
-                                      ? Colors.red.shade700
-                                      : Colors.amber.shade700,
+                                  ? Colors.red.shade700
+                                  : Colors.amber.shade700,
                               fontFamily: "AirbnbCereal",
                             ),
                           ),
@@ -1116,10 +1273,11 @@ class _AttendanceViewState extends State<_AttendanceView>
                             const Text(
                               "Response from HR/Admin:",
                               style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black54,
-                                  fontFamily: "AirbnbCereal"),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black54,
+                                fontFamily: "AirbnbCereal",
+                              ),
                             ),
                             const SizedBox(height: 3),
                             Text(
@@ -1132,7 +1290,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                             ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ],
                 ),

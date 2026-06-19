@@ -328,7 +328,7 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppAppBar(
-        title: "Team Chat",
+        title: "Team chat",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,

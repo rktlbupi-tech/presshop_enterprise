@@ -111,11 +111,13 @@ class _SosButtonState extends State<SosButton> {
     _countdownTimer = null;
     _countdownOverlayEntry?.remove();
     _countdownOverlayEntry = null;
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isCountingDown = false;
         _countdown = 5;
       });
+    }
+    widget.onSosStopped?.call();
   }
 
   void _startSosFlow() {
@@ -133,7 +135,6 @@ class _SosButtonState extends State<SosButton> {
     if (_activeSession != null) {
       await _sosApi.stopSos(sessionId: _activeSession!.sessionId);
       _activeSession = null;
-      widget.onSosStopped?.call();
     }
 
     _overlayEntry?.remove();
@@ -142,11 +143,13 @@ class _SosButtonState extends State<SosButton> {
     _audioTimer = null;
     await _audioPlayer.stop();
 
-    if (mounted)
+    if (mounted) {
       setState(() {
         _isActive = false;
         _isStopping = false;
       });
+    }
+    widget.onSosStopped?.call();
   }
 
   Future<void> _activateSos() async {

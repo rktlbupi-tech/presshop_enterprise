@@ -2,17 +2,18 @@
 
 
 
-1. Multiple language have to use 
+1. Multiple language have to use  - pending 
 
 
 
 Meeting of 16 June 
 
-1.Other User can report that attandance person is not availble 
-2. dutied record logs histor of prev 1 year filter feature 
+1.Other User can report that attandance person is not availble  
+- pending 
+2. dutied record logs histor of prev 1 year filter feature - pending 
 
 
-3. Guard turnout is correct or not ask for video or camera when login 
+3. Guard turnout is correct or not ask for video or camera when login  - pending
 
 
 
@@ -30,32 +31,3 @@ Open Camera - Cta Button
 
 
 
-
-///////////
-
-14 items -> view 14 items 
-
-Recent -> History 
-
-
-Evidence submited 
-
-view 14 items 
-
-
-------------------------
-
-History 
-
-
-Recent Earnings -> View Earnings 
-Last 3 transctions
-
-
-
-
-
-
-
-Discuss with sir 
-1. Have to show about availibilty map design    

@@ -237,7 +237,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
-                "Digital ID",
+                "Digital id",
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -656,6 +656,15 @@ Widget emilyLogoWidgetForPagesForEmployee(double size, String? companyLogo) {
             ? Image.network(
                 companyLogo,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.0,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  );
+                },
                 errorBuilder: (ctx, e, st) => Image.asset(
                   'assets/images/app_logo.png',
                   fit: BoxFit.contain,

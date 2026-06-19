@@ -1,7 +1,7 @@
 name: presshop_enterprise
 description: Presshop Enterprise — Employee App
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.10.7
@@ -9,6 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.1.0
+  firebase_messaging: ^15.0.2
+  firebase_analytics: ^11.1.0
+  firebase_crashlytics: ^4.0.2
 
   # State management
   flutter_bloc: ^8.1.6

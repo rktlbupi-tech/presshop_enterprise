@@ -10,6 +10,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
@@ -32,6 +33,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   List<dynamic> _evidenceList = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String? _localStatusOverride;
 
   Position? _userPosition;
   double? _taskLatitude;
@@ -45,6 +47,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   String _timeRemaining = 'No deadline';
   bool _isTimeOver = false;
   bool _isExtraTime = false;
+
+  Timer? _workTimer;
+  String _workDuration = '';
 
   final Completer<GoogleMapController> _mapCompleter = Completer();
   GoogleMapController? _mapController;
@@ -73,7 +78,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
-    _mapController = null; // don't call .dispose() — the GoogleMap widget handles its own cleanup
+    _workTimer?.cancel();
+    _mapController =
+        null; // don't call .dispose() — the GoogleMap widget handles its own cleanup
     super.dispose();
   }
 
@@ -111,6 +118,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         if (mounted) _updateMapMarker();
         if (mounted) _fetchDistanceMatrix();
         _loadTaskEvidences();
+
+        final status = _task?.status.toLowerCase() ?? '';
+        if (_localStatusOverride == null) {
+          _localStatusOverride = status;
+        }
+        if (_localStatusOverride == 'started' || _localStatusOverride == 'in_progress') {
+          _initWorkTimer();
+        } else {
+          _workTimer?.cancel();
+          _workDuration = '';
+        }
       } else {
         _errorMessage = 'Failed to load task details';
       }
@@ -119,6 +137,47 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _initWorkTimer() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedStart = prefs.getString('task_start_${widget.taskId}');
+      DateTime? startTime;
+      if (savedStart != null) {
+        startTime = DateTime.tryParse(savedStart);
+      }
+      startTime ??= DateTime.tryParse(_task?.updatedAt ?? '');
+
+      if (startTime != null) {
+        _startWorkTimer(startTime.toLocal());
+      }
+    } catch (_) {}
+  }
+
+  void _startWorkTimer(DateTime startTime) {
+    _workTimer?.cancel();
+    _updateWorkDuration(startTime);
+    _workTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() => _updateWorkDuration(startTime));
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void _updateWorkDuration(DateTime startTime) {
+    final diff = DateTime.now().difference(startTime);
+    if (diff.isNegative) {
+      _workDuration = '00:00:00';
+      return;
+    }
+    String two(int n) => n.toString().padLeft(2, '0');
+    final h = two(diff.inHours);
+    final m = two(diff.inMinutes % 60);
+    final s = two(diff.inSeconds % 60);
+    _workDuration = "$h:$m:$s";
   }
 
   Future<void> _loadTaskEvidences() async {
@@ -196,7 +255,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       if (extraDiff.isNegative) {
         _isTimeOver = true;
         _isExtraTime = false;
-        _timeRemaining = 'Time over';
+        _timeRemaining = '00:00:00';
         _countdownTimer?.cancel();
       } else {
         _isExtraTime = true;
@@ -304,26 +363,73 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: LoadingWidget(),
-      ),
+      builder: (_) => const Center(child: LoadingWidget()),
     );
     try {
+      // Commented out API Client Patch call as per instruction
+      /*
       final resp = await _apiClient.patch(
         'enterprise/tasks/${widget.taskId}',
         data: {'status': 'completed'},
       );
+      */
       if (!mounted) return;
       Navigator.pop(context);
-      if (resp.statusCode == 200) {
-        _showSuccessDialog();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to complete task. Please try again.'),
-          ),
-        );
+      setState(() {
+        _localStatusOverride = 'completed';
+      });
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('task_start_${widget.taskId}');
+      } catch (_) {}
+      _workTimer?.cancel();
+      _workDuration = '';
+
+      _showSuccessDialog();
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
+    }
+  }
+
+  Future<void> _startTask() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: LoadingWidget()),
+    );
+    try {
+      // Commented out API Client Patch call as per instruction
+      /*
+      final resp = await _apiClient.patch(
+        'enterprise/tasks/${widget.taskId}',
+        data: {'status': 'started'},
+      );
+      */
+      if (!mounted) return;
+      Navigator.pop(context);
+      setState(() {
+        _localStatusOverride = 'started';
+      });
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'task_start_${widget.taskId}',
+          DateTime.now().toIso8601String(),
+        );
+      } catch (_) {}
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Task started successfully.'),
+        ),
+      );
+      _initWorkTimer();
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
@@ -335,6 +441,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   String _getUserAssignmentStatus() {
+    if (_localStatusOverride != null) return _localStatusOverride!.toLowerCase();
     if (_task == null) return '';
     return _task!.status.toLowerCase();
   }
@@ -392,14 +499,29 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               SizedBox(height: size.width * 0.02),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
-                child: Text(
-                  'Your task has been marked as complete and logged successfully. Thank you.',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: size.width * 0.035,
-                    fontFamily: 'AirbnbCereal',
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.asset(
+                      'assets/images/ic_black_rabbit.png',
+                      width: size.width * 0.12,
+                      height: size.width * 0.12,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                    SizedBox(width: size.width * 0.03),
+                    Expanded(
+                      child: Text(
+                        'Your task has been marked as complete and logged successfully. Thank you.',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: size.width * 0.035,
+                          fontFamily: 'AirbnbCereal',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: size.width * 0.04),
@@ -483,9 +605,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     if (_isLoading) {
       return Scaffold(
         appBar: _buildAppBar(size),
-        body: const Center(
-          child: LoadingWidget(),
-        ),
+        body: const Center(child: LoadingWidget()),
       );
     }
 
@@ -523,6 +643,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
     final task = _task!;
     final isCompleted = _getUserAssignmentStatus() == 'completed';
+    final isStarted = _getUserAssignmentStatus() == 'started' || _getUserAssignmentStatus() == 'in_progress';
     final companyName =
         (task.creatorSummary != null &&
             task.creatorSummary!.fullName.isNotEmpty)
@@ -1041,24 +1162,30 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                       itemBuilder: (context, index) {
                         final item = _evidenceList[index];
-                        final rawType = item['evidenceType'] ?? item['mediaType'] ?? '';
+                        final rawType =
+                            item['evidenceType'] ?? item['mediaType'] ?? '';
                         final mediaType = rawType.toString().toLowerCase();
 
                         String? url;
-                        if (item['previewUrl'] != null && item['previewUrl'].toString().isNotEmpty) {
+                        if (item['previewUrl'] != null &&
+                            item['previewUrl'].toString().isNotEmpty) {
                           url = item['previewUrl'].toString();
-                        } else if (item['processedUrl'] != null && item['processedUrl'].toString().isNotEmpty) {
+                        } else if (item['processedUrl'] != null &&
+                            item['processedUrl'].toString().isNotEmpty) {
                           url = item['processedUrl'].toString();
                         } else {
                           url = item['originalUrl']?.toString();
                         }
 
                         String? thumbnail;
-                        if (item['thumbnailUrl'] != null && item['thumbnailUrl'].toString().isNotEmpty) {
+                        if (item['thumbnailUrl'] != null &&
+                            item['thumbnailUrl'].toString().isNotEmpty) {
                           thumbnail = item['thumbnailUrl'].toString();
-                        } else if (item['previewUrl'] != null && item['previewUrl'].toString().isNotEmpty) {
+                        } else if (item['previewUrl'] != null &&
+                            item['previewUrl'].toString().isNotEmpty) {
                           thumbnail = item['previewUrl'].toString();
-                        } else if (item['processedUrl'] != null && item['processedUrl'].toString().isNotEmpty) {
+                        } else if (item['processedUrl'] != null &&
+                            item['processedUrl'].toString().isNotEmpty) {
                           thumbnail = item['processedUrl'].toString();
                         } else {
                           thumbnail = item['originalUrl']?.toString();
@@ -1071,26 +1198,35 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           children: [
                             InkWell(
                               onTap: () {
-                                if (mediaType == 'image' && displayUrl.isNotEmpty) {
+                                if (mediaType == 'image' &&
+                                    displayUrl.isNotEmpty) {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => _FullImageScreen(url: displayUrl),
+                                      builder: (_) =>
+                                          _FullImageScreen(url: displayUrl),
                                     ),
                                   );
                                 } else if (displayUrl.isNotEmpty) {
-                                  launchUrl(Uri.parse(displayUrl), mode: LaunchMode.externalApplication);
+                                  launchUrl(
+                                    Uri.parse(displayUrl),
+                                    mode: LaunchMode.externalApplication,
+                                  );
                                 }
                               },
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(size.width * 0.02),
+                                borderRadius: BorderRadius.circular(
+                                  size.width * 0.02,
+                                ),
                                 child: mediaType == 'audio'
                                     ? Container(
                                         height: size.width * 0.25,
                                         width: size.width * 0.25,
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFF9A825),
-                                          borderRadius: BorderRadius.circular(size.width * 0.02),
+                                          borderRadius: BorderRadius.circular(
+                                            size.width * 0.02,
+                                          ),
                                         ),
                                         child: Center(
                                           child: Icon(
@@ -1100,28 +1236,30 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                           ),
                                         ),
                                       )
-                                    : (mediaType == 'video' || mediaType == 'image') && displayThumb.isNotEmpty
-                                        ? Image.network(
-                                            displayThumb,
-                                            fit: BoxFit.cover,
-                                            height: size.width * 0.25,
-                                            width: size.width * 0.25,
-                                            errorBuilder: (_, __, ___) => Container(
-                                              color: Colors.grey.shade200,
-                                              child: const Icon(Icons.broken_image),
-                                            ),
-                                          )
-                                        : Container(
-                                            color: Colors.grey.shade200,
-                                            height: size.width * 0.25,
-                                            width: size.width * 0.25,
-                                            child: Icon(
-                                              mediaType == 'video'
-                                                  ? Icons.video_library
-                                                  : Icons.insert_drive_file,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
+                                    : (mediaType == 'video' ||
+                                              mediaType == 'image') &&
+                                          displayThumb.isNotEmpty
+                                    ? Image.network(
+                                        displayThumb,
+                                        fit: BoxFit.cover,
+                                        height: size.width * 0.25,
+                                        width: size.width * 0.25,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: Colors.grey.shade200,
+                                          child: const Icon(Icons.broken_image),
+                                        ),
+                                      )
+                                    : Container(
+                                        color: Colors.grey.shade200,
+                                        height: size.width * 0.25,
+                                        width: size.width * 0.25,
+                                        child: Icon(
+                                          mediaType == 'video'
+                                              ? Icons.video_library
+                                              : Icons.insert_drive_file,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                               ),
                             ),
                             if (mediaType == 'video')
@@ -1141,6 +1279,51 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     SizedBox(height: size.width * 0.04),
                   ],
 
+                  if (isStarted && _workDuration.isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.only(bottom: size.width * 0.04),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.04,
+                        vertical: size.width * 0.03,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F0FE),
+                        borderRadius: BorderRadius.circular(size.width * 0.03),
+                        border: Border.all(
+                          color: const Color(0xFFD2E3FC),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.timer_outlined,
+                            color: Color(0xFF1877F2),
+                          ),
+                          SizedBox(width: size.width * 0.02),
+                          const Text(
+                            "Working Time Tracker:",
+                            style: TextStyle(
+                              fontFamily: 'AirbnbCereal',
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            _workDuration,
+                            style: const TextStyle(
+                              fontFamily: 'AirbnbCereal',
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: Color(0xFF1877F2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // ── Buttons ───────────────────────────────────────────
                   Row(
                     children: [
@@ -1148,11 +1331,13 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         child: SizedBox(
                           height: size.width * 0.14,
                           child: ElevatedButton(
-                            onPressed: isCompleted ? null : _completeTask,
+                            onPressed: isCompleted
+                                ? null
+                                : (isStarted ? _completeTask : _startTask),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isCompleted
                                   ? Colors.grey.shade400
-                                  : Colors.black,
+                                  : (isStarted ? const Color(0xFFFFB300) : const Color(0xFF127A45)),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
@@ -1163,7 +1348,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             child: Text(
                               isCompleted
                                   ? 'Completed'
-                                  : 'Tap to Complete Task',
+                                  : (isStarted ? 'Tap to Complete Task' : 'Start Task'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,
@@ -1254,9 +1439,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           if (_isNavigating)
             Container(
               color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: LoadingWidget(),
-              ),
+              child: const Center(child: LoadingWidget()),
             ),
         ],
       ),
@@ -1268,7 +1451,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: Image.asset('assets/icons/ic_arrow_left.png', color: Colors.black, width: 24, height: 24),
+        icon: Image.asset(
+          'assets/icons/ic_arrow_left.png',
+          color: Colors.black,
+          width: 24,
+          height: 24,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
@@ -1337,11 +1525,8 @@ class _FullImageScreen extends StatelessWidget {
           child: Image.network(
             url,
             fit: BoxFit.contain,
-            errorBuilder: (_, e, s) => const Icon(
-              Icons.broken_image,
-              color: Colors.white,
-              size: 60,
-            ),
+            errorBuilder: (_, e, s) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 60),
           ),
         ),
       ),

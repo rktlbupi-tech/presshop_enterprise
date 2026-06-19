@@ -209,7 +209,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppAppBar(
-        title: "Submit Forms",
+        title: "Submit forms",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,

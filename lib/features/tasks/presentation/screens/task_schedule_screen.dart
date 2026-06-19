@@ -76,7 +76,7 @@ class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
               },
             )
           : AppAppBar(
-              title: "View Task",
+              title: "View task",
               elevation: 0,
               centerTitle: false,
               titleSpacing: 0,

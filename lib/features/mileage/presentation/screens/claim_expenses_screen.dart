@@ -452,7 +452,7 @@ class _ClaimExpensesScreenState extends State<ClaimExpensesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppAppBar(
-        title: "Claim Expenses",
+        title: "Claim expenses",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,

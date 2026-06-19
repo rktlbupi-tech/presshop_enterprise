@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:go_router/go_router.dart';
+import 'firebase_options.dart';
 import 'config/di/injection.dart';
 import 'config/routes/app_router.dart';
 import 'core/config/app_config.dart';
@@ -19,6 +22,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // ── Environment ───────────────────────────────────────────
   AppConfig.init(AppFlavor.dev);
@@ -50,8 +55,21 @@ void main() async {
   runApp(const PresshopEnterpriseApp());
 }
 
-class PresshopEnterpriseApp extends StatelessWidget {
+class PresshopEnterpriseApp extends StatefulWidget {
   const PresshopEnterpriseApp({super.key});
+
+  @override
+  State<PresshopEnterpriseApp> createState() => _PresshopEnterpriseAppState();
+}
+
+class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = createRouter(getIt());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +78,11 @@ class PresshopEnterpriseApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        final router = createRouter(getIt());
         return MaterialApp.router(
           title: 'Enterprise',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
-          routerConfig: router,
+          routerConfig: _router,
         );
       },
     );

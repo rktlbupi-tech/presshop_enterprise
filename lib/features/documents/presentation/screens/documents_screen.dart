@@ -534,7 +534,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppAppBar(
-        title: "My Documents",
+        title: "My documents",
         elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,
