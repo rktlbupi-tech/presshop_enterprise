@@ -355,7 +355,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_content1.png',
                 iconColor: const Color(0xFF2DC78A),
                 iconBgColor: const Color(0xFFE6F9F2),
-                onTap: () => _open(const EvidenceScreen()),
+                onTap: () => _open(const EvidenceScreen(hideLeading: false)),
               ),
               _MenuGroupItem(
                 name: 'Submit forms',

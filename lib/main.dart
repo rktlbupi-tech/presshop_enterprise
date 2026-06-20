@@ -10,6 +10,7 @@ import 'config/di/injection.dart';
 import 'config/routes/app_router.dart';
 import 'core/config/app_config.dart';
 import 'core/theme/app_theme.dart';
+import 'package:presshop_enterprise/l10n/app_localizations.dart';
 
 /// Global camera list — populated before runApp so it's ready on first frame.
 List<CameraDescription> cameras = [];
@@ -83,6 +84,8 @@ class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           routerConfig: _router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
         );
       },
     );

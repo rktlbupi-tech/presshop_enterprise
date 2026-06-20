@@ -37,7 +37,6 @@ class _SosButtonState extends State<SosButton> {
   bool _isCountingDown = false;
   int _countdown = 5;
   Timer? _countdownTimer;
-  Timer? _audioTimer;
   SosSession? _activeSession;
   OverlayEntry? _overlayEntry;
   OverlayEntry? _countdownOverlayEntry;
@@ -139,8 +138,6 @@ class _SosButtonState extends State<SosButton> {
 
     _overlayEntry?.remove();
     _overlayEntry = null;
-    _audioTimer?.cancel();
-    _audioTimer = null;
     await _audioPlayer.stop();
 
     if (mounted) {
@@ -157,15 +154,8 @@ class _SosButtonState extends State<SosButton> {
     setState(() => _isActive = true);
 
     try {
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
       await _audioPlayer.play(AssetSource('audio/sos.mp3'));
-      _audioTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (!mounted) {
-          _audioTimer?.cancel();
-          return;
-        }
-        _audioPlayer.stop();
-        _audioPlayer.play(AssetSource('audio/sos.mp3'));
-      });
     } catch (_) {}
 
     final pos = widget.getPosition();
@@ -186,7 +176,6 @@ class _SosButtonState extends State<SosButton> {
 
   @override
   void dispose() {
-    _audioTimer?.cancel();
     _countdownTimer?.cancel();
     _countdownOverlayEntry?.remove();
     _countdownOverlayEntry = null;

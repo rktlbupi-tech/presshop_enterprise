@@ -1,0 +1,11 @@
+{
+  "@@locale": "en",
+  "appTitle": "Presshop Enterprise",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "welcomeMessage": "Welcome to Presshop Enterprise",
+  "@welcomeMessage": {
+    "description": "A welcome message shown to users"
+  }
+}

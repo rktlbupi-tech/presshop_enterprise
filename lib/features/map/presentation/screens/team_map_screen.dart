@@ -482,13 +482,9 @@ class _TeamMapScreenState extends State<TeamMapScreen>
 
     final generation = ++_myLocationMarkerGeneration;
 
-    final profile = DummyProfileController().profileData;
-    String userImage = profile?.profileImage ?? '';
-    // if (userImage.isEmpty) {
-    //   userImage = sharedPreferences?.getString(avatarKey) ?? '';
-    // }
+    String userImage = sharedPreferences?.getString('user_avatar') ?? '';
     if (userImage.isEmpty) {
-      userImage = "https://i.pravatar.cc/150?u=me";
+      userImage = sharedPreferences?.getString('user_profile_image') ?? '';
     }
 
     final icon = await _getMarkerIcon(userImage, showDot: false);
@@ -514,11 +510,11 @@ class _TeamMapScreenState extends State<TeamMapScreen>
     if (!mounted || _isDisposed) return;
     if (!widget.isScreenActive) return;
     Set<Marker> newMarkers = {};
-    final profile = DummyProfileController().profileData;
+    final myUserId = sharedPreferences?.getString('user_id') ?? '';
 
     for (final worker in workers) {
       // Skip yourself since _myLocationMarker already represents you at your current position
-      if (worker.isSelf || (profile?.id != null && worker.id == profile!.id)) {
+      if (worker.isSelf || (myUserId.isNotEmpty && worker.id == myUserId)) {
         continue;
       }
 
@@ -1854,7 +1850,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         kBottomNavigationBarHeight + MediaQuery.of(context).viewPadding.bottom;
     final double zoomPanelBottom = isNavigating
         ? 110.0 + bottomOffset
-        : bottomBarHeight + 62.h + bottomOffset;
+        : bottomOffset + 20;
     final mapState = context.watch<EmployeeMapCubit>().state;
     final employeeMapNotifier = BlocProvider.of<EmployeeMapCubit>(context);
     return BlocListener<EmployeeMapCubit, EmployeeMapState>(
@@ -1893,9 +1889,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
           onProfileTap: () {
             context.push('/menu');
           },
-          onFilterTap: () {
-            // Scaffold.of(context).openEndDrawer();
-          },
+          onFilterTap: null,
           isOnline: true,
         ),
         body: GestureDetector(

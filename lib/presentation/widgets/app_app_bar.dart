@@ -35,12 +35,15 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      scrolledUnderElevation: 0,
+
       backgroundColor: backgroundColor ?? Colors.white,
       elevation: elevation ?? 0.5,
       centerTitle: centerTitle,
       titleSpacing: titleSpacing,
       automaticallyImplyLeading: showBack,
-      leading: leading ??
+      leading:
+          leading ??
           (showBack
               ? IconButton(
                   icon: Image.asset(
@@ -59,7 +62,8 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
                   onPressed: onBackTap ?? () => Navigator.pop(context),
                 )
               : null),
-      title: titleWidget ??
+      title:
+          titleWidget ??
           (title != null
               ? Text(
                   title!,
@@ -70,10 +74,7 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 )
               : null),
-      actions: [
-        ...?actions,
-        if (showLogo) const CompanyLogoAction(),
-      ],
+      actions: [...?actions, if (showLogo) const CompanyLogoAction()],
     );
   }
 

@@ -1,13 +1,15 @@
 name: presshop_enterprise
 description: Presshop Enterprise — Employee App
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.10.7
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # Firebase
@@ -51,7 +53,7 @@ dependencies:
 
   # Utils
   logger: ^2.4.0
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   cupertino_icons: ^1.0.8
 
@@ -99,6 +101,7 @@ dev_dependencies:
   json_serializable: ^6.8.0
 
 flutter:
+  generate: true
   uses-material-design: true
 
   assets:

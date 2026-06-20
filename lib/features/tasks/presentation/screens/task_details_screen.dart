@@ -17,6 +17,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/loading_widget.dart';
 import '../../data/models/employee_task_model.dart';
+import '../../../map/core/map_constants.dart' show googleMapAPiKey;
 import 'task_chat_screen.dart';
 
 class TaskDetailsScreen extends StatefulWidget {
@@ -123,7 +124,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         if (_localStatusOverride == null) {
           _localStatusOverride = status;
         }
-        if (_localStatusOverride == 'started' || _localStatusOverride == 'in_progress') {
+        if (_localStatusOverride == 'started' ||
+            _localStatusOverride == 'in_progress') {
           _initWorkTimer();
         } else {
           _workTimer?.cancel();
@@ -330,8 +332,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         .catchError((_) {});
   }
 
-  String get _appleMapKey => '';
-  String get _googleMapKey => '';
+  String get _appleMapKey => googleMapAPiKey;
+  String get _googleMapKey => googleMapAPiKey;
 
   Future<void> _openMap({bool directions = false}) async {
     if (_taskLatitude == null || _taskLongitude == null) return;
@@ -425,9 +427,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task started successfully.'),
-        ),
+        const SnackBar(content: Text('Task started successfully.')),
       );
       _initWorkTimer();
     } catch (e) {
@@ -441,7 +441,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   String _getUserAssignmentStatus() {
-    if (_localStatusOverride != null) return _localStatusOverride!.toLowerCase();
+    if (_localStatusOverride != null)
+      return _localStatusOverride!.toLowerCase();
     if (_task == null) return '';
     return _task!.status.toLowerCase();
   }
@@ -643,7 +644,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
     final task = _task!;
     final isCompleted = _getUserAssignmentStatus() == 'completed';
-    final isStarted = _getUserAssignmentStatus() == 'started' || _getUserAssignmentStatus() == 'in_progress';
+    final isStarted =
+        _getUserAssignmentStatus() == 'started' ||
+        _getUserAssignmentStatus() == 'in_progress';
     final companyName =
         (task.creatorSummary != null &&
             task.creatorSummary!.fullName.isNotEmpty)
@@ -1290,9 +1293,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F0FE),
                         borderRadius: BorderRadius.circular(size.width * 0.03),
-                        border: Border.all(
-                          color: const Color(0xFFD2E3FC),
-                        ),
+                        border: Border.all(color: const Color(0xFFD2E3FC)),
                       ),
                       child: Row(
                         children: [
@@ -1337,7 +1338,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isCompleted
                                   ? Colors.grey.shade400
-                                  : (isStarted ? const Color(0xFFFFB300) : const Color(0xFF127A45)),
+                                  : (isStarted
+                                        ? const Color.fromARGB(255, 0, 0, 0)
+                                        : const Color.fromARGB(255, 0, 0, 0)),
                               elevation: 0,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
@@ -1348,7 +1351,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             child: Text(
                               isCompleted
                                   ? 'Completed'
-                                  : (isStarted ? 'Tap to Complete Task' : 'Start Task'),
+                                  : (isStarted
+                                        ? 'Tap to Complete Task'
+                                        : 'Tap to Start Start Task'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,

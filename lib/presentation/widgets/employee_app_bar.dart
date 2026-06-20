@@ -90,6 +90,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: AppColors.surface,
       elevation: 0.5,
+      scrolledUnderElevation: 0,
       shadowColor: Colors.black.withValues(alpha: 0.1),
       automaticallyImplyLeading: false,
       leading: onBackTap != null

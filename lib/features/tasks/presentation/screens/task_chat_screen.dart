@@ -67,6 +67,11 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
   Timer? _recordTimer;
   final AudioRecorder _audioRecorder = AudioRecorder();
 
+  Timer? _countdownTimer;
+  String _timeRemaining = '';
+  bool _isTimeOver = false;
+  bool _isExtraTime = false;
+
   double _uploadProgress = 0.0;
   bool _isUploading = false;
 
@@ -80,11 +85,67 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     _prefs = getIt<SharedPreferences>();
     _loadConversation();
     _fetchLocation();
+    _startCountdown();
+  }
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    final dueAt = widget.taskDetail?.dueAt;
+    if (dueAt == null) return;
+    final due = DateTime.tryParse(dueAt);
+    if (due == null) return;
+    _updateCountdown(due);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _updateCountdown(due));
+    });
+  }
+
+  void _updateCountdown(DateTime due) {
+    final diff = due.difference(DateTime.now());
+    if (diff.isNegative) {
+      final extra = due.add(const Duration(hours: 3));
+      final extraDiff = extra.difference(DateTime.now());
+      if (extraDiff.isNegative) {
+        _isTimeOver = true;
+        _isExtraTime = false;
+        _timeRemaining = '00:00:00';
+        _countdownTimer?.cancel();
+      } else {
+        _isExtraTime = true;
+        _isTimeOver = false;
+        _timeRemaining = _formatDiff(extraDiff);
+      }
+      return;
+    }
+    _isTimeOver = false;
+    _isExtraTime = false;
+    _timeRemaining = _formatDiff(diff);
+  }
+
+  String _formatDiff(Duration diff) {
+    if (diff.inDays > 0) {
+      return '${diff.inDays}d ${diff.inHours % 24}h ${diff.inMinutes % 60}m';
+    }
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}';
+  }
+
+  String _deadlineLabel() {
+    final dueAt = widget.taskDetail?.dueAt;
+    if (dueAt == null) return '';
+    final dt = DateTime.tryParse(dueAt);
+    if (dt == null) return '';
+    final l = dt.toLocal();
+    final h = l.hour > 12 ? l.hour - 12 : (l.hour == 0 ? 12 : l.hour);
+    final m = l.minute.toString().padLeft(2, '0');
+    final ampm = l.hour >= 12 ? 'pm' : 'am';
+    return 'Deadline ${h.toString().padLeft(2, '0')}:$m $ampm';
   }
 
   @override
   void dispose() {
     _isDisposed = true;
+    _countdownTimer?.cancel();
     _recordTimer?.cancel();
     _audioRecorder.dispose();
     if (_conversationId != null) {
@@ -1050,7 +1111,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: Image.asset(
+            'assets/icons/ic_arrow_left.png',
+            color: Colors.black,
+            width: 24,
+            height: 24,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 3,
@@ -1108,9 +1174,60 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                     ),
                   ),
                 ),
+                if (_timeRemaining.isNotEmpty) _buildTimerBar(),
                 _buildMessageInput(),
               ],
             ),
+    );
+  }
+
+  Widget _buildTimerBar() {
+    final Color timerColor = _isTimeOver
+        ? Colors.red
+        : _isExtraTime
+            ? Colors.orange
+            : const Color(0xFF1677FF);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: const Color(0xFFE2E8F0), width: 1)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, size: 16, color: timerColor),
+          const SizedBox(width: 6),
+          Text(
+            _isTimeOver ? 'Time over' : 'Time remaining',
+            style: TextStyle(
+              fontSize: 12,
+              color: const Color(0xFF64748B),
+              fontFamily: 'AirbnbCereal',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _timeRemaining,
+            style: TextStyle(
+              fontSize: 13,
+              color: timerColor,
+              fontFamily: 'AirbnbCereal',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            _deadlineLabel(),
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF94A3B8),
+              fontFamily: 'AirbnbCereal',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

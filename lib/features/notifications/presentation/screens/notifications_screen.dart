@@ -230,7 +230,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.all(8.r),
+              padding: EdgeInsets.all(6.r),
               decoration: BoxDecoration(
                 color: Colors.black,
                 shape: BoxShape.circle,
@@ -245,8 +245,8 @@ class _NotificationsViewState extends State<_NotificationsView> {
               child: Image.asset(
                 AppIcons.rabbitLogo,
                 color: Colors.white,
-                width: 24.w,
-                height: 24.w,
+                width: 18.w,
+                height: 18.w,
               ),
             ),
             SizedBox(width: 12.w),
@@ -254,40 +254,40 @@ class _NotificationsViewState extends State<_NotificationsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: notification.isRead
-                                ? FontWeight.w500
-                                : FontWeight.bold,
-                            color: Colors.black,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                      ),
-                      Text(
-                        DateFormat(
-                          'hh:mm a, dd MMM',
-                        ).format(notification.createdAt),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 10.w),
+                      child: Text(
+                        DateFormat('hh:mm a, dd MMM yyyy').format(notification.createdAt),
+                        textAlign: TextAlign.right,
                         style: TextStyle(
                           fontSize: 10.sp,
                           color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w300,
                           fontFamily: 'AirbnbCereal',
                         ),
                       ),
-                    ],
+                    ),
+                  ),
+                  Text(
+                    notification.title,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: notification.isRead
+                          ? FontWeight.w600
+                          : FontWeight.bold,
+                      color: Colors.black,
+                      fontFamily: 'AirbnbCereal',
+                    ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     notification.body,
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: Colors.grey.shade600,
+                      color: Colors.black,
+                      fontWeight: FontWeight.normal,
                       fontFamily: 'AirbnbCereal',
                     ),
                   ),

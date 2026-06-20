@@ -232,39 +232,39 @@ class SearchAndFilterBar extends StatelessWidget {
               ],
             ),
           ),
-        if (isFromEmployeeMap)
-          Padding(
-            padding: EdgeInsets.only(
-              left: responsiveWidth * numD04,
-              right: responsiveWidth * numD04,
-              bottom: 6,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: FilterDropdown(
-                          items: radiusOptions,
-                          selected: selectedDistance ?? '5 miles',
-                          onChanged: onDistanceChanged,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: FilterDropdown(
-                          items: employeeAlertOptions,
-                          selected: selectedAlertType ?? '',
-                          onChanged: onAlertTypeChanged,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // if (isFromEmployeeMap)
+        //   Padding(
+        //     padding: EdgeInsets.only(
+        //       left: responsiveWidth * numD04,
+        //       right: responsiveWidth * numD04,
+        //       bottom: 6,
+        //     ),
+        //     child: Row(
+        //       children: [
+        //         Expanded(
+        //           child: Row(
+        //             children: [
+        //               Expanded(
+        //                 child: FilterDropdown(
+        //                   items: radiusOptions,
+        //                   selected: selectedDistance ?? '5 miles',
+        //                   onChanged: onDistanceChanged,
+        //                 ),
+        //               ),
+        //               const SizedBox(width: 6),
+        //               Expanded(
+        //                 child: FilterDropdown(
+        //                   items: employeeAlertOptions,
+        //                   selected: selectedAlertType ?? '',
+        //                   onChanged: onAlertTypeChanged,
+        //                 ),
+        //               ),
+        //             ],
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //   ),
       ],
     );
   }

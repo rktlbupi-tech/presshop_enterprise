@@ -37,10 +37,9 @@ class SideActionPanel extends StatelessWidget {
           ),
           child: Column(
             children: [
-              SizedBox(height: w * 0.01),
               _buildButton(Icons.add, onZoomIn, w),
+              Divider(height: 0.5, thickness: 0.5, color: Color(0xFFBDBDBD)),
               _buildButton(Icons.remove, onZoomOut, w),
-              SizedBox(height: w * 0.01),
             ],
           ),
         ),
