@@ -1,7 +1,7 @@
 name: presshop_enterprise
 description: Presshop Enterprise — Employee App
 publish_to: 'none'
-version: 3.0.11+11
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.7

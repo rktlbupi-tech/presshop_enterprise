@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
@@ -484,12 +485,11 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
       backgroundColor: Colors.white,
       appBar: widget.hideLeading
           ? EmployeeAppBar(onFilterTap: _showFilterBottomSheet)
-          : AppBar(
-              title: const Text('Content & evidence'),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+          : AppAppBar(
+              showBack: true,
+              title: "Content & evidence",
               elevation: 0,
-              actions: const [CompanyLogoAction()],
+              titleSpacing: 0,
             ),
       body: SafeArea(
         child: Column(
@@ -697,8 +697,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                   height: 110.w,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      _imagePlaceholder(placeholderType),
+                  errorBuilder: (_, _, _) => _imagePlaceholder(placeholderType),
                 )
               : _imagePlaceholder(placeholderType),
           if (showImage)
@@ -837,4 +836,3 @@ class _FeedFilterModel {
     this.toDate,
   });
 }
-

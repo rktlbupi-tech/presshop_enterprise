@@ -45,3 +45,9 @@ keytool -genkey -v \
   -dname "CN=Presshop Enterprise, OU=Mobile, O=Presshop, L=Lucknow, S=Uttar Pradesh, C=IN" 2>&1
 
 
+
+
+
+
+1. Remove scan from camera and give a back buttion for apple devices 
+2. Cta buttion api integration in evidence page correct text and color of the cta button 

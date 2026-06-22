@@ -9,6 +9,7 @@ import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../config/di/injection.dart';
@@ -234,59 +235,13 @@ class _ProfileViewState extends State<_ProfileView> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: AppAppBar(
+        showBack: true,
+        title: "My profile",
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "My profile",
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: size.width * numD05,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'AirbnbCereal',
-          ),
-        ),
         centerTitle: false,
         titleSpacing: 0,
-        actions: [
-          BlocBuilder<ProfileBloc, ProfileState>(
-            builder: (context, state) {
-              if (state is ProfileLoading || state is ProfileInitial) {
-                final double logoSize =
-                    (size.width > 600 ? 500 : size.width) * 0.11;
-                return Padding(
-                  padding: EdgeInsets.only(right: size.width * numD04),
-                  child: Center(
-                    child: SizedBox(
-                      width: logoSize,
-                      height: logoSize,
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }
-              final companyLogo = state is ProfileLoaded
-                  ? state.profile.companyLogo
-                  : null;
-              return Padding(
-                padding: EdgeInsets.only(right: size.width * numD04),
-                child: emilyLogoWidgetForPagesForEmployee(
-                  size.width > 600 ? 500 : size.width,
-                  companyLogo,
-                ),
-              );
-            },
-          ),
-        ],
       ),
       body: BlocConsumer<ProfileBloc, ProfileState>(
         listener: (context, state) {

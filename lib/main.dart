@@ -13,35 +13,53 @@ import 'core/theme/app_theme.dart';
 import 'package:presshop_enterprise/l10n/app_localizations.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
-import 'dart:io';
 import 'package:presshop_enterprise/features/notifications/data/services/local_notification_service.dart';
 import 'package:force_update_helper/force_update_helper.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:presshop_enterprise/features/splash/data/repositories/force_update_repository.dart';
-import 'package:presshop_enterprise/features/camera/utils/camera_constants.dart';
+import 'package:presshop_enterprise/features/splash/presentation/widgets/force_update_dialog.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'core/services/app_bloc_observer.dart';
 
-/// Global camera list — populated before runApp so it's ready on first frame.
 List<CameraDescription> cameras = [];
-
-/// Global SharedPreferences instance — used by camera screens for lat/lon/address caching.
 SharedPreferences? sharedPreferences;
 
-/// Global navigator key — used by camera screens to push routes from async callbacks.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize custom BlocObserver to log Cubit/Bloc errors and transitions to Crashlytics
+  Bloc.observer = AppBlocObserver();
+
+  if (kDebugMode) {
+    // Disable Crashlytics and Analytics collection programmatically in debug mode
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
+  } else {
+    // Pass all uncaught "Fatal" errors from the framework to Crashlytics
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  }
+
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await LocalNotificationService.instance.setup();
   EnterpriseFcmService.setupTokenRefreshListener();
 
   // ── Environment ───────────────────────────────────────────
   AppConfig.init(AppFlavor.dev);
-
-  // ── System UI ─────────────────────────────────────────────
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -75,25 +93,31 @@ class PresshopEnterpriseApp extends StatefulWidget {
   State<PresshopEnterpriseApp> createState() => _PresshopEnterpriseAppState();
 }
 
-class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp> {
+class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp>
+    with WidgetsBindingObserver {
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _router = createRouter(getIt());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ForceUpdateManager.checkAndShowForceUpdate();
+    });
   }
 
-  void _openStore() async {
-    final url = Platform.isAndroid
-        ? 'https://play.google.com/store/apps/details?id=com.presshop.enterprise'
-        : 'https://apps.apple.com/app/id6744651614';
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    try {
-      final uri = Uri.parse(url);
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      debugPrint("Could not open store: $e");
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint("App resumed: checking for force update");
+      ForceUpdateManager.checkAndShowForceUpdate(forceRefresh: true);
     }
   }
 
@@ -117,7 +141,8 @@ class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp> {
               forceUpdateClient: ForceUpdateClient(
                 fetchRequiredVersion: () async {
                   try {
-                    final force = await ForceUpdateRepository.checkForceUpdate();
+                    final force =
+                        await ForceUpdateRepository.checkForceUpdate();
                     if (force) return "999.0.0";
                     final info = await PackageInfo.fromPlatform();
                     return info.version;
@@ -131,117 +156,9 @@ class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp> {
               ),
               allowCancel: false,
               showForceUpdateAlert: (context, allowCancel) {
-                final size = MediaQuery.of(context).size;
-                final dialogContext = navigatorKey.currentContext ?? context;
-                return showDialog(
-                  context: dialogContext,
-                  barrierDismissible: allowCancel,
-                  builder: (context) {
-                    return WillPopScope(
-                      onWillPop: () async => allowCancel,
-                      child: AlertDialog(
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        contentPadding: EdgeInsets.zero,
-                        insetPadding: EdgeInsets.symmetric(
-                          horizontal: size.width * numD04,
-                        ),
-                        content: StatefulBuilder(
-                          builder: (BuildContext context, StateSetter setState) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(size.width * numD045),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                      left: size.width * numD04,
-                                      top: size.width * numD02,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          "Update Required",
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: size.width * numD04,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: size.width * numD04,
-                                    ),
-                                    child: const Divider(
-                                      color: Colors.black,
-                                      thickness: 0.5,
-                                    ),
-                                  ),
-                                  SizedBox(height: size.width * numD02),
-                                  Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: size.width * numD04,
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(size.width * numD04),
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(size.width * numD04),
-                                            child: Image.asset(
-                                              "assets/rabbits/update_rabbit.png",
-                                              height: size.width * numD25,
-                                              width: size.width * numD35,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: size.width * numD04),
-                                        Expanded(
-                                          child: Text(
-                                            "A newer version of PressHop is available. Please update the app to continue using all features smoothly.",
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                              fontSize: size.width * numD035,
-                                              fontWeight: FontWeight.normal,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: size.width * numD08),
-                                  SizedBox(
-                                    height: size.width * 0.12,
-                                    width: size.width * numD35,
-                                    child: commonElevatedButton(
-                                      "Update Now",
-                                      size,
-                                      commonButtonTextStyle(size),
-                                      commonButtonStyle(size, colorEmployeeGreen1),
-                                      _openStore,
-                                    ),
-                                  ),
-                                  SizedBox(height: size.width * numD05),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
+                return ForceUpdateManager.showForceUpdateAlertGlobal(
+                  context,
+                  allowCancel,
                 );
               },
               showStoreListing: (Uri storeUrl) async {},

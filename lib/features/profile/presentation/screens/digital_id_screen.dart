@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -99,7 +100,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
 
       if (response.statusCode == 200) {
         var responseData = response.data;
-        String? uploadedImageUrl = responseData['mediaurl'] ?? responseData['mediaUrl'];
+        String? uploadedImageUrl =
+            responseData['mediaurl'] ?? responseData['mediaUrl'];
         if (uploadedImageUrl == null && responseData['fileName'] != null) {
           uploadedImageUrl = AppConfig.apiBaseUrl + responseData['fileName'];
         }
@@ -115,7 +117,9 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
             'profile_post_code': profile.profilePostCode ?? '',
             'address': profile.address ?? profile.profileAddress ?? '',
             'profile_image': uploadedImageUrl,
-            'emergency_contacts': profile.emergencyContacts.map((c) => c.toJson()).toList(),
+            'emergency_contacts': profile.emergencyContacts
+                .map((c) => c.toJson())
+                .toList(),
             'latitude': profile.latitude ?? '',
             'longitude': profile.longitude ?? '',
             'current_location': profile.currentLocation ?? '',
@@ -135,9 +139,9 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
     } catch (e) {
       debugPrint("Error uploading image: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error uploading image")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Error uploading image")));
       }
     } finally {
       if (mounted) {
@@ -150,30 +154,32 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
 
   void _showPicker(Size size, ProfileEntity profile) {
     showModalBottomSheet(
-        context: context,
-        builder: (BuildContext bc) {
-          return SafeArea(
-            child: Wrap(
-              children: <Widget>[
-                ListTile(
-                    leading: const Icon(Icons.photo_library),
-                    title: const Text('Photo Library'),
-                    onTap: () {
-                      _pickImage(ImageSource.gallery, profile);
-                      Navigator.of(context).pop();
-                    }),
-                ListTile(
-                  leading: const Icon(Icons.photo_camera),
-                  title: const Text('Camera'),
-                  onTap: () {
-                    _pickImage(ImageSource.camera, profile);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            ),
-          );
-        });
+      context: context,
+      builder: (BuildContext bc) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Photo Library'),
+                onTap: () {
+                  _pickImage(ImageSource.gallery, profile);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Camera'),
+                onTap: () {
+                  _pickImage(ImageSource.camera, profile);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -191,7 +197,9 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
           });
         } else if (state is ProfileError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed to update profile image: ${state.message}")),
+            SnackBar(
+              content: Text("Failed to update profile image: ${state.message}"),
+            ),
           );
         }
       },
@@ -207,17 +215,25 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
             );
           }
 
-          final String fullName = profile != null ? profile.fullName : "Loading...";
-          
+          final String fullName = profile != null
+              ? profile.fullName
+              : "Loading...";
+
           String userProfileImage = profile?.profileImage ?? "";
-          if (userProfileImage.startsWith("https://dev-api.presshop.news:5019/")) {
+          if (userProfileImage.startsWith(
+            "https://dev-api.presshop.news:5019/",
+          )) {
             userProfileImage = userProfileImage.replaceFirst(
-                "https://dev-api.presshop.news:5019/",
-                "https://dev-cdn.presshop.news/public/user/");
-          } else if (userProfileImage.startsWith("http://dev-api.presshop.news:5019/")) {
+              "https://dev-api.presshop.news:5019/",
+              "https://dev-cdn.presshop.news/public/user/",
+            );
+          } else if (userProfileImage.startsWith(
+            "http://dev-api.presshop.news:5019/",
+          )) {
             userProfileImage = userProfileImage.replaceFirst(
-                "http://dev-api.presshop.news:5019/",
-                "https://dev-cdn.presshop.news/public/user/");
+              "http://dev-api.presshop.news:5019/",
+              "https://dev-cdn.presshop.news/public/user/",
+            );
           }
           if (userProfileImage.startsWith("file:///")) {
             userProfileImage = "";
@@ -228,33 +244,12 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
 
           return Scaffold(
             backgroundColor: Colors.white,
-            appBar: AppBar(
+            appBar: AppAppBar(
+              title: "Digital id",
+              showBack: true,
               backgroundColor: Colors.white,
               elevation: 0,
               titleSpacing: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
-              title: Text(
-                "Digital id",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: size.width * appBarHeadingFontSize,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-              actions: [
-                if (profile != null)
-                  InkWell(
-                    onTap: () {
-                      context.go(AppRoutes.dashboard);
-                    },
-                    child: emilyLogoWidgetForPagesForEmployee(size.width, pubLogo),
-                  ),
-                SizedBox(width: size.width * numD04),
-              ],
             ),
             body: Stack(
               children: [
@@ -290,7 +285,9 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                   Stack(
                                     children: [
                                       ClipRRect(
-                                        borderRadius: BorderRadius.circular(size.width * numD04),
+                                        borderRadius: BorderRadius.circular(
+                                          size.width * numD04,
+                                        ),
                                         child: _imageFile != null
                                             ? Image.file(
                                                 _imageFile!,
@@ -299,7 +296,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                                 fit: BoxFit.cover,
                                               )
                                             : CachedNetworkImage(
-                                                imageUrl: userProfileImage.isEmpty
+                                                imageUrl:
+                                                    userProfileImage.isEmpty
                                                     ? "https://dev-cdn.presshop.news/public/avatarImages/default.png"
                                                     : userProfileImage,
                                                 height: size.width * numD60,
@@ -307,37 +305,62 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                                 fit: BoxFit.cover,
                                                 placeholder: (context, url) =>
                                                     const SizedBox.shrink(),
-                                                errorWidget: (context, url, error) =>
-                                                    Container(
+                                                errorWidget: (context, url, error) => Container(
                                                   height: size.width * numD65,
                                                   width: size.width * numD70,
                                                   decoration: BoxDecoration(
                                                     color: Colors.white,
                                                     border: Border.all(
-                                                      color: const Color.fromARGB(255, 223, 223, 223),
+                                                      color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            223,
+                                                            223,
+                                                            223,
+                                                          ),
                                                     ),
-                                                    borderRadius: BorderRadius.circular(size.width * numD04),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          size.width * numD04,
+                                                        ),
                                                   ),
                                                   child: Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
                                                     children: [
                                                       Icon(
                                                         Icons.person,
-                                                        size: size.width * numD11,
+                                                        size:
+                                                            size.width * numD11,
                                                         color: Colors.grey,
                                                       ),
-                                                      SizedBox(height: size.width * numD03),
+                                                      SizedBox(
+                                                        height:
+                                                            size.width * numD03,
+                                                      ),
                                                       Padding(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 20,
+                                                              vertical: 10,
+                                                            ),
                                                         child: Text(
                                                           "Photo not available",
-                                                          style: commonTextStyle(
-                                                            size: size,
-                                                            fontSize: size.width * numD03,
-                                                            color: colorHint,
-                                                            fontWeight: FontWeight.normal,
-                                                          ),
-                                                          textAlign: TextAlign.center,
+                                                          style:
+                                                              commonTextStyle(
+                                                                size: size,
+                                                                fontSize:
+                                                                    size.width *
+                                                                    numD03,
+                                                                color:
+                                                                    colorHint,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .normal,
+                                                              ),
+                                                          textAlign:
+                                                              TextAlign.center,
                                                         ),
                                                       ),
                                                     ],
@@ -353,13 +376,17 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                             _showPicker(size, profile);
                                           },
                                           child: Container(
-                                            padding: EdgeInsets.all(size.width * 0.005),
+                                            padding: EdgeInsets.all(
+                                              size.width * 0.005,
+                                            ),
                                             decoration: const BoxDecoration(
                                               color: Colors.white,
                                               shape: BoxShape.circle,
                                             ),
                                             child: Container(
-                                              padding: EdgeInsets.all(size.width * 0.005),
+                                              padding: EdgeInsets.all(
+                                                size.width * 0.005,
+                                              ),
                                               decoration: const BoxDecoration(
                                                 color: AppColors.primary,
                                                 shape: BoxShape.circle,
@@ -378,7 +405,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                   SizedBox(height: size.width * numD04),
                                   Center(
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Flexible(
                                           child: Text(
@@ -404,11 +432,15 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: Colors.black,
-                                      borderRadius: BorderRadius.circular(size.width * numD02),
+                                      borderRadius: BorderRadius.circular(
+                                        size.width * numD02,
+                                      ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         SizedBox(width: size.width * numD03),
                                         Image.asset(
@@ -434,14 +466,21 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                   Container(
                                     width: size.width * numD60,
                                     alignment: Alignment.centerLeft,
-                                    margin: EdgeInsets.only(top: size.width * numD04),
+                                    margin: EdgeInsets.only(
+                                      top: size.width * numD04,
+                                    ),
                                     padding: EdgeInsets.symmetric(
                                       vertical: size.width * numD03,
                                       horizontal: size.width * numD03,
                                     ),
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(size.width * numD02),
-                                      border: Border.all(width: 1.5, color: Colors.black),
+                                      borderRadius: BorderRadius.circular(
+                                        size.width * numD02,
+                                      ),
+                                      border: Border.all(
+                                        width: 1.5,
+                                        color: Colors.black,
+                                      ),
                                     ),
                                     child: RichText(
                                       textAlign: TextAlign.start,
@@ -456,9 +495,12 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                         ),
                                         children: [
                                           TextSpan(
-                                            text: DateFormat("dd MMM yyyy").format(
-                                              DateTime.now().add(const Duration(days: 365)),
-                                            ),
+                                            text: DateFormat("dd MMM yyyy")
+                                                .format(
+                                                  DateTime.now().add(
+                                                    const Duration(days: 365),
+                                                  ),
+                                                ),
                                             style: TextStyle(
                                               fontSize: size.width * numD036,
                                               color: Colors.black,
@@ -466,7 +508,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                               height: 1.5,
                                               fontFamily: "AirbnbCereal",
                                             ),
-                                          )
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -478,19 +520,28 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                       vertical: size.width * numD02,
                                     ),
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(size.width * numD02),
-                                      border: Border.all(width: 1.5, color: Colors.black),
+                                      borderRadius: BorderRadius.circular(
+                                        size.width * numD02,
+                                      ),
+                                      border: Border.all(
+                                        width: 1.5,
+                                        color: Colors.black,
+                                      ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
                                         SizedBox(width: size.width * numD01),
                                         SizedBox(
                                           height: size.width * numD16,
                                           width: size.width * numD16,
                                           child: QrImageView(
-                                            data: profile.employeeId ?? profile.id,
+                                            data:
+                                                profile.employeeId ??
+                                                profile.id,
                                             version: QrVersions.auto,
                                             padding: const EdgeInsets.all(2),
                                           ),
@@ -498,8 +549,10 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                         SizedBox(width: size.width * numD01),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Text(
                                                 pubName,
@@ -515,7 +568,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                                 Text(
                                                   "${profile.city}, ${profile.country ?? ''}",
                                                   style: TextStyle(
-                                                    fontSize: size.width * numD025,
+                                                    fontSize:
+                                                        size.width * numD025,
                                                     color: Colors.black,
                                                     fontWeight: FontWeight.w400,
                                                     height: 1.2,
@@ -525,20 +579,24 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                               Text(
                                                 "Employee ID: ${profile.employeeId ?? 'N/A'}",
                                                 style: TextStyle(
-                                                  fontSize: size.width * numD025,
+                                                  fontSize:
+                                                      size.width * numD025,
                                                   color: Colors.black,
                                                   fontWeight: FontWeight.w400,
                                                   height: 1.2,
                                                   fontFamily: "AirbnbCereal",
                                                 ),
                                               ),
-                                              if (profile.address?.isNotEmpty ?? false)
+                                              if (profile.address?.isNotEmpty ??
+                                                  false)
                                                 Text(
                                                   "Address: ${profile.address}",
                                                   maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                    fontSize: size.width * numD025,
+                                                    fontSize:
+                                                        size.width * numD025,
                                                     color: Colors.black,
                                                     fontWeight: FontWeight.w400,
                                                     height: 1.2,
@@ -548,7 +606,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                               Text(
                                                 "Status: Active",
                                                 style: TextStyle(
-                                                  fontSize: size.width * numD025,
+                                                  fontSize:
+                                                      size.width * numD025,
                                                   color: Colors.black,
                                                   fontWeight: FontWeight.w400,
                                                   height: 1.2,
@@ -557,7 +616,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                               ),
                                             ],
                                           ),
-                                        )
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -580,7 +639,9 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                               ),
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                              ),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
@@ -590,8 +651,8 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                                     fontSize: pubName.length > 8
                                         ? size.width * 0.08
                                         : (pubName.length > 5
-                                            ? size.width * 0.12
-                                            : size.width * numD20),
+                                              ? size.width * 0.12
+                                              : size.width * numD20),
                                     color: Colors.white,
                                     fontWeight: FontWeight.w500,
                                     letterSpacing: pubName.length > 8
@@ -603,7 +664,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
                               ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -661,7 +722,9 @@ Widget emilyLogoWidgetForPagesForEmployee(double size, String? companyLogo) {
                   return const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2.0,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
                     ),
                   );
                 },

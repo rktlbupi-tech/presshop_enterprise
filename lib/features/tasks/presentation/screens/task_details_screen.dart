@@ -1353,7 +1353,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                   ? 'Completed'
                                   : (isStarted
                                         ? 'Tap to Complete Task'
-                                        : 'Tap to Start Start Task'),
+                                        : 'Tap to Start Task'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white,

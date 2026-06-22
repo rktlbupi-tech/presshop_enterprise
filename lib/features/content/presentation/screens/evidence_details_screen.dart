@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:dots_indicator/dots_indicator.dart';
+import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -35,7 +36,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
   String get _taskId => widget.item.task.id;
 
   String _getUserAssignmentStatus() {
-    if (_localStatusOverride != null) return _localStatusOverride!.toLowerCase();
+    if (_localStatusOverride != null)
+      return _localStatusOverride!.toLowerCase();
     return widget.item.task.status.toLowerCase();
   }
 
@@ -56,7 +58,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
       setState(() => _localStatusOverride = 'started');
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('task_start_$_taskId', DateTime.now().toIso8601String());
+        await prefs.setString(
+          'task_start_$_taskId',
+          DateTime.now().toIso8601String(),
+        );
       } catch (_) {}
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +71,9 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -98,7 +105,9 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -128,9 +137,13 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
 
   void _updateWorkDuration(DateTime startTime) {
     final diff = DateTime.now().difference(startTime);
-    if (diff.isNegative) { _workDuration = '00:00:00'; return; }
+    if (diff.isNegative) {
+      _workDuration = '00:00:00';
+      return;
+    }
     String two(int n) => n.toString().padLeft(2, '0');
-    _workDuration = '${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}';
+    _workDuration =
+        '${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}';
   }
 
   void _showSuccessDialog() {
@@ -170,7 +183,11 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                         Navigator.pop(ctx);
                         Navigator.pop(context);
                       },
-                      icon: Icon(Icons.close, color: Colors.black, size: size.width * 0.06),
+                      icon: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: size.width * 0.06,
+                      ),
                     ),
                   ],
                 ),
@@ -255,12 +272,17 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final firstContent = widget.item.content.isNotEmpty ? widget.item.content.first : null;
-    final location = (firstContent?.captureAddressLine1 != null &&
+    final firstContent = widget.item.content.isNotEmpty
+        ? widget.item.content.first
+        : null;
+    final location =
+        (firstContent?.captureAddressLine1 != null &&
             firstContent!.captureAddressLine1.isNotEmpty)
         ? firstContent.captureAddressLine1
         : 'Location Not Captured';
-    final capturedAt = (firstContent?.capturedAt != null && firstContent!.capturedAt.isNotEmpty)
+    final capturedAt =
+        (firstContent?.capturedAt != null &&
+            firstContent!.capturedAt.isNotEmpty)
         ? firstContent.capturedAt
         : (firstContent?.createdAt ?? widget.item.task.createdAt);
     final description = widget.item.task.description.isNotEmpty
@@ -273,24 +295,13 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: AppAppBar(
+        title: "Evidence Details",
         backgroundColor: Colors.white,
+        showBack: true,
         elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "Content Details",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18.sp,
-          ),
-        ),
+        titleSpacing: 0,
         centerTitle: false,
-        actions: const [CompanyLogoAction()],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -329,7 +340,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                           SizedBox(width: 4.w),
                           Text(
                             _fmt('hh:mm a', capturedAt),
-                            style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           SizedBox(width: 12.w),
                           SizedBox(
@@ -346,7 +360,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                           SizedBox(width: 4.w),
                           Text(
                             _fmt('dd MMM yyyy', capturedAt),
-                            style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ],
                       ),
@@ -370,7 +387,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                           Expanded(
                             child: Text(
                               location,
-                              style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Colors.grey[600],
+                              ),
                             ),
                           ),
                         ],
@@ -397,7 +417,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                       Container(
                         width: double.infinity,
                         margin: EdgeInsets.only(bottom: 12.h),
-                        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 10.h,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE8F0FE),
                           borderRadius: BorderRadius.circular(10.r),
@@ -405,7 +428,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.timer_outlined, color: Color(0xFF1877F2)),
+                            const Icon(
+                              Icons.timer_outlined,
+                              color: Color(0xFF1877F2),
+                            ),
                             SizedBox(width: 8.w),
                             const Text(
                               "Working Time Tracker:",
@@ -444,8 +470,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                                 backgroundColor: isCompleted
                                     ? Colors.grey.shade400
                                     : (isStarted
-                                        ? const Color(0xFFFFB300)
-                                        : const Color(0xFF127A45)),
+                                          ? const Color(0xFF000000)
+                                          : const Color(0xFF000000)),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10.r),
@@ -454,7 +480,9 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                               child: Text(
                                 isCompleted
                                     ? 'Completed'
-                                    : (isStarted ? 'Tap to Complete Task' : 'Start Task'),
+                                    : (isStarted
+                                          ? 'Tap to Complete Task'
+                                          : 'Tab to Start Task'),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: Colors.white,
@@ -484,12 +512,17 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                                           'enterprise/tasks/$_taskId',
                                         );
                                         if (!mounted) return;
-                                        if (response.statusCode == 200 && response.data != null) {
+                                        if (response.statusCode == 200 &&
+                                            response.data != null) {
                                           final raw = response.data;
-                                          final data = (raw['data'] is Map<String, dynamic>)
-                                              ? raw['data'] as Map<String, dynamic>
+                                          final data =
+                                              (raw['data']
+                                                  is Map<String, dynamic>)
+                                              ? raw['data']
+                                                    as Map<String, dynamic>
                                               : raw as Map<String, dynamic>;
-                                          final task = EmployeeTaskModel.fromJson(data);
+                                          final task =
+                                              EmployeeTaskModel.fromJson(data);
                                           await navigator.push(
                                             MaterialPageRoute(
                                               builder: (_) => TaskChatScreen(
@@ -500,7 +533,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                                           );
                                         }
                                       } catch (_) {}
-                                      if (mounted) setState(() => _isNavigating = false);
+                                      if (mounted)
+                                        setState(() => _isNavigating = false);
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
@@ -569,7 +603,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
           height: 200.w,
           child: PageView.builder(
             itemCount: widget.item.content.length,
-            onPageChanged: (value) => setState(() => _currentMediaIndex = value),
+            onPageChanged: (value) =>
+                setState(() => _currentMediaIndex = value),
             itemBuilder: (_, i) {
               final contentItem = widget.item.content[i];
               final imageUrl = contentItem.previewUrl;
@@ -586,7 +621,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                               width: double.infinity,
                               height: 200.w,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(color: Colors.grey[300]),
+                              errorBuilder: (_, _, _) =>
+                                  Container(color: Colors.grey[300]),
                             )
                           : Container(
                               width: double.infinity,
@@ -635,9 +671,15 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
 
   List<Widget> _getMediaCountList() {
     final contents = widget.item.content;
-    final imageCount = contents.where((c) => c.evidenceType.toLowerCase() == 'image').length;
-    final videoCount = contents.where((c) => c.evidenceType.toLowerCase() == 'video').length;
-    final audioCount = contents.where((c) => c.evidenceType.toLowerCase() == 'audio').length;
+    final imageCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'image')
+        .length;
+    final videoCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'video')
+        .length;
+    final audioCount = contents
+        .where((c) => c.evidenceType.toLowerCase() == 'audio')
+        .length;
     final docCount = contents.where((c) {
       final t = c.evidenceType.toLowerCase();
       return t == 'doc' || t == 'document' || t == 'pdf';
@@ -673,17 +715,21 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
         children: [
           Text(
             "$count",
-            style: TextStyle(fontSize: 11.sp, color: Colors.white, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 11.sp,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           SizedBox(width: 3.w),
           Image.asset(
             type == 'image'
                 ? 'assets/icons/ic_camera_publish.png'
                 : type == 'video'
-                    ? 'assets/icons/ic_v_cam.png'
-                    : type == 'audio'
-                        ? 'assets/icons/new_audio.png'
-                        : 'assets/icons/doc_icon.png',
+                ? 'assets/icons/ic_v_cam.png'
+                : type == 'audio'
+                ? 'assets/icons/new_audio.png'
+                : 'assets/icons/doc_icon.png',
             color: Colors.white,
             height: type == 'image' ? 10.w : 14.w,
             width: type == 'image' ? 10.w : 14.w,
@@ -700,12 +746,16 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
 
   IconData _evidenceTypeIcon(String type) {
     switch (type.toLowerCase()) {
-      case 'video': return Icons.videocam_outlined;
-      case 'audio': return Icons.mic_outlined;
+      case 'video':
+        return Icons.videocam_outlined;
+      case 'audio':
+        return Icons.mic_outlined;
       case 'doc':
       case 'document':
-      case 'pdf': return Icons.description_outlined;
-      default: return Icons.image_outlined;
+      case 'pdf':
+        return Icons.description_outlined;
+      default:
+        return Icons.image_outlined;
     }
   }
 

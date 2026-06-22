@@ -42,14 +42,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
-    LocalNotificationService.instance.showTestNotification();
-    
+    // LocalNotificationService.instance.showTestNotification();
+
     // Check if force update is required before routing forward
-    final isForceUpdateRequired = await ForceUpdateRepository.checkForceUpdate();
-    if (isForceUpdateRequired) {
-      // Stay on the splash screen so the ForceUpdateWidget displays the popup here
-      return;
-    }
+    // final isForceUpdateRequired =
+    //     await ForceUpdateRepository.checkForceUpdate();
+    // if (isForceUpdateRequired) {
+    //   // Stay on the splash screen so the ForceUpdateWidget displays the popup here
+    //   return;
+    // }
 
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;

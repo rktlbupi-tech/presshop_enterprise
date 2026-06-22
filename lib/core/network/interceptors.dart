@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/firebase_logger.dart';
 
 class AuthInterceptor extends Interceptor {
   final SharedPreferences prefs;
@@ -34,8 +35,11 @@ class AuthInterceptor extends Interceptor {
 class AppLogInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.extra['__startMs'] = DateTime.now().millisecondsSinceEpoch;
+    FirebaseLogger.logMessage(
+      'API_REQ: ${options.method} ${_short(options.uri)}',
+    );
     if (kDebugMode) {
-      options.extra['__startMs'] = DateTime.now().millisecondsSinceEpoch;
       debugPrint('→  ${options.method.padRight(4)} ${_short(options.uri)}');
       final body = _formatBody(options.data);
       if (body != null) debugPrint('   body: $body');
@@ -45,10 +49,14 @@ class AppLogInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
+    final o = response.requestOptions;
+    FirebaseLogger.logMessage(
+      'API_RESP: ${response.statusCode} ${o.method} ${_short(o.uri)}${_elapsed(o)}',
+    );
     if (kDebugMode) {
-      final o = response.requestOptions;
       debugPrint(
-          '←  ${response.statusCode}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}');
+        '←  ${response.statusCode}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}',
+      );
       final body = _formatBody(response.data);
       if (body != null) debugPrint('   resp: $body');
     }
@@ -57,13 +65,22 @@ class AppLogInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    final o = err.requestOptions;
+    final status = err.response?.statusCode ?? '---';
+    final shortUri = _short(o.uri);
+    final elapsed = _elapsed(o);
+
+    FirebaseLogger.logMessage(
+      'API_ERR: $status ${o.method} $shortUri$elapsed | error: ${err.message}',
+    );
+
     if (kDebugMode) {
-      final o = err.requestOptions;
-      debugPrint(
-          '✖  ${err.response?.statusCode ?? '---'}  ${o.method.padRight(4)} ${_short(o.uri)}${_elapsed(o)}');
+      debugPrint('✖  $status  ${o.method.padRight(4)} $shortUri$elapsed');
       if (err.message != null) debugPrint('   error: ${err.message}');
       final data = err.response?.data;
-      if (data != null) debugPrint('   resp:  ${_truncate(data.toString(), 500)}');
+      if (data != null) {
+        debugPrint('   resp:  ${_truncate(data.toString(), 500)}');
+      }
     }
     handler.next(err);
   }

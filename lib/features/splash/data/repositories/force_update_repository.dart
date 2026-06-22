@@ -12,8 +12,6 @@ class ForceUpdateRepository {
   static bool? _isForceUpdateRequired;
   static Future<bool>? _inProgressCheck;
 
-  /// Check if a force update is required.
-  /// Uses memory caching for the decision, version info, and shares concurrent check Futures to prevent duplicate calls.
   static Future<bool> checkForceUpdate({bool forceRefresh = false}) async {
     if (!forceRefresh && _isForceUpdateRequired != null) {
       debugPrint(
@@ -71,11 +69,11 @@ class ForceUpdateRepository {
       bool backendForceFlag = false;
 
       if (Platform.isAndroid) {
-        latestBackendVersion = data["live_Version"]?.toString();
-        backendForceFlag = data["aOSshouldForceUpdate"] == true;
+        latestBackendVersion = data["live_Version_enterprise"]?.toString();
+        backendForceFlag = data["aOSshouldForceUpdate_enterprise"] == true;
       } else if (Platform.isIOS) {
-        latestBackendVersion = data["live_Version"]?.toString();
-        backendForceFlag = data["iOSshouldForceUpdate"] == true;
+        latestBackendVersion = data["live_Version_enterprise"]?.toString();
+        backendForceFlag = data["iOSshouldForceUpdate_enterprise"] == true;
       }
 
       debugPrint(
