@@ -44,7 +44,7 @@ class ForceUpdateRepository {
       return _isForceUpdateRequired ?? false;
     }
     _lastCheckTime = now;
-    // dsfsd
+    // dsfsdsd
     try {
       final apiClient = getIt<ApiClient>();
       final response = await apiClient.get(endpoint);
