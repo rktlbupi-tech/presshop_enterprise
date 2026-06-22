@@ -3,11 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
-import 'package:presshop_enterprise/features/notifications/data/services/local_notification_service.dart';
+
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_icons.dart';
-import 'package:presshop_enterprise/features/splash/data/repositories/force_update_repository.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

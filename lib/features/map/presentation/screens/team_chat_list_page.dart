@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/config/di/injection.dart';
 import 'package:presshop_enterprise/core/network/api_client.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:presshop_enterprise/features/team_chat/presentation/screens/team_chat_message_page.dart';
 
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
-import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/loading_widget.dart';
 
 // Real conversations endpoint chat modes (mirrors the legacy app).
 const String _kTeamChatModes =
@@ -129,9 +130,7 @@ class TeamChatData {
     final items = rawItems is List
         ? rawItems
               .whereType<Map>()
-              .map(
-                (x) => TeamChatItem.fromJson(Map<String, dynamic>.from(x)),
-              )
+              .map((x) => TeamChatItem.fromJson(Map<String, dynamic>.from(x)))
               .toList()
         : <TeamChatItem>[];
     return TeamChatData(
@@ -246,8 +245,7 @@ class PresshopColors {
   static const Color presshop_grey_dark = Colors.grey;
 }
 
-Widget showAnimatedLoader(Size size) =>
-    LoadingWidget(size: size.width * 0.25);
+Widget showAnimatedLoader(Size size) => LoadingWidget(size: size.width * 0.25);
 
 // Mock userRoleProvider since Riverpod is removed
 enum UserRole { employee, enterprise }
@@ -504,15 +502,13 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
               vertical: 0,
             ),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TeamChatMessagePage(
-                    conversationId: taskId,
-                    title: title,
-                    image: avatarUrl,
-                  ),
-                ),
+              context.push(
+                AppRoutes.teamChatMessage,
+                extra: {
+                  'conversationId': taskId,
+                  'title': title,
+                  'image': avatarUrl,
+                },
               ).then((_) {
                 _controller.fetchConversations(refresh: true);
               });
@@ -635,15 +631,13 @@ class _TeamChatListPageState extends State<TeamChatListPage> {
               vertical: 0,
             ),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TeamChatMessagePage(
-                    conversationId: item.conversation.id,
-                    title: item.display.title,
-                    image: item.display.avatarImage,
-                  ),
-                ),
+              context.push(
+                AppRoutes.teamChatMessage,
+                extra: {
+                  'conversationId': item.conversation.id,
+                  'title': item.display.title,
+                  'image': item.display.avatarImage,
+                },
               ).then((_) {
                 _controller.fetchConversations(refresh: true);
               });

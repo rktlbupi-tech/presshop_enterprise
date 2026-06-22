@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/employee_app_bar.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/employee_app_bar.dart';
+import '../../../../common/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 import '../../data/models/enterprise_feed_model.dart';
-import 'evidence_details_screen.dart';
 
 class EvidenceScreen extends StatefulWidget {
   final bool hideLeading;
@@ -521,12 +522,9 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                               itemBuilder: (context, index) {
                                 return InkWell(
                                   onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => EvidenceDetailsScreen(
-                                          item: _feedList[index],
-                                        ),
-                                      ),
+                                    context.push(
+                                      AppRoutes.evidenceDetails,
+                                      extra: _feedList[index],
                                     );
                                   },
                                   child: _feedCard(_feedList[index]),
@@ -763,9 +761,6 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
   }
 }
 
-/// Returns true only when [content]'s previewUrl points to a real, decodable
-/// image. Audio / video / document evidence (e.g. `.m4a`, `.mp4`, `.pdf`) must
-/// never be fed into `Image.network` — doing so throws "Invalid image data".
 bool _isDisplayableImage(EnterpriseFeedContent? content) {
   if (content == null) return false;
   final url = content.previewUrl.toLowerCase();
@@ -780,8 +775,6 @@ bool _isDisplayableImage(EnterpriseFeedContent? content) {
     return false;
   }
 
-  // Guard against a mislabeled type by also rejecting known non-image
-  // extensions (handles URLs with or without query strings).
   const nonImageExtensions = [
     '.m4a',
     '.mp3',
@@ -804,7 +797,6 @@ bool _isDisplayableImage(EnterpriseFeedContent? content) {
   return true;
 }
 
-/// Icon used for non-image evidence placeholders.
 IconData _evidenceTypeIcon(String type) {
   switch (type.toLowerCase()) {
     case 'video':

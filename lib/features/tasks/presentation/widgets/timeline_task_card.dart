@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import '../../data/models/employee_task_model.dart';
-import '../screens/task_details_screen.dart';
 
 class TimelineTaskCard extends StatelessWidget {
   final ScheduleTask task;
@@ -34,14 +35,7 @@ class TimelineTaskCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskDetailsScreen(
-              taskId: task.id,
-            ),
-          ),
-        );
+        context.push('/task-details/${task.id}');
       },
       child: Container(
         width: double.infinity,

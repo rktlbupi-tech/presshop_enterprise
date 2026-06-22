@@ -1,10 +1,11 @@
+// ignore_for_file: unused_field
+
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/network/api_client.dart';
-
 
 class WebViewForFormScreen extends StatefulWidget {
   final String? formId;
@@ -185,21 +186,21 @@ class _WebViewForFormScreenState extends State<WebViewForFormScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                  )
-                : WebViewWidget(controller: _webViewController!),
+                  ),
+                ),
+              )
+            : WebViewWidget(controller: _webViewController!),
       ),
     );
   }

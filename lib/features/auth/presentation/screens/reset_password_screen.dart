@@ -4,7 +4,7 @@ import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;

@@ -3,9 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
-import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../../common/widgets/employee_app_bar.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
-import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {

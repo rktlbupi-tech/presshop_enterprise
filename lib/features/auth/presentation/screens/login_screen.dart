@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:presshop_enterprise/features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -12,8 +11,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import '../widgets/auth_text_field.dart';
-import 'forgot_password_screen.dart';
+import '../../../../common/widgets/common_input_field.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -38,7 +36,6 @@ class _LoginViewState extends State<_LoginView> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -50,10 +47,7 @@ class _LoginViewState extends State<_LoginView> {
   void _submit(BuildContext context) {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-        LoginSubmitted(
-          _emailController.text.trim(),
-          _passwordController.text,
-        ),
+        LoginSubmitted(_emailController.text.trim(), _passwordController.text),
       );
     }
   }
@@ -105,7 +99,7 @@ class _LoginViewState extends State<_LoginView> {
                     ),
                   ),
                   SizedBox(height: 36.h),
-                  AuthTextField(
+                  CommonInputField(
                     controller: _emailController,
                     label: AppStrings.email,
                     showLabel: false,
@@ -114,48 +108,33 @@ class _LoginViewState extends State<_LoginView> {
                     keyboardType: TextInputType.emailAddress,
                     prefixIcon: Icons.email_outlined,
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty) {
                         return AppStrings.fieldRequired;
+                      }
                       return null;
                     },
                   ),
                   SizedBox(height: 18.h),
-                  AuthTextField(
+                  CommonInputField(
                     controller: _passwordController,
                     label: AppStrings.password,
                     showLabel: false,
                     filled: false,
                     hint: AppStrings.passwordHint,
-                    obscureText: _obscurePassword,
+                    isPassword: true,
                     prefixIcon: Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: AppColors.textSecondary,
-                        size: 20.sp,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty) {
                         return AppStrings.fieldRequired;
+                      }
                       if (v.length < 8) return AppStrings.passwordTooShort;
                       return null;
                     },
                   ),
-                  SizedBox(height: 8.h),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordScreen(),
-                        ),
-                      ),
+                      onPressed: () => context.push(AppRoutes.forgotPassword),
                       child: Text(
                         AppStrings.forgotPassword,
                         style: AppTextStyles.labelMedium.copyWith(
@@ -204,31 +183,6 @@ class _LoginViewState extends State<_LoginView> {
                     },
                   ),
                   SizedBox(height: 22.h),
-                  // Commented out: employees only log in and cannot sign up.
-                  /*
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          AppStrings.dontHaveAccount,
-                          style: AppTextStyles.bodySmall,
-                        ),
-                        GestureDetector(
-                          onTap: () => context.push(AppRoutes.signup),
-                          child: Text(
-                            AppStrings.signUpHere,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  */
-                  SizedBox(height: 32.h),
                 ],
               ),
             ),

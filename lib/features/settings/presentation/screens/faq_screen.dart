@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/loading_widget.dart';
 import '../../data/datasources/settings_remote_datasource.dart';
 
 // ── Models ────────────────────────────────────────────────────────
@@ -64,7 +64,8 @@ class FAQScreenState extends State<FAQScreen> {
   List<FAQPriceTipsData> searchResult = [];
   List<CategoryDataModel> categoryList = [];
 
-  final SettingsRemoteDatasource _datasource = getIt<SettingsRemoteDatasource>();
+  final SettingsRemoteDatasource _datasource =
+      getIt<SettingsRemoteDatasource>();
 
   @override
   void initState() {
@@ -94,16 +95,22 @@ class FAQScreenState extends State<FAQScreen> {
       final dataList = await _datasource.fetchCategories(typeStr);
 
       if (dataList.isNotEmpty) {
-        categoryList = dataList.map((e) => CategoryDataModel.fromJson(e)).toList();
+        categoryList = dataList
+            .map((e) => CategoryDataModel.fromJson(e))
+            .toList();
         String categoryName = "";
         if (categoryList.isNotEmpty) {
           if (widget.benefits.isEmpty) {
             categoryName = categoryList.first.name;
-            int idx = categoryList.indexWhere((element) => element.name == categoryName);
+            int idx = categoryList.indexWhere(
+              (element) => element.name == categoryName,
+            );
             if (idx >= 0) categoryList[idx].selected = true;
           } else {
             categoryName = categoryList.last.name;
-            int idx = categoryList.lastIndexWhere((element) => element.name.contains(categoryName));
+            int idx = categoryList.lastIndexWhere(
+              (element) => element.name.contains(categoryName),
+            );
             if (idx >= 0) categoryList[idx].selected = true;
           }
         }
@@ -124,9 +131,11 @@ class FAQScreenState extends State<FAQScreen> {
             if (categoryList.length > 5) categoryList[5].selected = true;
             await callFAQAPI("PRO benefits");
           } else {
-            await callFAQAPI(widget.index == 1 && categoryList.length > 1
-                ? "Emergency"
-                : categoryList.first.name);
+            await callFAQAPI(
+              widget.index == 1 && categoryList.length > 1
+                  ? "Emergency"
+                  : categoryList.first.name,
+            );
           }
         }
       }
@@ -141,9 +150,13 @@ class FAQScreenState extends State<FAQScreen> {
       final list = await _datasource.fetchFaqs(widget.type, category, _offset);
       if (list.isNotEmpty) {
         if (_offset == 0) {
-          questionAnswerList = list.map((e) => FAQPriceTipsData.fromJson(e)).toList();
+          questionAnswerList = list
+              .map((e) => FAQPriceTipsData.fromJson(e))
+              .toList();
         } else {
-          questionAnswerList.addAll(list.map((e) => FAQPriceTipsData.fromJson(e)).toList());
+          questionAnswerList.addAll(
+            list.map((e) => FAQPriceTipsData.fromJson(e)).toList(),
+          );
         }
         isApiSuccess = true;
       } else if (_offset == 0) {
@@ -177,152 +190,212 @@ class FAQScreenState extends State<FAQScreen> {
                     children: [
                       Padding(
                         padding: EdgeInsets.symmetric(
-                            horizontal: size.width * 0.04, vertical: size.width * 0.03),
+                          horizontal: size.width * 0.04,
+                          vertical: size.width * 0.03,
+                        ),
                         child: TextFormField(
-                            decoration: InputDecoration(
-                              hintText: "Search here...",
-                              filled: true,
-                              fillColor: const Color(0xFFF1F1F1),
-                              hintStyle: TextStyle(
-                                  color: Colors.black, fontSize: size.width * 0.035),
-                              disabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(size.width * 0.03),
-                                  borderSide: BorderSide.none),
-                              focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(size.width * 0.03),
-                                  borderSide: BorderSide.none),
-                              enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(size.width * 0.03),
-                                  borderSide: BorderSide.none),
-                              errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(size.width * 0.03),
-                                  borderSide: BorderSide.none),
-                              focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(size.width * 0.03),
-                                  borderSide: BorderSide.none),
-                              suffixIcon: Padding(
-                                padding: EdgeInsets.only(right: size.width * 0.04),
-                                child: const Icon(Icons.search, color: Colors.black),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: size.width * 0.04,
-                                  vertical: size.width * 0.015),
+                          decoration: InputDecoration(
+                            hintText: "Search here...",
+                            filled: true,
+                            fillColor: const Color(0xFFF1F1F1),
+                            hintStyle: TextStyle(
+                              color: Colors.black,
+                              fontSize: size.width * 0.035,
                             ),
-                            onChanged: (value) {
-                              if (value.isNotEmpty) {
-                                searchResult = questionAnswerList
-                                    .where((element) => element.question
+                            disabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            suffixIcon: Padding(
+                              padding: EdgeInsets.only(
+                                right: size.width * 0.04,
+                              ),
+                              child: const Icon(
+                                Icons.search,
+                                color: Colors.black,
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: size.width * 0.04,
+                              vertical: size.width * 0.015,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            if (value.isNotEmpty) {
+                              searchResult = questionAnswerList
+                                  .where(
+                                    (element) => element.question
                                         .toLowerCase()
-                                        .contains(value.toLowerCase()))
-                                    .toList();
-                                isSearch = true;
-                              } else {
-                                isSearch = false;
-                              }
-                              setState(() {});
-                            }),
+                                        .contains(value.toLowerCase()),
+                                  )
+                                  .toList();
+                              isSearch = true;
+                            } else {
+                              isSearch = false;
+                            }
+                            setState(() {});
+                          },
+                        ),
                       ),
                       categoryList.isEmpty
-                          ? const Center(child: Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: Text("No Category found"),
-                          ))
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: Text("No Category found"),
+                              ),
+                            )
                           : Container(
                               height: size.width * 0.15,
                               margin: EdgeInsets.only(left: size.width * 0.035),
                               child: ListView.separated(
-                                  controller: listController,
-                                  scrollDirection: Axis.horizontal,
-                                  itemBuilder: (context, index) {
-                                    return InkWell(
-                                      onTap: () {
-                                        int pos = categoryList.indexWhere(
-                                            (element) => element.selected);
-                                        if (pos >= 0) {
-                                          categoryList[pos].selected = false;
-                                        }
-                                        categoryList[index].selected =
-                                            !categoryList[index].selected;
-                                        if (categoryList[index].selected) {
-                                          selectedCategoryIndex = index;
-                                          _offset = 0;
-                                          callFAQAPI(categoryList[selectedCategoryIndex].name);
-                                        }
+                                controller: listController,
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder: (context, index) {
+                                  return InkWell(
+                                    onTap: () {
+                                      int pos = categoryList.indexWhere(
+                                        (element) => element.selected,
+                                      );
+                                      if (pos >= 0) {
+                                        categoryList[pos].selected = false;
+                                      }
+                                      categoryList[index].selected =
+                                          !categoryList[index].selected;
+                                      if (categoryList[index].selected) {
+                                        selectedCategoryIndex = index;
+                                        _offset = 0;
+                                        callFAQAPI(
+                                          categoryList[selectedCategoryIndex]
+                                              .name,
+                                        );
+                                      }
 
-                                        listController.animateTo(index * 100.0,
-                                            duration: const Duration(milliseconds: 200),
-                                            curve: Curves.ease);
+                                      listController.animateTo(
+                                        index * 100.0,
+                                        duration: const Duration(
+                                          milliseconds: 200,
+                                        ),
+                                        curve: Curves.ease,
+                                      );
 
-                                        setState(() {});
-                                      },
-                                      child: Chip(
-                                        backgroundColor: categoryList[index].selected
-                                            ? Colors.black
-                                            : const Color(0xFFF1F1F1),
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: size.width * 0.025,
-                                            vertical: size.width * 0.02),
-                                        label: Text(
-                                          categoryList[index].name,
-                                          style: TextStyle(
-                                              color: categoryList[index].selected
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                              fontSize: size.width * 0.036,
-                                              fontWeight: FontWeight.w600),
+                                      setState(() {});
+                                    },
+                                    child: Chip(
+                                      backgroundColor:
+                                          categoryList[index].selected
+                                          ? Colors.black
+                                          : const Color(0xFFF1F1F1),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: size.width * 0.025,
+                                        vertical: size.width * 0.02,
+                                      ),
+                                      label: Text(
+                                        categoryList[index].name,
+                                        style: TextStyle(
+                                          color: categoryList[index].selected
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontSize: size.width * 0.036,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    );
-                                  },
-                                  separatorBuilder: (context, index) {
-                                    return SizedBox(width: size.width * 0.04);
-                                  },
-                                  itemCount: categoryList.length),
+                                    ),
+                                  );
+                                },
+                                separatorBuilder: (context, index) {
+                                  return SizedBox(width: size.width * 0.04);
+                                },
+                                itemCount: categoryList.length,
+                              ),
                             ),
                       questionAnswerList.isNotEmpty
                           ? ListView.separated(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              padding: EdgeInsets.symmetric(horizontal: size.width * 0.035, vertical: 10),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: size.width * 0.035,
+                                vertical: 10,
+                              ),
                               itemBuilder: (context, index) {
                                 var item = isSearch
                                     ? searchResult[index]
                                     : questionAnswerList[index];
                                 return Container(
                                   decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(size.width * 0.02),
-                                      border: Border.all(color: Colors.grey.shade300)),
+                                    borderRadius: BorderRadius.circular(
+                                      size.width * 0.02,
+                                    ),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
                                   child: ExpansionTile(
                                     title: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
                                       children: [
                                         Container(
-                                          margin: EdgeInsets.only(top: size.width * 0.01),
+                                          margin: EdgeInsets.only(
+                                            top: size.width * 0.01,
+                                          ),
                                           padding: EdgeInsets.symmetric(
-                                              horizontal: size.width * 0.02,
-                                              vertical: size.width * 0.01),
+                                            horizontal: size.width * 0.02,
+                                            vertical: size.width * 0.01,
+                                          ),
                                           decoration: BoxDecoration(
-                                              color: themeColor,
-                                              borderRadius: BorderRadius.circular(
-                                                  size.width * 0.01)),
+                                            color: themeColor,
+                                            borderRadius: BorderRadius.circular(
+                                              size.width * 0.01,
+                                            ),
+                                          ),
                                           child: Text(
                                             "Q",
                                             style: TextStyle(
-                                                fontSize: size.width * 0.036,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold),
+                                              fontSize: size.width * 0.036,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                         SizedBox(width: size.width * 0.02),
                                         Expanded(
-                                            child: Text(
-                                          item.question,
-                                          style: TextStyle(
+                                          child: Text(
+                                            item.question,
+                                            style: TextStyle(
                                               fontSize: size.width * 0.035,
                                               color: Colors.black,
-                                              fontWeight: FontWeight.bold),
-                                        ))
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     iconColor: Colors.black,
@@ -334,34 +407,43 @@ class FAQScreenState extends State<FAQScreen> {
                                       Container(
                                         height: 1,
                                         margin: EdgeInsets.only(
-                                            bottom: size.width * 0.04,
-                                            left: size.width * 0.04,
-                                            right: size.width * 0.04),
+                                          bottom: size.width * 0.04,
+                                          left: size.width * 0.04,
+                                          right: size.width * 0.04,
+                                        ),
                                         width: size.width,
                                         color: Colors.grey.shade300,
                                       ),
                                       Padding(
                                         padding: EdgeInsets.symmetric(
-                                            horizontal: size.width * 0.04),
+                                          horizontal: size.width * 0.04,
+                                        ),
                                         child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Container(
                                               margin: EdgeInsets.only(
-                                                  top: size.width * 0.01),
+                                                top: size.width * 0.01,
+                                              ),
                                               padding: EdgeInsets.symmetric(
-                                                  horizontal: size.width * 0.02,
-                                                  vertical: size.width * 0.01),
+                                                horizontal: size.width * 0.02,
+                                                vertical: size.width * 0.01,
+                                              ),
                                               decoration: BoxDecoration(
-                                                  color: themeColor,
-                                                  borderRadius: BorderRadius.circular(
-                                                      size.width * 0.01)),
+                                                color: themeColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      size.width * 0.01,
+                                                    ),
+                                              ),
                                               child: Text(
                                                 "A",
                                                 style: TextStyle(
-                                                    fontSize: size.width * 0.035,
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold),
+                                                  fontSize: size.width * 0.035,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                             SizedBox(width: size.width * 0.02),
@@ -369,14 +451,15 @@ class FAQScreenState extends State<FAQScreen> {
                                               child: Text(
                                                 item.answer,
                                                 style: TextStyle(
-                                                    color: Colors.black,
-                                                    fontSize: size.width * 0.035),
+                                                  color: Colors.black,
+                                                  fontSize: size.width * 0.035,
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      SizedBox(height: size.width * 0.04)
+                                      SizedBox(height: size.width * 0.04),
                                     ],
                                   ),
                                 );
@@ -384,7 +467,10 @@ class FAQScreenState extends State<FAQScreen> {
                               separatorBuilder: (context, index) {
                                 return SizedBox(height: size.width * 0.04);
                               },
-                              itemCount: isSearch ? searchResult.length : questionAnswerList.length)
+                              itemCount: isSearch
+                                  ? searchResult.length
+                                  : questionAnswerList.length,
+                            )
                           : const Padding(
                               padding: EdgeInsets.all(20.0),
                               child: Text("No FAQ found"),

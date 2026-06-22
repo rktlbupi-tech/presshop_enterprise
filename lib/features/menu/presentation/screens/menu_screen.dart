@@ -1,35 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:presshop_enterprise/features/attendance/presentation/screens/uniform_verification_screen.dart';
+
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:presshop_enterprise/features/mileage/presentation/screens/track_mileage_screen.dart';
-import 'package:presshop_enterprise/features/mileage/presentation/screens/claim_expenses_screen.dart';
-import 'package:presshop_enterprise/features/profile/presentation/screens/digital_id_screen.dart'
-    show DigitalIdScreen;
-import 'package:presshop_enterprise/features/submit_forms/presentation/screens/submit_forms_screen.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/employee_app_bar.dart';
-import '../../../attendance/presentation/screens/attendance_screen.dart';
-import '../../../documents/presentation/screens/documents_screen.dart';
-import '../../../earnings/presentation/screens/earnings_screen.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
-import '../../../profile/presentation/screens/profile_screen.dart'
-    show ProfileScreen;
+import '../../../../common/widgets/employee_app_bar.dart';
+
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
-import '../../../map/presentation/screens/team_chat_list_page.dart';
-import '../../../content/presentation/screens/evidence_screen.dart';
-import '../../../tasks/presentation/screens/task_schedule_screen.dart';
-import '../../../../features/settings/presentation/screens/faq_screen.dart';
-import '../../../../features/settings/presentation/screens/term_check_screen.dart';
-import '../../../duties/presentation/screens/duties_screen.dart';
-import '../../../payslip/presentation/screens/payslip_screen.dart';
-import '../../../camera/presentation/screens/employee_camera_screen.dart';
 
 const _iconsPath = 'assets/icons/';
 const Color colorLightGrey = Color(0xFFF3F5F4);
@@ -41,13 +24,14 @@ class MenuScreen extends StatefulWidget {
   State<MenuScreen> createState() => _MenuScreenState();
 }
 
+// 9792728283
 class _MenuScreenState extends State<MenuScreen> {
   bool _onDuty = false;
   // ignore: prefer_final_fields
   int _notificationCount = 0;
 
-  void _open(Widget screen) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  void _open(String path, {Object? extra}) {
+    context.push(path, extra: extra);
   }
 
   Future<void> _logout() async {
@@ -229,7 +213,7 @@ class _MenuScreenState extends State<MenuScreen> {
       backgroundColor: Colors.white,
       appBar: EmployeeAppBar(
         isOnline: _onDuty,
-        onProfileTap: () => _open(const ProfileScreen()),
+        onProfileTap: () => _open(AppRoutes.profile),
       ),
       body: ListView(
         padding: EdgeInsets.symmetric(
@@ -298,13 +282,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             onToggle: (v) {
                               setState(() => _onDuty = v);
                               if (v) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const UniformVerificationScreen(),
-                                  ),
-                                );
+                                context.push(AppRoutes.uniformVerification);
                               }
                             },
                           ),
@@ -329,7 +307,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_my_profile.svg',
                 iconColor: const Color(0xFF4A80F0),
                 iconBgColor: const Color(0xFFEEF2FF),
-                onTap: () => _open(const ProfileScreen()),
+                onTap: () => _open(AppRoutes.profile),
               ),
               _MenuGroupItem(
                 name: 'Digital ID',
@@ -337,7 +315,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF2DC78A),
                 iconBgColor: const Color(0xFFE6F9F2),
                 iconSize: size.width * 0.069,
-                onTap: () => _open(DigitalIdScreen()),
+                onTap: () => _open(AppRoutes.digitalId),
               ),
               _MenuGroupItem(
                 name: 'Notifications',
@@ -346,7 +324,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconBgColor: const Color(0xFFFFF8EC),
                 badgeCount: _notificationCount,
                 alwaysShowBadge: true,
-                onTap: () => _open(const NotificationsScreen()),
+                onTap: () => _open(AppRoutes.notifications),
               ),
             ],
           ),
@@ -363,14 +341,14 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_task1.png',
                 iconColor: const Color(0xFF4A80F0),
                 iconBgColor: const Color(0xFFEEF2FF),
-                onTap: () => _open(const TaskScheduleScreen()),
+                onTap: () => _open(AppRoutes.tasks),
               ),
               _MenuGroupItem(
                 name: 'Evidence',
                 iconPath: '${_iconsPath}ic_content1.png',
                 iconColor: const Color(0xFF2DC78A),
                 iconBgColor: const Color(0xFFE6F9F2),
-                onTap: () => _open(const EvidenceScreen(hideLeading: false)),
+                onTap: () => _open('${AppRoutes.evidence}?hideLeading=false'),
               ),
               _MenuGroupItem(
                 name: 'Submit forms',
@@ -378,7 +356,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 iconSize: size.width * 0.078,
-                onTap: () => _open(const SubmitFormsScreen()),
+                onTap: () => _open(AppRoutes.submitForms),
               ),
               _MenuGroupItem(
                 name: 'Track mileage',
@@ -386,7 +364,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFFF59E0B),
                 iconBgColor: const Color(0xFFFFF8EC),
                 iconSize: size.width * 0.068,
-                onTap: () => _open(TrackMileageScreen()),
+                onTap: () => _open(AppRoutes.trackMileage),
               ),
               _MenuGroupItem(
                 name: 'Claim expenses',
@@ -394,7 +372,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF10B981),
                 iconBgColor: const Color(0xFFD1FAE5),
                 iconSize: size.width * 0.070,
-                onTap: () => _open(const ClaimExpensesScreen()),
+                onTap: () => _open(AppRoutes.claimExpenses),
               ),
             ],
           ),
@@ -412,14 +390,14 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF3B82F6),
                 iconBgColor: const Color(0xFFEFF6FF),
                 iconSize: size.width * 0.058,
-                onTap: () => _open(const DutiesScreen()),
+                onTap: () => _open(AppRoutes.duties),
               ),
               _MenuGroupItem(
                 name: 'Attendance log',
                 iconPath: '${_iconsPath}ic_attendance_log.svg',
                 iconColor: const Color(0xFFE11D48),
                 iconBgColor: const Color(0xFFFFE4E6),
-                onTap: () => _open(const AttendanceScreen()),
+                onTap: () => _open(AppRoutes.attendance),
               ),
               _MenuGroupItem(
                 name: 'Payslip',
@@ -427,14 +405,14 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF10B981),
                 iconBgColor: const Color(0xFFD1FAE5),
                 iconSize: size.width * 0.076,
-                onTap: () => _open(const PayslipScreen()),
+                onTap: () => _open(AppRoutes.payslip),
               ),
               _MenuGroupItem(
                 name: 'View earnings',
                 iconPath: '${_iconsPath}ic_view_earnings.svg',
                 iconColor: const Color(0xFFF59E0B),
                 iconBgColor: const Color(0xFFFEF3C7),
-                onTap: () => _open(const EarningsScreen()),
+                onTap: () => _open(AppRoutes.earnings),
               ),
               _MenuGroupItem(
                 name: 'My documents',
@@ -442,7 +420,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF6366F1),
                 iconBgColor: const Color(0xFFE0E7FF),
                 iconSize: size.width * 0.064,
-                onTap: () => _open(const DocumentsScreen()),
+                onTap: () => _open(AppRoutes.documents),
               ),
             ],
           ),
@@ -478,7 +456,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconPath: '${_iconsPath}ic_chat.png',
                 iconColor: const Color(0xFF4A80F0),
                 iconBgColor: const Color(0xFFEEF2FF),
-                onTap: () => _open(const TeamChatListPage()),
+                onTap: () => _open(AppRoutes.teamChatList),
               ),
             ],
           ),
@@ -496,11 +474,12 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 onTap: () => _open(
-                  const FAQScreen(
-                    priceTipsSelected: false,
-                    type: 'faq',
-                    index: 0,
-                  ),
+                  AppRoutes.faq,
+                  extra: {
+                    'priceTipsSelected': false,
+                    'type': 'faq',
+                    'index': 0,
+                  },
                 ),
               ),
               _MenuGroupItem(
@@ -509,7 +488,8 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF3B82F6),
                 iconBgColor: const Color(0xFFEFF6FF),
                 iconSize: size.width * 0.062,
-                onTap: () => _open(const TermCheckScreen(type: 'legal')),
+                onTap: () =>
+                    _open(AppRoutes.termCheck, extra: {'type': 'legal'}),
               ),
               _MenuGroupItem(
                 name: 'Privacy policy',
@@ -517,8 +497,10 @@ class _MenuScreenState extends State<MenuScreen> {
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),
                 iconSize: size.width * 0.068,
-                onTap: () =>
-                    _open(const TermCheckScreen(type: 'privacy_policy')),
+                onTap: () => _open(
+                  AppRoutes.termCheck,
+                  extra: {'type': 'privacy_policy'},
+                ),
               ),
               // _MenuGroupItem(
               //   name: 'Contact Us',

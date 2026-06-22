@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 
 import '../../../../core/constants/app_colors.dart';
-
 
 class TrackMileageScreen extends StatefulWidget {
   const TrackMileageScreen({super.key});
@@ -103,9 +102,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
               onSurface: Colors.black,
             ),
             textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ),
           child: child!,
@@ -130,9 +127,7 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
         titleSpacing: 0,
         showBack: true,
       ),
-      body: SafeArea(
-        child: _buildMileageContent(size),
-      ),
+      body: SafeArea(child: _buildMileageContent(size)),
     );
   }
 
@@ -147,8 +142,9 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom']
-                .map((filter) {
+            children: ['Daily', 'Weekly', 'Monthly', 'Yearly', 'Custom'].map((
+              filter,
+            ) {
               final isSelected = _timeRangeFilter == filter;
               return Padding(
                 padding: const EdgeInsets.only(right: 8, bottom: 4),
@@ -161,8 +157,9 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                       color: isSelected
                           ? AppColors.primary
                           : const Color(0xFF6B7280),
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                   selected: isSelected,
@@ -172,9 +169,10 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                     side: BorderSide(
-                        color: isSelected
-                            ? const Color(0xFFDBEAFE)
-                            : Colors.grey.shade200),
+                      color: isSelected
+                          ? const Color(0xFFDBEAFE)
+                          : Colors.grey.shade200,
+                    ),
                   ),
                   onSelected: (val) {
                     setState(() => _timeRangeFilter = filter);
@@ -200,8 +198,11 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                 onTap: _pickDate,
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.calendar,
-                        size: 16, color: Colors.grey),
+                    const Icon(
+                      LucideIcons.calendar,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       DateFormat('dd MMM yyyy, EEEE').format(_currentDate),
@@ -213,8 +214,11 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down,
-                        size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                   ],
                 ),
               ),
@@ -232,11 +236,21 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildStatItem("Total Distance", "85.6 miles",
-                  "▲ 12.4 miles vs yesterday", LucideIcons.milestone, Colors.blue),
+              _buildStatItem(
+                "Total Distance",
+                "85.6 miles",
+                "▲ 12.4 miles vs yesterday",
+                LucideIcons.milestone,
+                Colors.blue,
+              ),
               const SizedBox(width: 16),
-              _buildStatItem("Total Trips", "4", "▲ 1 vs yesterday",
-                  LucideIcons.gauge, Colors.green),
+              _buildStatItem(
+                "Total Trips",
+                "4",
+                "▲ 1 vs yesterday",
+                LucideIcons.gauge,
+                Colors.green,
+              ),
             ],
           ),
         ),
@@ -245,11 +259,21 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildStatItem("Total Duration", "02h 48m", "▲ 20m vs yesterday",
-                  LucideIcons.timer, Colors.purple),
+              _buildStatItem(
+                "Total Duration",
+                "02h 48m",
+                "▲ 20m vs yesterday",
+                LucideIcons.timer,
+                Colors.purple,
+              ),
               const SizedBox(width: 16),
-              _buildStatItem("Est. Fuel Cost", "£8.45", "▲ £1.12 vs yesterday",
-                  LucideIcons.fuel, Colors.orange),
+              _buildStatItem(
+                "Est. Fuel Cost",
+                "£8.45",
+                "▲ £1.12 vs yesterday",
+                LucideIcons.fuel,
+                Colors.orange,
+              ),
             ],
           ),
         ),
@@ -267,21 +291,25 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
           child: Stack(
             children: [
               GoogleMap(
-                initialCameraPosition:
-                    CameraPosition(target: coords.first, zoom: 11.5),
+                initialCameraPosition: CameraPosition(
+                  target: coords.first,
+                  zoom: 11.5,
+                ),
                 onMapCreated: (ctrl) => _mapController = ctrl,
                 markers: {
                   Marker(
                     markerId: const MarkerId('start'),
                     position: coords.first,
                     icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueGreen),
+                      BitmapDescriptor.hueGreen,
+                    ),
                   ),
                   Marker(
                     markerId: const MarkerId('end'),
                     position: coords.last,
                     icon: BitmapDescriptor.defaultMarkerWithHue(
-                        BitmapDescriptor.hueRed),
+                      BitmapDescriptor.hueRed,
+                    ),
                   ),
                 },
                 polylines: {
@@ -300,15 +328,20 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8)),
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Row(
                     children: [
                       const CircleAvatar(
-                          radius: 3, backgroundColor: Colors.green),
+                        radius: 3,
+                        backgroundColor: Colors.green,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         "Start: ${trip['startTime']}",
@@ -327,15 +360,20 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8)),
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Row(
                     children: [
                       const CircleAvatar(
-                          radius: 3, backgroundColor: Colors.red),
+                        radius: 3,
+                        backgroundColor: Colors.red,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         "End: ${trip['endTime']}",
@@ -391,16 +429,20 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
               color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: isSelected
-                      ? AppColors.primary.withOpacity(0.3)
-                      : Colors.grey.shade100),
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.3)
+                    : Colors.grey.shade100,
+              ),
             ),
             child: InkWell(
               onTap: () {
                 setState(() => _selectedTripIndex = index);
                 if (_mapController != null) {
-                  _mapController!.animateCamera(CameraUpdate.newLatLng(
-                      List<LatLng>.from(item['coords']).first));
+                  _mapController!.animateCamera(
+                    CameraUpdate.newLatLng(
+                      List<LatLng>.from(item['coords']).first,
+                    ),
+                  );
                 }
               },
               borderRadius: BorderRadius.circular(16),
@@ -438,7 +480,9 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                           Row(
                             children: [
                               const CircleAvatar(
-                                  radius: 3, backgroundColor: Colors.green),
+                                radius: 3,
+                                backgroundColor: Colors.green,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 item['startTime'],
@@ -451,7 +495,9 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                               ),
                               const SizedBox(width: 12),
                               const CircleAvatar(
-                                  radius: 3, backgroundColor: Colors.red),
+                                radius: 3,
+                                backgroundColor: Colors.red,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 item['endTime'],
@@ -503,8 +549,11 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                       ],
                     ),
                     const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right,
-                        size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                   ],
                 ),
               ),
@@ -517,13 +566,17 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12)),
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(LucideIcons.shield_check,
-                  size: 16, color: AppColors.primary),
+              Icon(
+                LucideIcons.shield_check,
+                size: 16,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
@@ -545,7 +598,12 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
   }
 
   Widget _buildStatItem(
-      String label, String value, String subText, IconData icon, Color color) {
+    String label,
+    String value,
+    String subText,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -570,7 +628,9 @@ class _TrackMileageScreenState extends State<TrackMileageScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: color.withOpacity(0.1), shape: BoxShape.circle),
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(icon, color: color, size: 18),
                 ),
                 const SizedBox(width: 8),

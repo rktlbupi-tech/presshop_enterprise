@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import 'task_details_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
@@ -78,7 +77,9 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
               padding: EdgeInsets.symmetric(horizontal: 20.w),
               itemCount: _tasks.length,
               itemBuilder: (context, index) {
@@ -121,12 +122,7 @@ class _TimelineTaskCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TaskDetailsScreen(taskId: task.id),
-          ),
-        );
+        context.push('/task-details/${task.id}');
       },
       child: Container(
         width: double.infinity,
@@ -150,7 +146,10 @@ class _TimelineTaskCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 10.h,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -174,7 +173,11 @@ class _TimelineTaskCard extends StatelessWidget {
                       SizedBox(height: 5.h),
                       Row(
                         children: [
-                          Icon(Icons.location_on, size: 12.sp, color: Colors.grey.shade500),
+                          Icon(
+                            Icons.location_on,
+                            size: 12.sp,
+                            color: Colors.grey.shade500,
+                          ),
                           SizedBox(width: 4.w),
                           Expanded(
                             child: Text(
@@ -215,9 +218,17 @@ class _TimelineTaskCard extends StatelessWidget {
                         ? Image.network(
                             task.mediaHouseLogo,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 20, color: Colors.grey),
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.business,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
                           )
-                        : const Icon(Icons.business, size: 20, color: Colors.grey),
+                        : const Icon(
+                            Icons.business,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
                   ),
                 ),
               ),

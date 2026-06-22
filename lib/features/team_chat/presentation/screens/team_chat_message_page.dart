@@ -17,20 +17,11 @@ import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket/socket_events.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 import '../../../../core/network/socket/socket_manager.dart';
 import '../../../camera/data/models/camera_data.dart';
-import '../../../camera/presentation/screens/employee_camera_screen.dart';
 
-/// Dedicated message page for **team-chat** conversations.
-///
-/// Unlike [TaskChatScreen], this screen is keyed entirely off the
-/// `conversationId` (team chats are not tasks). It loads messages, subscribes
-/// to the chat socket, renders incoming text/media messages, and sends text +
-/// media using the same conversation media flow the task chat uses
-/// (`chat-v2/media/prepare` then socket `message.send` with `mediaAssetIds`).
-///
-/// It intentionally omits any task-specific behaviour (no "Manage Task" header,
-/// no task-evidence upload).
 class TeamChatMessagePage extends StatefulWidget {
   final String conversationId;
   final String title;
@@ -80,11 +71,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     _audioRecorder.dispose();
     if (_conversationId != null) {
       final socket = SocketManager.instance.chatSocket;
-      socket.emitWithAck(
-        SocketEvents.conversationUnsubscribe,
-        {'conversationId': _conversationId},
-        ack: (_) {},
-      );
+      socket.emitWithAck(SocketEvents.conversationUnsubscribe, {
+        'conversationId': _conversationId,
+      }, ack: (_) {});
       socket.off(SocketEvents.taskMessageNew);
     }
     _chatScrollController.dispose();
@@ -114,8 +103,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
         final items = (d['data']['items'] as List<dynamic>?) ?? [];
         if (mounted) {
           setState(() {
-            _chatMessages =
-                items.where((m) => m['kind'] != 'task_evidence').toList();
+            _chatMessages = items
+                .where((m) => m['kind'] != 'task_evidence')
+                .toList();
             _sortMessages();
           });
         }
@@ -184,7 +174,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
         final String? optText = m['payload']?['text'] ?? m['text'];
         final String? msgText = message['payload']?['text'] ?? message['text'];
         final String? optSender = m['senderId']?.toString();
-        final String? msgSender = message['senderId']?.toString() ??
+        final String? msgSender =
+            message['senderId']?.toString() ??
             message['senderUserId']?.toString() ??
             message['actingAsId']?.toString();
         if (optText == msgText && optSender == msgSender) return true;
@@ -273,8 +264,10 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Microphone permission',
-          style:
-              TextStyle(fontFamily: 'AirbnbCereal', fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'AirbnbCereal',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: const Text(
           'Microphone access is needed to record voice notes. Please enable it for PressHop in Settings.',
@@ -346,7 +339,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     if (mounted) setState(() => _chatUploading = true);
     try {
       final assetIds = await _prepareAndUploadMedia(
-          conversationId: _conversationId!, files: files);
+        conversationId: _conversationId!,
+        files: files,
+      );
       if (!mounted) return;
       if (assetIds != null && assetIds.isNotEmpty) {
         SocketManager.instance.chatSocket.emitWithAck(
@@ -378,18 +373,20 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
   }) async {
     try {
       final items = files
-          .map((f) => {
-                'fileName': p.basename(f.path),
-                'contentType':
-                    lookupMimeType(f.path) ?? 'application/octet-stream',
-                'size': f.lengthSync(),
-              })
+          .map(
+            (f) => {
+              'fileName': p.basename(f.path),
+              'contentType':
+                  lookupMimeType(f.path) ?? 'application/octet-stream',
+              'size': f.lengthSync(),
+            },
+          )
           .toList();
 
-      final resp = await _apiClient.post('chat-v2/media/prepare', data: {
-        'conversationId': conversationId,
-        'items': items,
-      });
+      final resp = await _apiClient.post(
+        'chat-v2/media/prepare',
+        data: {'conversationId': conversationId, 'items': items},
+      );
       if (resp.statusCode != 200 && resp.statusCode != 201) return null;
 
       final raw = resp.data;
@@ -412,7 +409,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           options: Options(
             headers: {
               'Content-Type': contentType,
-              'Content-Length': fileLength
+              'Content-Length': fileLength,
             },
             followRedirects: false,
             validateStatus: (s) => s != null && s < 400,
@@ -432,10 +429,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
   }
 
   Future<void> _launchCameraScreen() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => const EmployeeCameraScreen(picAgain: true)),
+    final result = await context.push(
+      AppRoutes.employeeCamera,
+      extra: {'picAgain': true},
     );
     if (result == null || result is! List) return;
 
@@ -449,7 +445,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     final previewResult = await Navigator.push<List<CameraData>>(
       context,
       MaterialPageRoute(
-          builder: (_) => _TeamMediaPreviewScreen(initialItems: captured)),
+        builder: (_) => _TeamMediaPreviewScreen(initialItems: captured),
+      ),
     );
     if (previewResult != null && previewResult.isNotEmpty) {
       final files = previewResult
@@ -489,8 +486,18 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     final m = local.minute.toString().padLeft(2, '0');
     final ampm = local.hour >= 12 ? 'PM' : 'AM';
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '$h:$m $ampm, ${local.day} ${months[local.month - 1]} ${local.year}';
   }
@@ -501,12 +508,15 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
       children: [
         Icon(Icons.chat_bubble_outline, size: 52, color: Colors.grey.shade300),
         const SizedBox(height: 12),
-        const Text('Start to chat',
-            style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF1A1A2E),
-                fontWeight: FontWeight.w600,
-                fontFamily: 'AirbnbCereal')),
+        const Text(
+          'Start to chat',
+          style: TextStyle(
+            fontSize: 16,
+            color: Color(0xFF1A1A2E),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'AirbnbCereal',
+          ),
+        ),
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -514,9 +524,10 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
             'Say hello to ${widget.title}! Send a message to start the conversation.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-                fontFamily: 'AirbnbCereal'),
+              fontSize: 12,
+              color: Colors.grey.shade500,
+              fontFamily: 'AirbnbCereal',
+            ),
           ),
         ),
       ],
@@ -534,8 +545,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
       msg['senderUserId']?.toString(),
       msg['actingAsId']?.toString(),
     ];
-    final bool isMe =
-        possibleIds.any((id) => id != null && id == myId && id.isNotEmpty);
+    final bool isMe = possibleIds.any(
+      (id) => id != null && id == myId && id.isNotEmpty,
+    );
 
     String text = '';
     if (msg['payload']?['text'] != null) {
@@ -547,12 +559,14 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     final String time = _formatMsgTime(msg['createdAt']?.toString());
     final List<dynamic> attachments = msg['attachments'] ?? [];
 
-    final String senderId = msg['senderId']?.toString() ??
+    final String senderId =
+        msg['senderId']?.toString() ??
         msg['sender']?['actorId']?.toString() ??
         msg['actorId']?.toString() ??
         'unknown';
     final memberInfo = _membersMap[senderId];
-    final String avatarUrl = msg['payload']?['senderProfileImage']?.toString() ??
+    final String avatarUrl =
+        msg['payload']?['senderProfileImage']?.toString() ??
         msg['senderProfileImage']?.toString() ??
         msg['sender']?['profileImage']?.toString() ??
         memberInfo?['profileImage']?.toString() ??
@@ -561,21 +575,26 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     final Widget avatar = Container(
       height: size.width * 0.11,
       width: size.width * 0.11,
-      decoration:
-          BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        shape: BoxShape.circle,
+      ),
       child: ClipOval(
         child: avatarUrl.isNotEmpty
-            ? Image.network(avatarUrl,
+            ? Image.network(
+                avatarUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, e, s) =>
-                    const Icon(Icons.person, color: Colors.grey))
+                    const Icon(Icons.person, color: Colors.grey),
+              )
             : const Icon(Icons.person, color: Colors.grey),
       ),
     );
 
     final bubble = Column(
-      crossAxisAlignment:
-          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         if (!isMe)
           Padding(
@@ -587,19 +606,23 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                   msg['senderName']?.toString() ??
                   'Member',
               style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: primaryColor,
-                  letterSpacing: 0.1),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: primaryColor,
+                letterSpacing: 0.1,
+              ),
             ),
           ),
         text.trim().isEmpty && attachments.isNotEmpty
             ? Column(
-                crossAxisAlignment:
-                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: attachments
-                    .map<Widget>((att) => _buildAttachment(att, msg, isMe, size))
+                    .map<Widget>(
+                      (att) => _buildAttachment(att, msg, isMe, size),
+                    )
                     .toList(),
               )
             : Container(
@@ -608,7 +631,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                     ? EdgeInsets.zero
                     : EdgeInsets.symmetric(
                         horizontal: size.width * 0.05,
-                        vertical: size.width * 0.025),
+                        vertical: size.width * 0.025,
+                      ),
                 decoration: BoxDecoration(
                   color: text.trim().isEmpty
                       ? Colors.transparent
@@ -628,9 +652,10 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                       ? []
                       : [
                           BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2))
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
                         ],
                 ),
                 child: Column(
@@ -639,7 +664,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                   children: [
                     if (attachments.isNotEmpty) ...[
                       ...attachments.map<Widget>(
-                          (att) => _buildAttachment(att, msg, isMe, size)),
+                        (att) => _buildAttachment(att, msg, isMe, size),
+                      ),
                       if (text.isNotEmpty) const SizedBox(height: 6),
                     ],
                     if (text.isNotEmpty)
@@ -661,17 +687,24 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           const SizedBox(height: 3),
           Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             children: [
-              Text(time,
-                  style: TextStyle(
-                      fontSize: size.width * 0.028,
-                      color: const Color(0xFFADB5BD))),
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: size.width * 0.028,
+                  color: const Color(0xFFADB5BD),
+                ),
+              ),
               if (isMe) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.done_all,
-                    size: size.width * 0.04, color: Colors.green.shade400),
+                Icon(
+                  Icons.done_all,
+                  size: size.width * 0.04,
+                  color: Colors.green.shade400,
+                ),
               ],
             ],
           ),
@@ -684,17 +717,19 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
       return Align(
         alignment: Alignment.centerRight,
         child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [bubble, const SizedBox(width: 6), avatar]),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [bubble, const SizedBox(width: 6), avatar],
+        ),
       );
     }
     return Align(
       alignment: Alignment.centerLeft,
       child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [avatar, const SizedBox(width: 6), bubble]),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [avatar, const SizedBox(width: 6), bubble],
+      ),
     );
   }
 
@@ -704,19 +739,27 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
 
     if (mediaType == 'image') {
       return Column(
-        crossAxisAlignment:
-            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => _FullImageScreen(url: url))),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => _FullImageScreen(url: url)),
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(size.width * 0.04),
-              child: Image.network(url,
-                  width: size.width * 0.64,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, e, s) => const Icon(Icons.broken_image,
-                      size: 40, color: Colors.grey)),
+              child: Image.network(
+                url,
+                width: size.width * 0.64,
+                fit: BoxFit.cover,
+                errorBuilder: (_, e, s) => const Icon(
+                  Icons.broken_image,
+                  size: 40,
+                  color: Colors.grey,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -725,16 +768,26 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.access_time,
-                    size: size.width * 0.028, color: Colors.grey),
+                Icon(
+                  Icons.access_time,
+                  size: size.width * 0.028,
+                  color: Colors.grey,
+                ),
                 SizedBox(width: size.width * 0.012),
-                Text(_formatMsgTime(msg['createdAt']?.toString()),
-                    style: TextStyle(
-                        fontSize: size.width * 0.028, color: Colors.grey)),
+                Text(
+                  _formatMsgTime(msg['createdAt']?.toString()),
+                  style: TextStyle(
+                    fontSize: size.width * 0.028,
+                    color: Colors.grey,
+                  ),
+                ),
                 if (isMe) ...[
                   SizedBox(width: size.width * 0.012),
-                  Icon(Icons.done_all,
-                      size: size.width * 0.04, color: Colors.green.shade400),
+                  Icon(
+                    Icons.done_all,
+                    size: size.width * 0.04,
+                    color: Colors.green.shade400,
+                  ),
                 ],
               ],
             ),
@@ -759,23 +812,32 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                 alignment: Alignment.center,
                 children: [
                   Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.play_arrow_rounded,
-                          color: Colors.white, size: 26)),
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
                   Positioned(
-                      bottom: 8,
-                      left: 10,
-                      child: Text(att['fileName'] ?? 'Video',
-                          style: const TextStyle(
-                              color: Colors.white60,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis)),
+                    bottom: 8,
+                    left: 10,
+                    child: Text(
+                      att['fileName'] ?? 'Video',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -786,7 +848,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
 
     if (mediaType == 'audio') {
       return _AudioBubble(
-          audioUrl: url, fileName: att['fileName'] ?? 'Voice note');
+        audioUrl: url,
+        fileName: att['fileName'] ?? 'Voice note',
+      );
     }
 
     return GestureDetector(
@@ -805,13 +869,17 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
               const Icon(Icons.insert_drive_file, color: Colors.black87),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text(att['fileName'] ?? 'Document',
-                      style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis)),
+                child: Text(
+                  att['fileName'] ?? 'Document',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -827,7 +895,11 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
         const Divider(height: 1, thickness: 1, color: Color(0xFFF1F3F5)),
         Container(
           padding: EdgeInsets.fromLTRB(
-              12, 10, 12, 12 + MediaQuery.of(context).padding.bottom),
+            12,
+            10,
+            12,
+            12 + MediaQuery.of(context).padding.bottom,
+          ),
           color: Colors.white,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -837,27 +909,37 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                       width: 44,
                       height: 44,
                       child: Center(
-                          child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: primaryColor))),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
                     )
                   : _inputIconButton(
-                      icon: LucideIcons.plus, onTap: _showAttachmentOptions),
+                      icon: LucideIcons.plus,
+                      onTap: _showAttachmentOptions,
+                    ),
               const SizedBox(width: 8),
               Expanded(
                 child: Stack(
                   alignment: Alignment.centerRight,
                   children: [
                     Container(
-                      constraints:
-                          const BoxConstraints(minHeight: 44, maxHeight: 120),
+                      constraints: const BoxConstraints(
+                        minHeight: 44,
+                        maxHeight: 120,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF5F6F8),
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                            color: const Color(0xFFE2E8F0), width: 1.0),
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.0,
+                        ),
                       ),
                       child: TextField(
                         controller: _messageController,
@@ -878,7 +960,11 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.only(
-                              left: 14, right: 44, top: 12, bottom: 12),
+                            left: 14,
+                            right: 44,
+                            top: 12,
+                            bottom: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -887,11 +973,16 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                       child: GestureDetector(
                         onTap: _sendMessage,
                         child: const SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: Center(
-                                child: Icon(Icons.arrow_forward,
-                                    color: Colors.black87, size: 22))),
+                          width: 36,
+                          height: 36,
+                          child: Center(
+                            child: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.black87,
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     if (_isRecording)
@@ -902,22 +993,28 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                             color: const Color(0xFFF5F6F8),
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(
-                                color: const Color(0xFFE2E8F0), width: 1.0),
+                              color: const Color(0xFFE2E8F0),
+                              width: 1.0,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.mic_none_outlined,
-                                  color: Colors.red, size: 18),
+                              const Icon(
+                                Icons.mic_none_outlined,
+                                color: Colors.red,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Text(
-                                  Duration(seconds: _recordDuration)
-                                      .toString()
-                                      .split('.')
-                                      .first,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontFamily: 'AirbnbCereal',
-                                      color: Colors.black87)),
+                                Duration(
+                                  seconds: _recordDuration,
+                                ).toString().split('.').first,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontFamily: 'AirbnbCereal',
+                                  color: Colors.black87,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -932,11 +1029,12 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                   width: 44,
                   height: 44,
                   child: Center(
-                      child: Icon(
-                    _isRecording ? Icons.send_rounded : Icons.mic_none_sharp,
-                    color: _isRecording ? primaryColor : Colors.black87,
-                    size: 26,
-                  )),
+                    child: Icon(
+                      _isRecording ? Icons.send_rounded : Icons.mic_none_sharp,
+                      color: _isRecording ? primaryColor : Colors.black87,
+                      size: 26,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -946,8 +1044,10 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
   }
 
-  Widget _inputIconButton(
-      {required IconData icon, required VoidCallback onTap}) {
+  Widget _inputIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -958,8 +1058,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           shape: BoxShape.circle,
           color: Colors.transparent,
           border: Border.all(
-              color: const Color(0xFF1677FF).withValues(alpha: 0.45),
-              width: 1.5),
+            color: const Color(0xFF1677FF).withValues(alpha: 0.45),
+            width: 1.5,
+          ),
         ),
         child: Center(
           child: Container(
@@ -969,7 +1070,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
               shape: BoxShape.circle,
               color: const Color(0xFF1677FF),
               border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18), width: 1),
+                color: Colors.white.withValues(alpha: 0.18),
+                width: 1,
+              ),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
           ),
@@ -1043,7 +1146,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
       resizeToAvoidBottomInset: true,
       appBar: _buildAppBar(),
       body: _chatLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : Column(
               children: [
                 Expanded(
@@ -1064,7 +1169,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                             itemCount: _chatMessages.length,
                             itemBuilder: (context, index) {
                               return _buildChatBubble(
-                                  _chatMessages[index], size);
+                                _chatMessages[index],
+                                size,
+                              );
                             },
                           ),
                         ),
@@ -1093,10 +1200,12 @@ class _FullImageScreen extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(url,
-              fit: BoxFit.contain,
-              errorBuilder: (_, e, s) => const Icon(Icons.broken_image,
-                  color: Colors.white, size: 60)),
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            errorBuilder: (_, e, s) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 60),
+          ),
         ),
       ),
     );
@@ -1134,25 +1243,34 @@ class _AudioBubbleState extends State<_AudioBubble> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.play_circle_outline,
-                color: AppColors.primary, size: 28),
+            const Icon(
+              Icons.play_circle_outline,
+              color: AppColors.primary,
+              size: 28,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.fileName,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'AirbnbCereal'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const Text('Voice note',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                          fontFamily: 'AirbnbCereal')),
+                  Text(
+                    widget.fileName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Text(
+                    'Voice note',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1192,10 +1310,9 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
   }
 
   Future<void> _addMore() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (_) => const EmployeeCameraScreen(picAgain: true)),
+    final result = await context.push(
+      AppRoutes.employeeCamera,
+      extra: {'picAgain': true},
     );
     if (result != null && result is List) {
       for (final e in result) {
@@ -1219,8 +1336,9 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
       Navigator.pop(context);
       return;
     }
-    final nextPage =
-        _currentPage >= items.length ? items.length - 1 : _currentPage;
+    final nextPage = _currentPage >= items.length
+        ? items.length - 1
+        : _currentPage;
     setState(() => _currentPage = nextPage);
     _pageController.jumpToPage(nextPage);
   }
@@ -1241,7 +1359,8 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
               itemCount: items.length,
               itemBuilder: (context, i) {
                 final item = items[i];
-                final isImage = item.mimeType.startsWith('image') ||
+                final isImage =
+                    item.mimeType.startsWith('image') ||
                     item.mimeType.isEmpty ||
                     item.path.toLowerCase().endsWith('.jpg') ||
                     item.path.toLowerCase().endsWith('.jpeg') ||
@@ -1259,9 +1378,10 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                             File(item.path),
                             fit: BoxFit.contain,
                             errorBuilder: (_, e, s) => const Icon(
-                                Icons.broken_image,
-                                color: Colors.white,
-                                size: 60),
+                              Icons.broken_image,
+                              color: Colors.white,
+                              size: 60,
+                            ),
                           ),
                         )
                       else
@@ -1269,13 +1389,18 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.videocam,
-                                  color: Colors.white, size: 64),
+                              const Icon(
+                                Icons.videocam,
+                                color: Colors.white,
+                                size: 64,
+                              ),
                               const SizedBox(height: 12),
                               Text(
                                 item.path.split('/').last,
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13),
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -1288,9 +1413,14 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                           onPressed: _removeCurrentPage,
                           icon: Container(
                             decoration: const BoxDecoration(
-                                color: Colors.white, shape: BoxShape.circle),
-                            child: Icon(Icons.close,
-                                color: Colors.black, size: size.width * 0.06),
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              color: Colors.black,
+                              size: size.width * 0.06,
+                            ),
                           ),
                         ),
                       ),
@@ -1309,27 +1439,30 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                       Container(
                         margin: EdgeInsets.only(bottom: size.width * 0.03),
                         padding: EdgeInsets.symmetric(
-                            horizontal: size.width * 0.04,
-                            vertical: size.width * 0.04),
+                          horizontal: size.width * 0.04,
+                          vertical: size.width * 0.04,
+                        ),
                         child: Row(
                           children: [
                             Expanded(
-                                child: _infoPill(
-                              size,
-                              icon: Icons.access_time,
-                              text: item.dateTime,
-                              isAlert: false,
-                            )),
+                              child: _infoPill(
+                                size,
+                                icon: Icons.access_time,
+                                text: item.dateTime,
+                                isAlert: false,
+                              ),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
-                                child: _infoPill(
-                              size,
-                              icon: Icons.location_on,
-                              text: item.location.isEmpty
-                                  ? 'No Location'
-                                  : item.location,
-                              isAlert: item.location.isEmpty,
-                            )),
+                              child: _infoPill(
+                                size,
+                                icon: Icons.location_on,
+                                text: item.location.isEmpty
+                                    ? 'No Location'
+                                    : item.location,
+                                isAlert: item.location.isEmpty,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1341,8 +1474,12 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
           ),
           Container(
             color: Colors.white,
-            padding: EdgeInsets.fromLTRB(size.width * 0.03, size.width * 0.02,
-                size.width * 0.03, size.width * 0.08),
+            padding: EdgeInsets.fromLTRB(
+              size.width * 0.03,
+              size.width * 0.02,
+              size.width * 0.03,
+              size.width * 0.08,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -1353,17 +1490,20 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                         backgroundColor: Colors.black,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(size.width * 0.03)),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.03,
+                          ),
+                        ),
                       ),
                       onPressed: _addMore,
                       child: Text(
                         'Add More',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: size.width * 0.035,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'AirbnbCereal'),
+                          color: Colors.white,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
                       ),
                     ),
                   ),
@@ -1377,17 +1517,20 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
                         backgroundColor: AppColors.primary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(size.width * 0.03)),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.03,
+                          ),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(context, items),
                       child: Text(
                         'Submit',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: size.width * 0.035,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'AirbnbCereal'),
+                          color: Colors.white,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
                       ),
                     ),
                   ),
@@ -1400,8 +1543,12 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
     );
   }
 
-  Widget _infoPill(Size size,
-      {required IconData icon, required String text, required bool isAlert}) {
+  Widget _infoPill(
+    Size size, {
+    required IconData icon,
+    required String text,
+    required bool isAlert,
+  }) {
     return Container(
       height: size.width * 0.11,
       decoration: BoxDecoration(
@@ -1419,9 +1566,11 @@ class _TeamMediaPreviewScreenState extends State<_TeamMediaPreviewScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon,
-              size: size.width * 0.04,
-              color: isAlert ? Colors.red : const Color(0xFF64748B)),
+          Icon(
+            icon,
+            size: size.width * 0.04,
+            color: isAlert ? Colors.red : const Color(0xFF64748B),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(

@@ -4,21 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:presshop_enterprise/features/duties/presentation/screens/duties_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/features/duties/data/models/duty_shift_model.dart';
-import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_screen.dart';
-import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_details_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
-import '../../../attendance/presentation/screens/uniform_verification_screen.dart';
-import '../../../attendance/presentation/screens/attendance_screen.dart';
-import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
-import '../../../notifications/presentation/screens/notifications_screen.dart';
-import '../../../../presentation/widgets/coming_soon_screen.dart';
-import '../../../../presentation/widgets/employee_app_bar.dart';
+import '../../../../common/widgets/employee_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen3 extends StatefulWidget {
@@ -48,12 +41,12 @@ class _HomeScreen3State extends State<HomeScreen3> {
     context.findAncestorStateOfType<DashboardScreenState>()?.changeTab(index);
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'GOOD MORNING';
-    if (hour < 17) return 'GOOD AFTERNOON';
-    return 'GOOD EVENING';
-  }
+  // String _getGreeting() {
+  //   final hour = DateTime.now().hour;
+  //   if (hour < 12) return 'GOOD MORNING';
+  //   if (hour < 17) return 'GOOD AFTERNOON';
+  //   return 'GOOD EVENING';
+  // }
 
   String _formatDuration(int seconds) {
     final h = seconds ~/ 3600;
@@ -229,10 +222,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         children: [
           // Row 1: status badge + shift + view details
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AttendanceScreen()),
-            ),
+            onTap: () => context.push(AppRoutes.attendance),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -396,15 +386,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
               } else {
                 // Open uniform verification before allowing check-in.
                 final bloc = context.read<AttendanceBloc>();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: bloc,
-                      child: const UniformVerificationScreen(),
-                    ),
-                  ),
-                );
+                context.push(AppRoutes.uniformVerification, extra: bloc);
               }
             },
             child: Container(
@@ -787,214 +769,214 @@ class _HomeScreen3State extends State<HomeScreen3> {
 
   // ── Stats Grid ────────────────────────────────────────────────────────────
 
-  Widget _buildStatsGrid() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildGridCard(
-                icon: LucideIcons.calendar_check,
-                iconColor: const Color(0xFF127A45),
-                badgeText: '96%',
-                badgeBgColor: const Color(0xFFEAF5EE),
-                badgeTextColor: const Color(0xFF127A45),
-                value: '22',
-                title: 'Present days',
-                subtitle: '1 late · 0 absent',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AttendanceScreen()),
-                ),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildGridCard(
-                icon: LucideIcons.wallet,
-                iconColor: Colors.white,
-                badgeText: '+₹12.4k',
-                badgeBgColor: Colors.white.withValues(alpha: 0.2),
-                badgeTextColor: Colors.white,
-                value: '₹38,400',
-                title: 'Earnings this month',
-                subtitle: 'Base + 9 content payouts',
-                isDarkHero: true,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ComingSoonScreen(
-                      title: 'Earnings Detail',
-                      icon: LucideIcons.wallet,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12.h),
-        Row(
-          children: [
-            Expanded(
-              child: _buildGridCard(
-                icon: LucideIcons.car,
-                iconColor: const Color(0xFF1F5BF6),
-                badgeText: 'June',
-                badgeBgColor: const Color(0xFFEAF1FE),
-                badgeTextColor: const Color(0xFF1F5BF6),
-                value: _formatDistance(248.0),
-                title: 'Mileage done',
-                subtitle: 'Reimbursable ₹2,480',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClaimExpensesScreen(),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildGridCard(
-                icon: LucideIcons.folder_open,
-                iconColor: const Color(0xFF127A45),
-                badgeText: '+5',
-                badgeBgColor: const Color(0xFFEAF5EE),
-                badgeTextColor: const Color(0xFF127A45),
-                value: '14',
-                title: 'Evidence submitted',
-                subtitle: '11 approved · 3 in review',
-                onTap: () => _navigateToTab(0),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildStatsGrid() {
+  //   return Column(
+  //     children: [
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: _buildGridCard(
+  //               icon: LucideIcons.calendar_check,
+  //               iconColor: const Color(0xFF127A45),
+  //               badgeText: '96%',
+  //               badgeBgColor: const Color(0xFFEAF5EE),
+  //               badgeTextColor: const Color(0xFF127A45),
+  //               value: '22',
+  //               title: 'Present days',
+  //               subtitle: '1 late · 0 absent',
+  //               onTap: () => Navigator.push(
+  //                 context,
+  //                 MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+  //               ),
+  //             ),
+  //           ),
+  //           SizedBox(width: 12.w),
+  //           Expanded(
+  //             child: _buildGridCard(
+  //               icon: LucideIcons.wallet,
+  //               iconColor: Colors.white,
+  //               badgeText: '+₹12.4k',
+  //               badgeBgColor: Colors.white.withValues(alpha: 0.2),
+  //               badgeTextColor: Colors.white,
+  //               value: '₹38,400',
+  //               title: 'Earnings this month',
+  //               subtitle: 'Base + 9 content payouts',
+  //               isDarkHero: true,
+  //               onTap: () => Navigator.push(
+  //                 context,
+  //                 MaterialPageRoute(
+  //                   builder: (_) => const ComingSoonScreen(
+  //                     title: 'Earnings Detail',
+  //                     icon: LucideIcons.wallet,
+  //                   ),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //       SizedBox(height: 12.h),
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: _buildGridCard(
+  //               icon: LucideIcons.car,
+  //               iconColor: const Color(0xFF1F5BF6),
+  //               badgeText: 'June',
+  //               badgeBgColor: const Color(0xFFEAF1FE),
+  //               badgeTextColor: const Color(0xFF1F5BF6),
+  //               value: _formatDistance(248.0),
+  //               title: 'Mileage done',
+  //               subtitle: 'Reimbursable ₹2,480',
+  //               onTap: () => Navigator.push(
+  //                 context,
+  //                 MaterialPageRoute(
+  //                   builder: (_) => const ClaimExpensesScreen(),
+  //                 ),
+  //               ),
+  //             ),
+  //           ),
+  //           SizedBox(width: 12.w),
+  //           Expanded(
+  //             child: _buildGridCard(
+  //               icon: LucideIcons.folder_open,
+  //               iconColor: const Color(0xFF127A45),
+  //               badgeText: '+5',
+  //               badgeBgColor: const Color(0xFFEAF5EE),
+  //               badgeTextColor: const Color(0xFF127A45),
+  //               value: '14',
+  //               title: 'Evidence submitted',
+  //               subtitle: '11 approved · 3 in review',
+  //               onTap: () => _navigateToTab(0),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
-  Widget _buildGridCard({
-    required IconData icon,
-    required Color iconColor,
-    required String badgeText,
-    required Color badgeBgColor,
-    required Color badgeTextColor,
-    required String value,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool isDarkHero = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16.r),
-      child: Container(
-        height: 118.h,
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isDarkHero ? null : Colors.white,
-          gradient: isDarkHero
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2E66FF), Color(0xFF1540C0)],
-                )
-              : null,
-          borderRadius: BorderRadius.circular(16.r),
-          border: isDarkHero
-              ? null
-              : Border.all(color: const Color(0xFFEFF1F5)),
-          boxShadow: isDarkHero
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF1540C0).withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 32.w,
-                  height: 32.w,
-                  decoration: BoxDecoration(
-                    color: isDarkHero
-                        ? Colors.white.withValues(alpha: 0.18)
-                        : const Color(0xFFF3F5F9),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: isDarkHero
-                        ? null
-                        : Border.all(color: const Color(0xFFE5E8EE)),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 16.sp),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    color: badgeBgColor,
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: TextStyle(
-                      color: badgeTextColor,
-                      fontSize: 9.sp,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'AirbnbCereal',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              value,
-              style: TextStyle(
-                color: isDarkHero ? Colors.white : const Color(0xFF0B0F1A),
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w800,
-                fontFamily: 'AirbnbCereal',
-              ),
-            ),
-            SizedBox(height: 2.h),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isDarkHero
-                    ? Colors.white.withValues(alpha: 0.85)
-                    : const Color(0xFF5A6373),
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'AirbnbCereal',
-              ),
-            ),
-            SizedBox(height: 1.h),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isDarkHero
-                    ? Colors.white.withValues(alpha: 0.7)
-                    : const Color(0xFF9AA2B1),
-                fontSize: 9.sp,
-                fontFamily: 'AirbnbCereal',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildGridCard({
+  //   required IconData icon,
+  //   required Color iconColor,
+  //   required String badgeText,
+  //   required Color badgeBgColor,
+  //   required Color badgeTextColor,
+  //   required String value,
+  //   required String title,
+  //   required String subtitle,
+  //   required VoidCallback onTap,
+  //   bool isDarkHero = false,
+  // }) {
+  //   return InkWell(
+  //     onTap: onTap,
+  //     borderRadius: BorderRadius.circular(16.r),
+  //     child: Container(
+  //       height: 118.h,
+  //       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+  //       decoration: BoxDecoration(
+  //         color: isDarkHero ? null : Colors.white,
+  //         gradient: isDarkHero
+  //             ? const LinearGradient(
+  //                 begin: Alignment.topLeft,
+  //                 end: Alignment.bottomRight,
+  //                 colors: [Color(0xFF2E66FF), Color(0xFF1540C0)],
+  //               )
+  //             : null,
+  //         borderRadius: BorderRadius.circular(16.r),
+  //         border: isDarkHero
+  //             ? null
+  //             : Border.all(color: const Color(0xFFEFF1F5)),
+  //         boxShadow: isDarkHero
+  //             ? [
+  //                 BoxShadow(
+  //                   color: const Color(0xFF1540C0).withValues(alpha: 0.15),
+  //                   blurRadius: 8,
+  //                   offset: const Offset(0, 4),
+  //                 ),
+  //               ]
+  //             : null,
+  //       ),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //             children: [
+  //               Container(
+  //                 width: 32.w,
+  //                 height: 32.w,
+  //                 decoration: BoxDecoration(
+  //                   color: isDarkHero
+  //                       ? Colors.white.withValues(alpha: 0.18)
+  //                       : const Color(0xFFF3F5F9),
+  //                   borderRadius: BorderRadius.circular(10.r),
+  //                   border: isDarkHero
+  //                       ? null
+  //                       : Border.all(color: const Color(0xFFE5E8EE)),
+  //                 ),
+  //                 child: Icon(icon, color: iconColor, size: 16.sp),
+  //               ),
+  //               Container(
+  //                 padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+  //                 decoration: BoxDecoration(
+  //                   color: badgeBgColor,
+  //                   borderRadius: BorderRadius.circular(6.r),
+  //                 ),
+  //                 child: Text(
+  //                   badgeText,
+  //                   style: TextStyle(
+  //                     color: badgeTextColor,
+  //                     fontSize: 9.sp,
+  //                     fontWeight: FontWeight.w700,
+  //                     fontFamily: 'AirbnbCereal',
+  //                   ),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           const Spacer(),
+  //           Text(
+  //             value,
+  //             style: TextStyle(
+  //               color: isDarkHero ? Colors.white : const Color(0xFF0B0F1A),
+  //               fontSize: 18.sp,
+  //               fontWeight: FontWeight.w800,
+  //               fontFamily: 'AirbnbCereal',
+  //             ),
+  //           ),
+  //           SizedBox(height: 2.h),
+  //           Text(
+  //             title,
+  //             maxLines: 1,
+  //             overflow: TextOverflow.ellipsis,
+  //             style: TextStyle(
+  //               color: isDarkHero
+  //                   ? Colors.white.withValues(alpha: 0.85)
+  //                   : const Color(0xFF5A6373),
+  //               fontSize: 10.sp,
+  //               fontWeight: FontWeight.w500,
+  //               fontFamily: 'AirbnbCereal',
+  //             ),
+  //           ),
+  //           SizedBox(height: 1.h),
+  //           Text(
+  //             subtitle,
+  //             maxLines: 1,
+  //             overflow: TextOverflow.ellipsis,
+  //             style: TextStyle(
+  //               color: isDarkHero
+  //                   ? Colors.white.withValues(alpha: 0.7)
+  //                   : const Color(0xFF9AA2B1),
+  //               fontSize: 9.sp,
+  //               fontFamily: 'AirbnbCereal',
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   // ── Attention Section ─────────────────────────────────────────────────────
 
@@ -1066,12 +1048,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 subtitle: 'Travel ₹2,400 · fuel ₹1,150',
                 badgeText: '2',
                 badgeColor: const Color(0xFF9A6411),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ClaimExpensesScreen(),
-                  ),
-                ),
+                onTap: () => context.push(AppRoutes.claimExpenses),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14.w),
@@ -1086,12 +1063,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 subtitle: 'New task broadcast · roster update',
                 badgeText: '3',
                 badgeColor: const Color(0xFF1F5BF6),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(),
-                  ),
-                ),
+                onTap: () => context.push(AppRoutes.notifications),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14.w),
@@ -1113,12 +1085,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 child: const Divider(color: Color(0xFFEFF1F5), height: 1),
               ),
               InkWell(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(),
-                  ),
-                ),
+                onTap: () => context.push(AppRoutes.notifications),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(18.r),
                   bottomRight: Radius.circular(18.r),
@@ -1302,10 +1269,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
             SizedBox(width: 8.w),
             GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EmployeeCameraScreen()),
-              ),
+              onTap: () => context.push(AppRoutes.employeeCamera),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 11.w, vertical: 9.h),
                 decoration: BoxDecoration(
@@ -1350,10 +1314,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const DutiesScreen()),
-            ),
+            onTap: () => context.push(AppRoutes.duties),
             child: Row(
               children: [
                 Container(
@@ -1430,10 +1391,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 ),
               ),
               GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DutiesHistoryScreen()),
-                ),
+                onTap: () => context.push(AppRoutes.dutiesHistory),
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 4.h),
                   child: Text(
@@ -1462,7 +1420,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   _buildDutyLogRow(mockShifts[2]),
                 ],
               );
-            }
+            },
           ),
         ],
       ),
@@ -1498,12 +1456,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
   Widget _buildDutyLogRow(DutyShiftHistory shift, {bool isToday = false}) {
     final formattedDate = DateFormat('EEE, MMM d').format(shift.date);
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DutiesHistoryDetailsScreen(shift: shift),
-        ),
-      ),
+      onTap: () => context.push(AppRoutes.dutiesHistoryDetails, extra: shift),
       child: Container(
         color: Colors.transparent,
         child: Row(
@@ -1512,12 +1465,16 @@ class _HomeScreen3State extends State<HomeScreen3> {
               width: 28.w,
               height: 28.w,
               decoration: BoxDecoration(
-                color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
+                color: isToday
+                    ? const Color(0xFFEAF5EE)
+                    : const Color(0xFFF3F5F9),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Icon(
                 LucideIcons.clock,
-                color: isToday ? const Color(0xFF127A45) : const Color(0xFF9AA2B1),
+                color: isToday
+                    ? const Color(0xFF127A45)
+                    : const Color(0xFF9AA2B1),
                 size: 13.sp,
               ),
             ),
@@ -1550,7 +1507,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
               decoration: BoxDecoration(
-                color: isToday ? const Color(0xFFEAF5EE) : const Color(0xFFF3F5F9),
+                color: isToday
+                    ? const Color(0xFFEAF5EE)
+                    : const Color(0xFFF3F5F9),
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: Text(
@@ -1571,55 +1530,55 @@ class _HomeScreen3State extends State<HomeScreen3> {
     );
   }
 
-  Widget _buildDutySessionRow(
-    String date,
-    String checkIn,
-    String checkOut,
-    String duration,
-  ) {
-    return Row(
-      children: [
-        Container(
-          width: 6.w,
-          height: 6.w,
-          decoration: const BoxDecoration(
-            color: Color(0xFF7DF3A8),
-            shape: BoxShape.circle,
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Text(
-            date,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'AirbnbCereal',
-            ),
-          ),
-        ),
-        Text(
-          '$checkIn – $checkOut',
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 10.sp,
-            fontFamily: 'AirbnbCereal',
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Text(
-          duration,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 10.5.sp,
-            fontWeight: FontWeight.w800,
-            fontFamily: 'AirbnbCereal',
-          ),
-        ),
-      ],
-    );
-  }
+  // Widget _buildDutySessionRow(
+  //   String date,
+  //   String checkIn,
+  //   String checkOut,
+  //   String duration,
+  // ) {
+  //   return Row(
+  //     children: [
+  //       Container(
+  //         width: 6.w,
+  //         height: 6.w,
+  //         decoration: const BoxDecoration(
+  //           color: Color(0xFF7DF3A8),
+  //           shape: BoxShape.circle,
+  //         ),
+  //       ),
+  //       SizedBox(width: 10.w),
+  //       Expanded(
+  //         child: Text(
+  //           date,
+  //           style: TextStyle(
+  //             color: Colors.white.withValues(alpha: 0.85),
+  //             fontSize: 11.sp,
+  //             fontWeight: FontWeight.w600,
+  //             fontFamily: 'AirbnbCereal',
+  //           ),
+  //         ),
+  //       ),
+  //       Text(
+  //         '$checkIn – $checkOut',
+  //         style: TextStyle(
+  //           color: Colors.white.withValues(alpha: 0.6),
+  //           fontSize: 10.sp,
+  //           fontFamily: 'AirbnbCereal',
+  //         ),
+  //       ),
+  //       SizedBox(width: 10.w),
+  //       Text(
+  //         duration,
+  //         style: TextStyle(
+  //           color: Colors.white,
+  //           fontSize: 10.5.sp,
+  //           fontWeight: FontWeight.w800,
+  //           fontFamily: 'AirbnbCereal',
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildRecentTaskRow({
     required String title,
@@ -1713,10 +1672,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AttendanceScreen()),
-            ),
+            onTap: () => context.push(AppRoutes.attendance),
             child: Row(
               children: [
                 Container(
@@ -1869,14 +1825,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ComingSoonScreen(
-                  title: 'Earnings Detail',
-                  icon: LucideIcons.wallet,
-                ),
-              ),
+            onTap: () => context.push(
+              AppRoutes.comingSoon,
+              extra: {'title': 'Earnings Detail', 'icon': LucideIcons.wallet},
             ),
             child: Row(
               children: [
@@ -2012,10 +1963,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         children: [
           // ── Header ──────────────────────────────────────────────────
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ClaimExpensesScreen()),
-            ),
+            onTap: () => context.push(AppRoutes.claimExpenses),
             child: Row(
               children: [
                 Container(
@@ -2286,46 +2234,46 @@ class _HomeScreen3State extends State<HomeScreen3> {
     );
   }
 
-  Widget _buildEvidenceThumb(String imageUrl, String title) {
-    return Column(
-      children: [
-        Container(
-          width: 52.w,
-          height: 52.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE5E8EE), width: 1.5),
-          ),
-          child: ClipOval(
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (ctx, err, st) => Container(
-                color: const Color(0xFFEAF1FE),
-                child: Icon(
-                  LucideIcons.image,
-                  color: const Color(0xFF1F5BF6),
-                  size: 22.sp,
-                ),
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: 5.h),
-        Text(
-          title,
-          style: TextStyle(
-            color: const Color(0xFF0B0F1A),
-            fontSize: 9.5.sp,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'AirbnbCereal',
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
+  // Widget _buildEvidenceThumb(String imageUrl, String title) {
+  //   return Column(
+  //     children: [
+  //       Container(
+  //         width: 52.w,
+  //         height: 52.w,
+  //         decoration: BoxDecoration(
+  //           shape: BoxShape.circle,
+  //           border: Border.all(color: const Color(0xFFE5E8EE), width: 1.5),
+  //         ),
+  //         child: ClipOval(
+  //           child: Image.network(
+  //             imageUrl,
+  //             fit: BoxFit.cover,
+  //             errorBuilder: (ctx, err, st) => Container(
+  //               color: const Color(0xFFEAF1FE),
+  //               child: Icon(
+  //                 LucideIcons.image,
+  //                 color: const Color(0xFF1F5BF6),
+  //                 size: 22.sp,
+  //               ),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //       SizedBox(height: 5.h),
+  //       Text(
+  //         title,
+  //         style: TextStyle(
+  //           color: const Color(0xFF0B0F1A),
+  //           fontSize: 9.5.sp,
+  //           fontWeight: FontWeight.w600,
+  //           fontFamily: 'AirbnbCereal',
+  //         ),
+  //         maxLines: 1,
+  //         overflow: TextOverflow.ellipsis,
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildVehicleChip(String label) {
     return Container(

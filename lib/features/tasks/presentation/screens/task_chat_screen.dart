@@ -20,11 +20,11 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket/socket_events.dart';
 import '../../../../core/network/socket/socket_manager.dart';
-import '../../../../presentation/widgets/company_logo_widget.dart';
+import '../../../../common/widgets/company_logo_widget.dart';
 import '../../../camera/data/models/camera_data.dart';
 import '../../../camera/presentation/screens/employee_camera_screen.dart';
 import '../../data/models/employee_task_model.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
 
 class TaskChatScreen extends StatefulWidget {
   final EmployeeTaskModel? taskDetail;

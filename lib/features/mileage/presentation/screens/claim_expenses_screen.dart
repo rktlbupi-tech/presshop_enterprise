@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/core/constants/constant_data.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../widgets/custom_dropdown.dart';
@@ -18,50 +18,6 @@ class ClaimExpensesScreen extends StatefulWidget {
 class _ClaimExpensesScreenState extends State<ClaimExpensesScreen> {
   // Expenses State
   String _expenseSummaryFilter = 'This Month';
-  final List<Map<String, dynamic>> _claims = [
-    {
-      'type': 'Fuel Expense',
-      'detail': 'Site Visit - Building A',
-      'date': '08 May 2026',
-      'amount': '£65.50',
-      'status': 'In Review',
-      'icon': LucideIcons.fuel,
-      'iconColor': const Color(0xFF0066FF),
-      'iconBg': const Color(0xFFEFF6FF),
-    },
-    {
-      'type': 'Meal Expense',
-      'detail': 'Client Meeting',
-      'date': '07 May 2026',
-      'amount': '£28.00',
-      'status': 'Approved',
-      'isReimbursed': true,
-      'icon': LucideIcons.utensils,
-      'iconColor': const Color(0xFF10B981),
-      'iconBg': const Color(0xFFE6F9F2),
-    },
-    {
-      'type': 'Parking Charges',
-      'detail': 'Site Visit - Building B',
-      'date': '06 May 2026',
-      'amount': '£12.00',
-      'status': 'Approved',
-      'isReimbursed': true,
-      'icon': LucideIcons.car,
-      'iconColor': const Color(0xFF8B5CF6),
-      'iconBg': const Color(0xFFF5F3FF),
-    },
-    {
-      'type': 'Toll Charges',
-      'detail': 'Site Visit - Building A',
-      'date': '05 May 2026',
-      'amount': '£15.00',
-      'status': 'Rejected',
-      'icon': LucideIcons.container,
-      'iconColor': const Color(0xFFEF4444),
-      'iconBg': const Color(0xFFFEE2E2),
-    },
-  ];
 
   void _showToast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -419,7 +375,7 @@ class _ClaimExpensesScreenState extends State<ClaimExpensesScreen> {
                       }
 
                       setState(() {
-                        _claims.insert(0, {
+                        AppConstantData.claims.insert(0, {
                           'type': selectedCategory,
                           'detail': detailCtrl.text,
                           'date': dateCtrl.text,
@@ -574,7 +530,7 @@ class _ClaimExpensesScreenState extends State<ClaimExpensesScreen> {
         const SizedBox(height: 10),
 
         // Claims list items
-        ..._claims.map((claim) {
+        ...AppConstantData.claims.map((claim) {
           final isApproved = claim['status'] == 'Approved';
           final isRejected = claim['status'] == 'Rejected';
           final isReimbursed = claim['isReimbursed'] == true;

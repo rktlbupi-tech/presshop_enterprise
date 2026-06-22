@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_icons.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/loading_widget.dart';
 import '../bloc/notifications_bloc.dart';
 import '../../domain/entities/notification_entity.dart';
 
@@ -46,27 +46,27 @@ class _NotificationsViewState extends State<_NotificationsView> {
             ),
           ),
           Positioned(
-              right: -5.w,
-              top: -5.h,
-              child: Container(
-                padding: EdgeInsets.all(4.w),
-                decoration: BoxDecoration(
-                  color: unreadCount > 0
-                      ? AppColors.primary
-                      : Colors.grey.shade400,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5.w),
-                ),
-                child: Text(
-                  unreadCount > 99 ? "99+" : unreadCount.toString(),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 8.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+            right: -5.w,
+            top: -5.h,
+            child: Container(
+              padding: EdgeInsets.all(4.w),
+              decoration: BoxDecoration(
+                color: unreadCount > 0
+                    ? AppColors.primary
+                    : Colors.grey.shade400,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5.w),
+              ),
+              child: Text(
+                unreadCount > 99 ? "99+" : unreadCount.toString(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 8.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -274,7 +274,9 @@ class _NotificationsViewState extends State<_NotificationsView> {
                       Padding(
                         padding: EdgeInsets.only(right: 10.w),
                         child: Text(
-                          DateFormat('hh:mm a, dd MMM yyyy').format(notification.createdAt),
+                          DateFormat(
+                            'hh:mm a, dd MMM yyyy',
+                          ).format(notification.createdAt),
                           style: TextStyle(
                             fontSize: 10.sp,
                             color: Colors.grey.shade500,

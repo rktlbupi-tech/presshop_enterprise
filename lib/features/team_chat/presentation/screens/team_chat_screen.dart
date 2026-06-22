@@ -8,7 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket/socket_events.dart';
 import '../../../../core/network/socket/socket_manager.dart';
-import '../../../../presentation/widgets/company_logo_widget.dart';
+import '../../../../common/widgets/company_logo_widget.dart';
 import '../../../tasks/data/models/employee_task_model.dart';
 
 class _ChatMessage {
@@ -113,8 +113,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     final senderId =
         m['senderId']?.toString() ?? m['senderUserId']?.toString() ?? '';
     final text =
-        (m['payload'] is Map ? m['payload']['text'] : m['text'])
-            ?.toString() ??
+        (m['payload'] is Map ? m['payload']['text'] : m['text'])?.toString() ??
         '';
     final id =
         m['_id']?.toString() ??
@@ -126,10 +125,9 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
         senderId: senderId,
         senderName: m['senderName']?.toString() ?? '',
         text: text,
-        time:
-            m['createdAt'] != null
-                ? DateTime.tryParse(m['createdAt'].toString()) ?? DateTime.now()
-                : DateTime.now(),
+        time: m['createdAt'] != null
+            ? DateTime.tryParse(m['createdAt'].toString()) ?? DateTime.now()
+            : DateTime.now(),
         isMe: senderId == _myId,
       ),
     );
@@ -140,9 +138,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     if (data['conversationId']?.toString() != _conversationId) return;
 
     final senderId =
-        data['senderId']?.toString() ??
-        data['senderUserId']?.toString() ??
-        '';
+        data['senderId']?.toString() ?? data['senderUserId']?.toString() ?? '';
     final text =
         (data['payload'] is Map ? data['payload']['text'] : data['text'])
             ?.toString() ??
@@ -160,11 +156,10 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
           senderId: senderId,
           senderName: data['senderName']?.toString() ?? '',
           text: text,
-          time:
-              data['createdAt'] != null
-                  ? DateTime.tryParse(data['createdAt'].toString()) ??
-                      DateTime.now()
-                  : DateTime.now(),
+          time: data['createdAt'] != null
+              ? DateTime.tryParse(data['createdAt'].toString()) ??
+                    DateTime.now()
+              : DateTime.now(),
           isMe: senderId == _myId,
         ),
       );
@@ -181,9 +176,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     setState(() {
       _otherTyping = true;
       _typingName =
-          data['actorName']?.toString() ??
-          data['userName']?.toString() ??
-          '';
+          data['actorName']?.toString() ?? data['userName']?.toString() ?? '';
     });
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _otherTyping = false);
@@ -268,11 +261,9 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     socket.off(SocketEvents.taskMessageNew);
     socket.off(SocketEvents.typingStart);
     if (_conversationId.isNotEmpty) {
-      socket.emitWithAck(
-        SocketEvents.conversationUnsubscribe,
-        {'conversationId': _conversationId},
-        ack: (_) {},
-      );
+      socket.emitWithAck(SocketEvents.conversationUnsubscribe, {
+        'conversationId': _conversationId,
+      }, ack: (_) {});
     }
     super.dispose();
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:presshop_enterprise/common/widgets/sliding_tabs.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -8,9 +9,9 @@ import 'package:intl/intl.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/sliding_tabs.dart';
-import 'web_view_form_screen.dart';
+import '../../../../common/widgets/app_app_bar.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 
 class SubmitFormsScreen extends StatefulWidget {
   const SubmitFormsScreen({super.key});
@@ -152,7 +153,8 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
           final status = (sub['status'] ?? '').toString().toLowerCase();
 
           if (query.isNotEmpty) {
-            final matchesSearch = formName.contains(query) ||
+            final matchesSearch =
+                formName.contains(query) ||
                 code.contains(query) ||
                 status.contains(query);
             if (!matchesSearch) return false;
@@ -162,14 +164,16 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
       } else {
         _filteredForms = _allForms.where((form) {
           final name = (form['name'] ?? '').toString().toLowerCase();
-          final description =
-              (form['description'] ?? '').toString().toLowerCase();
+          final description = (form['description'] ?? '')
+              .toString()
+              .toLowerCase();
           final tags = (form['tags'] as List? ?? [])
               .map((t) => t.toString().toLowerCase())
               .toList();
 
           if (query.isNotEmpty) {
-            final matchesSearch = name.contains(query) ||
+            final matchesSearch =
+                name.contains(query) ||
                 description.contains(query) ||
                 tags.any((tag) => tag.contains(query));
             if (!matchesSearch) return false;
@@ -316,10 +320,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
             children: [
               Text(
                 _errorMessage!,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -343,9 +344,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 child: const Center(
                   child: Text(
                     "No forms available",
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
               ),
@@ -400,10 +399,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
             children: [
               Text(
                 _submissionsError!,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.red, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -427,9 +423,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 child: const Center(
                   child: Text(
                     "No submissions found",
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
               ),
@@ -503,7 +497,9 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 color: cardBg,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: cardIconColor.withValues(alpha: 0.3), width: 1),
+                  color: cardIconColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(5),
@@ -610,20 +606,17 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     final viewUrl =
         "https://presshop.dev/f/$formId/view/$submissionId?token=$token";
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => WebViewForFormScreen(
-          formId: formId,
-          formName: formName,
-          customUrl: viewUrl,
-        ),
-      ),
+    context.push(
+      AppRoutes.webViewForm,
+      extra: {'formId': formId, 'formName': formName, 'customUrl': viewUrl},
     );
   }
 
   void _shareSubmission(
-      BuildContext buttonContext, dynamic submission, String formName) {
+    BuildContext buttonContext,
+    dynamic submission,
+    String formName,
+  ) {
     final formId = submission['formId'] ?? '';
     final submissionId = submission['id'] ?? '';
     final token = getIt<SharedPreferences>().getString('auth_token') ?? '';
@@ -687,7 +680,9 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 color: cardBg,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: cardIconColor.withValues(alpha: 0.3), width: 1),
+                  color: cardIconColor.withValues(alpha: 0.3),
+                  width: 1,
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(5),
@@ -713,8 +708,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
               ),
             ),
             const SizedBox(width: 12),
-
-            // Middle: Title & Description
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -750,11 +743,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
             const Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Icon(
-                  Icons.chevron_right,
-                  color: Color(0xFF9CA3AF),
-                  size: 18,
-                ),
+                Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 18),
               ],
             ),
           ],
@@ -764,14 +753,9 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
   }
 
   void _openForm(String formId, String formName) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => WebViewForFormScreen(
-          formId: formId,
-          formName: formName,
-        ),
-      ),
+    context.push(
+      AppRoutes.webViewForm,
+      extra: {'formId': formId, 'formName': formName},
     );
   }
 }

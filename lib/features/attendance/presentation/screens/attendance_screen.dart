@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
+import 'package:presshop_enterprise/core/constants/constant_data.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_text_styles.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import '../../../../presentation/widgets/empty_state.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/empty_state.dart';
+import '../../../../common/widgets/loading_widget.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 import '../bloc/attendance_bloc.dart';
-import '../widgets/sliding_tabs.dart';
-import '../widgets/custom_dropdown.dart';
-import 'check_in_out_screen.dart';
-import 'uniform_verification_screen.dart';
+import '../../../../common/widgets/sliding_tabs.dart';
+import '../../../../common/widgets/custom_dropdown.dart';
 
 class AttendanceScreen extends StatelessWidget {
   const AttendanceScreen({super.key});
@@ -43,37 +42,6 @@ class _AttendanceViewState extends State<_AttendanceView>
   DateTime _queryDate = DateTime.now();
   String _queryType = 'Medical Issue';
 
-  final List<String> _queryTypes = [
-    'Medical Issue',
-    'Vehicle Breakdown',
-    'Transport Delay',
-    'Traffic Delay',
-    'Personal Emergency',
-    'App / Check-In Issue',
-    'Other Reason',
-  ];
-
-  // Local list of submitted issues (mock database)
-  final List<Map<String, dynamic>> _queries = [
-    {
-      'id': 'Q-9843',
-      'date': '04 Jun 2026',
-      'type': 'Missing Clock Out',
-      'status': 'Approved',
-      'description': 'Forgot to clock out on Thursday. Left shift at 6:00 PM.',
-      'adminComment': 'Log updated successfully to 6:00 PM.',
-    },
-    {
-      'id': 'Q-9850',
-      'date': '08 Jun 2026',
-      'type': 'Incorrect Hours',
-      'status': 'Pending',
-      'description':
-          'System registered late arrival but I was here at 8:55 AM, had issues with the app scanner.',
-      'adminComment': '',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -96,8 +64,8 @@ class _AttendanceViewState extends State<_AttendanceView>
   void _submitQuery() {
     if (_queryFormKey.currentState!.validate()) {
       setState(() {
-        _queries.insert(0, {
-          'id': 'Q-${(1000 + _queries.length * 17).toString()}',
+        AppConstantData.queries.insert(0, {
+          'id': 'Q-${(1000 + AppConstantData.queries.length * 17).toString()}',
           'date': DateFormat('dd MMM yyyy').format(_queryDate),
           'type': _queryType,
           'status': 'Pending',
@@ -736,24 +704,17 @@ class _AttendanceViewState extends State<_AttendanceView>
           return GestureDetector(
             onTap: () async {
               if (!isCheckedIn) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BlocProvider.value(
-                      value: context.read<AttendanceBloc>(),
-                      child: const UniformVerificationScreen(),
-                    ),
-                  ),
+                await context.push(
+                  AppRoutes.uniformVerification,
+                  extra: context.read<AttendanceBloc>(),
                 );
               } else {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CheckInOutScreen(
-                      isCheckingIn: !isCheckedIn,
-                      attendanceBloc: context.read<AttendanceBloc>(),
-                    ),
-                  ),
+                await context.push(
+                  AppRoutes.checkInOut,
+                  extra: {
+                    'isCheckingIn': !isCheckedIn,
+                    'attendanceBloc': context.read<AttendanceBloc>(),
+                  },
                 );
               }
               if (context.mounted) {
@@ -826,24 +787,17 @@ class _AttendanceViewState extends State<_AttendanceView>
                   ElevatedButton(
                     onPressed: () async {
                       if (!isCheckedIn) {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<AttendanceBloc>(),
-                              child: const UniformVerificationScreen(),
-                            ),
-                          ),
+                        await context.push(
+                          AppRoutes.uniformVerification,
+                          extra: context.read<AttendanceBloc>(),
                         );
                       } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CheckInOutScreen(
-                              isCheckingIn: !isCheckedIn,
-                              attendanceBloc: context.read<AttendanceBloc>(),
-                            ),
-                          ),
+                        await context.push(
+                          AppRoutes.checkInOut,
+                          extra: {
+                            'isCheckingIn': !isCheckedIn,
+                            'attendanceBloc': context.read<AttendanceBloc>(),
+                          },
                         );
                       }
                       if (context.mounted) {
@@ -1059,7 +1013,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                   const SizedBox(height: 12),
                   CustomDropdown<String>(
                     value: _queryType,
-                    items: _queryTypes,
+                    items: AppConstantData.queryTypes,
                     width: double.infinity,
                     buttonWidth: size.width * 0.8,
                     buttonColor: Colors.grey.shade50,
@@ -1200,9 +1154,9 @@ class _AttendanceViewState extends State<_AttendanceView>
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _queries.length,
+            itemCount: AppConstantData.queries.length,
             itemBuilder: (context, index) {
-              final query = _queries[index];
+              final query = AppConstantData.queries[index];
               final isApproved = query['status'] == 'Approved';
               final isRejected = query['status'] == 'Rejected';
 

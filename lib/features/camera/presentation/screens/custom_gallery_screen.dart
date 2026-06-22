@@ -9,7 +9,7 @@ import '../../data/models/camera_data.dart';
 import '../../utils/camera_constants.dart';
 import 'employee_preview_screen.dart';
 import 'permission_error_screen.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
 
 class CustomGalleryScreen extends StatefulWidget {
   final bool picAgain;

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/duties/data/models/duty_shift_model.dart';
-import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_details_screen.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 
 class DutiesHistoryScreen extends StatefulWidget {
   const DutiesHistoryScreen({super.key});
@@ -300,11 +301,9 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
         borderRadius: BorderRadius.circular(14.r),
         child: InkWell(
           borderRadius: BorderRadius.circular(14.r),
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DutiesHistoryDetailsScreen(shift: shift),
-            ),
+          onTap: () => context.push(
+            AppRoutes.dutiesHistoryDetails,
+            extra: shift,
           ),
           child: Padding(
             padding: EdgeInsets.all(12.w),

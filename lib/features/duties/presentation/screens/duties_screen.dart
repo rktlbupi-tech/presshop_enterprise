@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:presshop_enterprise/features/duties/presentation/screens/duties_history_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 
 class DutiesScreen extends StatefulWidget {
   const DutiesScreen({super.key});
@@ -980,10 +981,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
               ),
               title: Row(
                 children: const [
-                  Icon(
-                    LucideIcons.triangle_alert,
-                    color: Color(0xFFFF3B30),
-                  ),
+                  Icon(LucideIcons.triangle_alert, color: Color(0xFFFF3B30)),
                   SizedBox(width: 8),
                   Text(
                     "Report Handover Issue",
@@ -1039,15 +1037,11 @@ class _DutiesScreenState extends State<DutiesScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Colors.grey.shade300,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Colors.grey.shade300,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
                         validator: (v) {
@@ -1076,7 +1070,8 @@ class _DutiesScreenState extends State<DutiesScreen> {
                           fontFamily: 'AirbnbCereal',
                         ),
                         decoration: InputDecoration(
-                          hintText: "Describe the issue (e.g. Relief guard has not arrived yet, shift ended but relief not here, etc.)",
+                          hintText:
+                              "Describe the issue (e.g. Relief guard has not arrived yet, shift ended but relief not here, etc.)",
                           hintStyle: TextStyle(
                             color: Colors.grey.shade400,
                             fontSize: 12.5,
@@ -1088,15 +1083,11 @@ class _DutiesScreenState extends State<DutiesScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Colors.grey.shade300,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: Colors.grey.shade300,
-                            ),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
                         validator: (v) {
@@ -1132,11 +1123,15 @@ class _DutiesScreenState extends State<DutiesScreen> {
                             });
 
                             // Simulate submission
-                            await Future.delayed(const Duration(milliseconds: 1500));
+                            await Future.delayed(
+                              const Duration(milliseconds: 1500),
+                            );
 
                             if (context.mounted) {
                               Navigator.pop(context);
-                              _showToast("Handover report submitted successfully.");
+                              _showToast(
+                                "Handover report submitted successfully.",
+                              );
                             }
                           }
                         },
@@ -1187,10 +1182,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DutiesHistoryScreen()),
-        ),
+        onTap: () => context.push(AppRoutes.dutiesHistory),
         child: Row(
           children: [
             Container(
@@ -1231,11 +1223,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-              size: 20,
-            ),
+            const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
           ],
         ),
       ),

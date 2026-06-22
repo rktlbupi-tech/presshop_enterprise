@@ -5,14 +5,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:dots_indicator/dots_indicator.dart';
 import 'package:presshop_enterprise/core/errors/failures.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 import '../../data/models/enterprise_feed_model.dart';
-import '../../../tasks/presentation/screens/task_chat_screen.dart';
 import '../../../tasks/data/models/employee_task_model.dart';
 
 class EvidenceDetailsScreen extends StatefulWidget {
@@ -519,7 +520,6 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                                   : () async {
                                       if (_isNavigating) return;
                                       setState(() => _isNavigating = true);
-                                      final navigator = Navigator.of(context);
                                       final apiClient = getIt<ApiClient>();
                                       try {
                                         final response = await apiClient.get(
@@ -537,14 +537,15 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                                               : raw as Map<String, dynamic>;
                                           final task =
                                               EmployeeTaskModel.fromJson(data);
-                                          await navigator.push(
-                                            MaterialPageRoute(
-                                              builder: (_) => TaskChatScreen(
-                                                taskDetail: task,
-                                                roomId: _taskId,
-                                              ),
-                                            ),
-                                          );
+                                          if (context.mounted) {
+                                            await context.push(
+                                              AppRoutes.taskChat,
+                                              extra: {
+                                                'taskDetail': task,
+                                                'roomId': _taskId,
+                                              },
+                                            );
+                                          }
                                         }
                                       } catch (_) {}
                                       if (mounted)

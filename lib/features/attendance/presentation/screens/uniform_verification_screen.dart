@@ -23,7 +23,7 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
     with TickerProviderStateMixin {
   CameraController? _cameraController;
   bool _cameraReady = false;
-  bool _capturing = false;
+  // bool _capturing = false;
   File? _selfiePhoto;
 
   bool _scanning = true;

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../attendance/presentation/screens/check_in_out_screen.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
@@ -12,7 +10,7 @@ import '../../../mileage/presentation/screens/track_mileage_screen.dart';
 import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
 import '../../../notifications/presentation/screens/notifications_screen.dart';
 import '../../../sos/presentation/widgets/sos_dialog.dart';
-import '../../../../presentation/widgets/coming_soon_screen.dart';
+import '../../../../common/widgets/coming_soon_screen.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen2 extends StatefulWidget {
@@ -353,10 +351,7 @@ class _HomeScreenState extends State<HomeScreen2> {
                       ),
                     ),
                     SizedBox(width: 6.w),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 14.sp,
-                    ),
+                    Icon(Icons.arrow_forward_rounded, size: 14.sp),
                   ],
                 ),
               ),

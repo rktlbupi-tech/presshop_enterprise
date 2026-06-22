@@ -9,15 +9,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../config/di/injection.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
 
 import '../../../../features/map/core/map_constants.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 import '../../../../features/mileage/presentation/widgets/custom_dropdown.dart';
 
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
 import '../bloc/documents_bloc.dart';
 import '../../domain/entities/document_entity.dart';
-import './document_preview_screen.dart';
 
 const double numD036 = 0.036;
 const double numD028 = 0.028;
@@ -472,13 +473,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                     style: TextStyle(fontFamily: 'AirbnbCereal'),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            DocumentPreviewScreen(document: doc),
-                      ),
-                    );
+                    context.push(AppRoutes.documentPreview, extra: doc);
                   },
                 ),
                 ListTile(
@@ -736,11 +731,9 @@ class _DocumentsViewState extends State<_DocumentsView> {
                           final statusStr = _getStatus(doc);
                           return InkWell(
                             onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      DocumentPreviewScreen(document: doc),
-                                ),
+                              context.push(
+                                AppRoutes.documentPreview,
+                                extra: doc,
                               );
                             },
                             borderRadius: BorderRadius.circular(

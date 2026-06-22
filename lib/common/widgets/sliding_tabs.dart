@@ -25,7 +25,10 @@ class SlidingTabs extends StatelessWidget {
     this.activeTextColor,
     this.inactiveTextColor,
     this.fontSize = 14.0,
-  }) : assert(tabs.length == 2, 'SlidingTabs currently supports exactly 2 tabs.');
+  }) : assert(
+         tabs.length == 2,
+         'SlidingTabs currently supports exactly 2 tabs.',
+       );
 
   @override
   Widget build(BuildContext context) {

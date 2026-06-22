@@ -6,16 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../../../config/di/injection.dart';
-import '../../../../config/routes/app_router.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
 import '../../domain/entities/profile_entity.dart';
 import '../bloc/profile_bloc.dart';
 
@@ -240,7 +237,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
           }
 
           final String pubName = profile?.companyName ?? "PressHop Media";
-          final String pubLogo = profile?.companyLogo ?? "";
+          // final String pubLogo = profile?.companyLogo ?? "";
 
           return Scaffold(
             backgroundColor: Colors.white,

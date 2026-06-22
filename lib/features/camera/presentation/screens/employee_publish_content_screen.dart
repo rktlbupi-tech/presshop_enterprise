@@ -15,7 +15,7 @@ import 'audio_recorder_screen.dart';
 import 'content_submitted_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../../main.dart' show sharedPreferences;
-import '../../../../presentation/widgets/loading_widget.dart';
+import '../../../../common/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/socket/socket_manager.dart';

@@ -7,9 +7,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/location_error_screen_map_news.dart';
-import 'package:presshop_enterprise/features/map/presentation/screens/team_chat_list_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,8 +17,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:presshop_enterprise/features/map/presentation/widgets/message_button.dart';
 import 'package:presshop_enterprise/main.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:presshop_enterprise/presentation/widgets/employee_app_bar.dart';
-import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
+import 'package:presshop_enterprise/common/widgets/employee_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/loading_widget.dart';
 
 import 'package:presshop_enterprise/features/map/presentation/widgets/alert_button_map.dart';
 import 'package:presshop_enterprise/features/map/data/models/map_models.dart'
@@ -1337,12 +1337,7 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                         label: "Chat",
                         color: colorThemePink,
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TeamChatListPage(),
-                            ),
-                          );
+                          context.push(AppRoutes.teamChatList);
                         },
                       ),
                     ),
@@ -2297,12 +2292,8 @@ class _TeamMapScreenState extends State<TeamMapScreen>
                                             Expanded(
                                               child: GestureDetector(
                                                 onTap: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          const TeamChatListPage(),
-                                                    ),
+                                                  context.push(
+                                                    AppRoutes.teamChatList,
                                                   );
                                                 },
                                                 child:

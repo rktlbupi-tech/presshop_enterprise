@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
-import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
 
 import '../../data/datasources/settings_remote_datasource.dart';
-import 'package:intl/intl.dart';
 
 class TermCheckScreen extends StatefulWidget {
   final String type; // e.g. "legal" or "privacy_policy"
@@ -137,7 +136,9 @@ class _TermCheckScreenState extends State<TermCheckScreen> {
         ),
       ),
       appBar: AppAppBar(
-        title: widget.type == "privacy_policy" ? "Privacy policy" : "Legal T&Cs",
+        title: widget.type == "privacy_policy"
+            ? "Privacy policy"
+            : "Legal T&Cs",
         showBack: true,
         showLogo: false,
       ),

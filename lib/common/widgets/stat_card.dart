@@ -47,13 +47,19 @@ class StatCard extends StatelessWidget {
                 color: (bgColor ?? AppColors.primary).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.r),
               ),
-              child: Icon(icon,
-                  size: 20.sp, color: iconColor ?? AppColors.primary),
+              child: Icon(
+                icon,
+                size: 20.sp,
+                color: iconColor ?? AppColors.primary,
+              ),
             ),
             SizedBox(height: 12.h),
-            Text(value,
-                style: AppTextStyles.h3
-                    .copyWith(color: iconColor ?? AppColors.primary)),
+            Text(
+              value,
+              style: AppTextStyles.h3.copyWith(
+                color: iconColor ?? AppColors.primary,
+              ),
+            ),
             SizedBox(height: 2.h),
             Text(label, style: AppTextStyles.labelSmall),
           ],

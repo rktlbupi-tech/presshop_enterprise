@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import '../../domain/entities/document_entity.dart';
 
 class DocumentPreviewScreen extends StatelessWidget {
@@ -39,7 +39,11 @@ class DocumentPreviewScreen extends StatelessWidget {
           Builder(
             builder: (BuildContext context) {
               return IconButton(
-                icon: Icon(LucideIcons.share_2, color: Colors.black87, size: size.width * 0.055),
+                icon: Icon(
+                  LucideIcons.share_2,
+                  color: Colors.black87,
+                  size: size.width * 0.055,
+                ),
                 onPressed: () {
                   final box = context.findRenderObject() as RenderBox?;
                   // ignore: deprecated_member_use
@@ -66,24 +70,23 @@ class DocumentPreviewScreen extends StatelessWidget {
   }
 
   Widget _buildPreviewWidget(bool isPdf, String? fileUrl) {
-    final hasLocal = fileUrl != null && !fileUrl.startsWith('http') && !fileUrl.startsWith('https');
+    final hasLocal =
+        fileUrl != null &&
+        !fileUrl.startsWith('http') &&
+        !fileUrl.startsWith('https');
 
     if (isPdf) {
       if (hasLocal) {
-        return SfPdfViewer.file(
-          File(fileUrl),
-        );
+        return SfPdfViewer.file(File(fileUrl));
       } else {
         return SfPdfViewer.network(
-          fileUrl ?? 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+          fileUrl ??
+              'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
         );
       }
     } else {
       if (hasLocal) {
-        return Image.file(
-          File(fileUrl),
-          fit: BoxFit.contain,
-        );
+        return Image.file(File(fileUrl), fit: BoxFit.contain);
       } else {
         return Image.network(
           fileUrl ?? 'https://via.placeholder.com/600x800?text=Preview+Image',

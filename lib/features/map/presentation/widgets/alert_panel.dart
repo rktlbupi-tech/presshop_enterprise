@@ -4,7 +4,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:presshop_enterprise/presentation/widgets/loading_widget.dart';
+import 'package:presshop_enterprise/common/widgets/loading_widget.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/map/data/services/emergency_service.dart';
 
@@ -239,7 +239,9 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     final clean = phoneNumber.replaceAll(RegExp(r'[^\d+*#]'), '');
     final uri = Uri(scheme: 'tel', path: clean);
     try {
-      debugPrint('[AlertPanel] Launching tel URI: $uri (Original: $phoneNumber)');
+      debugPrint(
+        '[AlertPanel] Launching tel URI: $uri (Original: $phoneNumber)',
+      );
       await launchUrl(uri);
     } catch (e) {
       debugPrint('[AlertPanel] Error launching tel URI: $e');
@@ -513,9 +515,7 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                     SizedBox(
                       width: w * 0.04,
                       height: w * 0.04,
-                      child: LoadingWidget(
-                        size: w * 0.04,
-                      ),
+                      child: LoadingWidget(size: w * 0.04),
                     ),
                     SizedBox(width: w * 0.02),
                     Text(
@@ -559,7 +559,9 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     final dialNumber = station.phoneNumber.isNotEmpty
         ? station.phoneNumber
         : getEmergencyNumber(category);
-    debugPrint('[AlertPanel] Building card for ${station.name}: Phone="${station.phoneNumber}", DialNumber="$dialNumber"');
+    debugPrint(
+      '[AlertPanel] Building card for ${station.name}: Phone="${station.phoneNumber}", DialNumber="$dialNumber"',
+    );
 
     return Container(
       margin: EdgeInsets.only(bottom: w * 0.02),

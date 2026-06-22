@@ -6,8 +6,9 @@ import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_endpoints.dart';
-import '../../../../presentation/widgets/app_app_bar.dart';
-import 'reset_password_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/routes/app_router.dart';
+import '../../../../common/widgets/app_app_bar.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -39,7 +40,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       );
 
       final data = response.data as Map<String, dynamic>;
-      if (response.statusCode == 200 || data['code'] == 200 || data['success'] == true) {
+      if (response.statusCode == 200 ||
+          data['code'] == 200 ||
+          data['success'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -79,7 +82,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       builder: (bottomSheetContext) {
         return OtpBottomSheet(
           email: email,
-          onVerify: (emailAddress, otpCode) => _verifyOtp(bottomSheetContext, emailAddress, otpCode),
+          onVerify: (emailAddress, otpCode) =>
+              _verifyOtp(bottomSheetContext, emailAddress, otpCode),
           onResend: () async {
             Navigator.pop(bottomSheetContext);
             await _submit();
@@ -89,33 +93,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Future<void> _verifyOtp(BuildContext bottomSheetContext, String email, String otp) async {
-    final navigator = Navigator.of(context);
+  Future<void> _verifyOtp(
+    BuildContext bottomSheetContext,
+    String email,
+    String otp,
+  ) async {
     final bottomSheetNavigator = Navigator.of(bottomSheetContext);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     try {
       final response = await getIt<ApiClient>().post(
         ApiEndpoints.verifyOtp,
-        data: {
-          'email': email,
-          'otp': otp,
-        },
+        data: {'email': email, 'otp': otp},
       );
 
       final data = response.data as Map<String, dynamic>;
-      if (response.statusCode == 200 || data['otp_match'] == true || data['success'] == true) {
+      if (response.statusCode == 200 ||
+          data['otp_match'] == true ||
+          data['success'] == true) {
         // Close OTP Bottom Sheet
         bottomSheetNavigator.pop();
         // Navigate to ResetPasswordScreen
-        navigator.push(
-          MaterialPageRoute(
-            builder: (_) => ResetPasswordScreen(
-              email: email,
-              otp: otp,
-            ),
-          ),
-        );
+        if (context.mounted) {
+          context.push(
+            AppRoutes.resetPassword,
+            extra: {'email': email, 'otp': otp},
+          );
+        }
       } else {
         throw Exception(data['message'] ?? 'Invalid OTP code');
       }
@@ -383,7 +387,12 @@ class _OtpBottomSheetState extends State<OtpBottomSheet> {
                     onPressed: _verifying
                         ? null
                         : () async {
-                            final otpValue = _otpPinController.currentState?.controller.text ?? "";
+                            final otpValue =
+                                _otpPinController
+                                    .currentState
+                                    ?.controller
+                                    .text ??
+                                "";
                             if (otpValue.isEmpty || otpValue.length < 5) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(

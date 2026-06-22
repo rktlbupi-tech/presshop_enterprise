@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:presshop_enterprise/presentation/widgets/employee_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/employee_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -12,7 +12,7 @@ import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../mileage/presentation/screens/track_mileage_screen.dart';
 import '../../../mileage/presentation/screens/claim_expenses_screen.dart';
 import '../../../sos/presentation/widgets/sos_dialog.dart';
-import '../../../../presentation/widgets/coming_soon_screen.dart';
+import '../../../../common/widgets/coming_soon_screen.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen2 extends StatefulWidget {
@@ -31,7 +31,9 @@ class _HomeScreenState extends State<HomeScreen2> {
   Widget build(BuildContext context) {
     final prefs = getIt<SharedPreferences>();
     final onDuty = prefs.getBool('on_duty') ?? false;
-    final currentDateString = DateFormat('EEEE, dd MMM yyyy').format(DateTime.now());
+    final currentDateString = DateFormat(
+      'EEEE, dd MMM yyyy',
+    ).format(DateTime.now());
 
     return BlocBuilder<ProfileBloc, ProfileState>(
       builder: (context, state) {
@@ -47,7 +49,9 @@ class _HomeScreenState extends State<HomeScreen2> {
             avatarOverride: profile?.profileImage,
             companyLogoOverride: profile?.companyLogo,
             onProfileTap: () {
-              context.findAncestorStateOfType<DashboardScreenState>()?.changeTab(4);
+              context
+                  .findAncestorStateOfType<DashboardScreenState>()
+                  ?.changeTab(4);
             },
           ),
           body: SafeArea(
@@ -200,7 +204,10 @@ class _HomeScreenState extends State<HomeScreen2> {
                 GestureDetector(
                   onTap: () => _navigateToTab(1),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 9.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 9.h,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8.r),
@@ -437,7 +444,9 @@ class _HomeScreenState extends State<HomeScreen2> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ClaimExpensesScreen()),
+            MaterialPageRoute(
+              builder: (context) => const ClaimExpensesScreen(),
+            ),
           );
         },
       ),
@@ -680,21 +689,24 @@ class _HomeScreenState extends State<HomeScreen2> {
         text: 'The inspection report is ready.',
         time: '10:30 AM',
         unreadCount: 2,
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+        avatarUrl:
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
       ),
       _MessageModel(
         name: 'Site Team – Building A',
         text: 'Please submit your daily report.',
         time: '9:45 AM',
         unreadCount: 5,
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+        avatarUrl:
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
       ),
       _MessageModel(
         name: 'HR Team',
         text: 'Your leave request has been approved.',
         time: 'Yesterday',
         unreadCount: 1,
-        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100',
+        avatarUrl:
+            'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100',
       ),
     ];
 
@@ -719,7 +731,10 @@ class _HomeScreenState extends State<HomeScreen2> {
                 onTap: () => _navigateToTab(3),
                 borderRadius: BorderRadius.circular(12.r),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 12.h,
+                  ),
                   child: Row(
                     children: [
                       CircleAvatar(
@@ -771,7 +786,10 @@ class _HomeScreenState extends State<HomeScreen2> {
                             SizedBox(height: 5.h),
                             Container(
                               constraints: BoxConstraints(minWidth: 18.w),
-                              padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 5.w,
+                                vertical: 2.h,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
                                 borderRadius: BorderRadius.circular(10.r),

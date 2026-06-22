@@ -4,7 +4,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/duties/data/models/duty_shift_model.dart';
-import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 
 class DutiesHistoryDetailsScreen extends StatelessWidget {
   final DutyShiftHistory shift;
@@ -303,7 +303,7 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: 14.h),
-          
+
           // Site Row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,7 +348,7 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
               ),
             ],
           ),
-          
+
           SizedBox(height: 14.h),
           const Divider(height: 1, color: Color(0xFFEFF1F5)),
           SizedBox(height: 14.h),
@@ -408,7 +408,10 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
                   color: Color(0xFF127A45),
                   size: 16,
                 ),
-                onPressed: () => _showToast(context, "Calling supervisor: ${shift.supervisorPhone}"),
+                onPressed: () => _showToast(
+                  context,
+                  "Calling supervisor: ${shift.supervisorPhone}",
+                ),
               ),
             ],
           ),
@@ -463,7 +466,11 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSelfieBox(BuildContext context, {required String title, required String time}) {
+  Widget _buildSelfieBox(
+    BuildContext context, {
+    required String title,
+    required String time,
+  }) {
     return Container(
       padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
@@ -483,7 +490,7 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8.h),
-          
+
           // Custom premium mockup of verified selfie
           Container(
             height: 90.h,
@@ -511,7 +518,10 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
                 Positioned(
                   top: 8.h,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 6.w,
+                      vertical: 2.h,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEAF5EE),
                       borderRadius: BorderRadius.circular(4.r),
@@ -564,7 +574,7 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
       'Badge / ID Card Checked',
       'Duty Boots Checked',
       'Security Belt Checked',
-      'High-Visibility Vest Checked'
+      'High-Visibility Vest Checked',
     ];
 
     return Container(
@@ -589,28 +599,32 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
           ),
           SizedBox(height: 10.h),
           Column(
-            children: checklist.map((item) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 4.h),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFF127A45),
-                    size: 16,
-                  ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    item,
-                    style: TextStyle(
-                      color: const Color(0xFF0B0F1A),
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'AirbnbCereal',
+            children: checklist
+                .map(
+                  (item) => Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4.h),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF127A45),
+                          size: 16,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          item,
+                          style: TextStyle(
+                            color: const Color(0xFF0B0F1A),
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            )).toList(),
+                )
+                .toList(),
           ),
         ],
       ),

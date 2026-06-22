@@ -3,23 +3,18 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // ── Brand (PressHop Enterprise — employee theme) ─────────
-  // Carried over from the old app's employee palette so the look
-  // matches 1:1. `colorEmployeeGreen1` in the old app was actually
-  // the brand blue (#1877F2); that is the employee primary.
-  static const Color primary = Color(0xFF1877F2); // old: colorEmployeeGreen1
+  static const Color primary = Color(0xFF1877F2);
   static const Color primaryLight = Color(0xFF4A90F5);
   static const Color primaryDark = Color(0xFF0F5FC9);
-  static const Color accent = Color(0xFF4FAA4B); // old: colorEmployeeGreen2
+  static const Color accent = Color(0xFF4FAA4B);
   static const Color accentLight = Color(0xFF6FC56B);
 
   // ── Legacy / brand reference colors (from old app) ───────
   static const Color employeeBlue = Color(0xFF1877F2);
   static const Color employeeGreen = Color(0xFF4FAA4B);
-  static const Color hopperPink = Color(0xFFEC4E54); // old: colorThemePink
-  static const Color textFieldBorder = Color(0xFF858585); // old: colorTextFieldBorder
+  static const Color hopperPink = Color(0xFFEC4E54);
+  static const Color textFieldBorder = Color(0xFF858585);
 
-  // ── Background ───────────────────────────────────────────
   static const Color background = Color(0xFFF5F5F5);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color cardBackground = Color(0xFFFFFFFF);
