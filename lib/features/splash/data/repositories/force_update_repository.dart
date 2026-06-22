@@ -16,7 +16,9 @@ class ForceUpdateRepository {
   /// Uses memory caching for the decision, version info, and shares concurrent check Futures to prevent duplicate calls.
   static Future<bool> checkForceUpdate({bool forceRefresh = false}) async {
     if (!forceRefresh && _isForceUpdateRequired != null) {
-      debugPrint("Returning cached force update decision: $_isForceUpdateRequired");
+      debugPrint(
+        "Returning cached force update decision: $_isForceUpdateRequired",
+      );
       return _isForceUpdateRequired!;
     }
     if (_inProgressCheck != null) {
@@ -35,12 +37,14 @@ class ForceUpdateRepository {
 
   static Future<bool> _performCheck({bool forceRefresh = false}) async {
     final now = DateTime.now();
-    if (!forceRefresh && _lastCheckTime != null && now.difference(_lastCheckTime!) < const Duration(minutes: 5)) {
+    if (!forceRefresh &&
+        _lastCheckTime != null &&
+        now.difference(_lastCheckTime!) < const Duration(minutes: 5)) {
       debugPrint("Skipping force update check (cooldown active)");
       return _isForceUpdateRequired ?? false;
     }
     _lastCheckTime = now;
-
+    // dsfsd
     try {
       final apiClient = getIt<ApiClient>();
       final response = await apiClient.get(endpoint);
@@ -74,10 +78,15 @@ class ForceUpdateRepository {
         backendForceFlag = data["iOSshouldForceUpdate"] == true;
       }
 
-      debugPrint("ForceUpdate check: latest=$latestBackendVersion, current=$currentVersion, forceFlag=$backendForceFlag");
+      debugPrint(
+        "ForceUpdate check: latest=$latestBackendVersion, current=$currentVersion, forceFlag=$backendForceFlag",
+      );
 
       if (latestBackendVersion != null) {
-        bool updateAvailable = compareVersions(latestBackendVersion, currentVersion);
+        bool updateAvailable = compareVersions(
+          latestBackendVersion,
+          currentVersion,
+        );
         _isForceUpdateRequired = updateAvailable && backendForceFlag;
         return _isForceUpdateRequired!;
       }
@@ -92,8 +101,14 @@ class ForceUpdateRepository {
 
   /// Compare two semantic version strings. Returns true if latest is greater than current.
   static bool compareVersions(String latest, String current) {
-    final latestParts = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final currentParts = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final latestParts = latest
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
+    final currentParts = current
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
 
     for (int i = 0; i < latestParts.length; i++) {
       if (i >= currentParts.length) return true;
