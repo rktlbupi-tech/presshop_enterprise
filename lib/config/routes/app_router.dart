@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:presshop_enterprise/main.dart';
 import '../../features/splash/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -19,6 +20,7 @@ class AppRoutes {
 
 GoRouter createRouter(SharedPreferences prefs) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: AppRoutes.splash,
     redirect: (context, state) {
       final token = prefs.getString('auth_token');
@@ -59,7 +61,11 @@ GoRouter createRouter(SharedPreferences prefs) {
       ),
       GoRoute(
         path: AppRoutes.dashboard,
-        builder: (context, state) => const DashboardScreen(),
+        builder: (context, state) {
+          final tabStr = state.uri.queryParameters['tab'];
+          final index = tabStr != null ? int.tryParse(tabStr) ?? 2 : 2;
+          return DashboardScreen(initialIndex: index);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

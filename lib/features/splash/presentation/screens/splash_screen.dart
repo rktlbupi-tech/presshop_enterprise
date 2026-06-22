@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
+import 'package:presshop_enterprise/features/notifications/data/services/local_notification_service.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_icons.dart';
+import 'package:presshop_enterprise/features/splash/data/repositories/force_update_repository.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -39,6 +42,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
+    LocalNotificationService.instance.showTestNotification();
+    
+    // Check if force update is required before routing forward
+    final isForceUpdateRequired = await ForceUpdateRepository.checkForceUpdate();
+    if (isForceUpdateRequired) {
+      // Stay on the splash screen so the ForceUpdateWidget displays the popup here
+      return;
+    }
+
     await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
     final prefs = await SharedPreferences.getInstance();
@@ -48,6 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!onboardingSeen) {
       context.go(AppRoutes.onboarding);
     } else if (token != null) {
+      EnterpriseFcmService.registerToken();
       context.go(AppRoutes.dashboard);
     } else {
       context.go(AppRoutes.login);

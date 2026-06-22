@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/features/mileage/presentation/screens/track_mileage_screen.dart';
@@ -49,6 +50,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Future<void> _logout() async {
     final prefs = getIt<SharedPreferences>();
+    await EnterpriseFcmService.removeToken();
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
     await prefs.remove('user_email');

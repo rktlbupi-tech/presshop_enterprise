@@ -1,7 +1,7 @@
 name: presshop_enterprise
 description: Presshop Enterprise — Employee App
 publish_to: 'none'
-version: 1.0.0+3
+version: 3.0.11+11
 
 environment:
   sdk: ^3.10.7
@@ -77,6 +77,8 @@ dependencies:
   flutter_local_notifications: ^17.2.4
   flutter_html: ^3.0.0
   url_launcher: ^6.3.2
+  package_info_plus: ^8.1.0
+  force_update_helper: ^0.2.1
 
   # Map feature
   google_maps_flutter: ^2.9.0

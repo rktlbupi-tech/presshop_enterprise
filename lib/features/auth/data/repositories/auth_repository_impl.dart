@@ -3,6 +3,7 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../../../../features/notifications/data/services/enterprise_fcm_service.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDatasource _datasource;
@@ -16,6 +17,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final (token, userModel) = await _datasource.login(email, password);
       final user = userModel.toEntity(token);
       await _saveSession(user);
+      await EnterpriseFcmService.registerToken();
       return (user, null);
     } on Failure catch (f) {
       return (null, f);
@@ -30,6 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
       final (token, userModel) = await _datasource.signup(fullName, email, password);
       final user = userModel.toEntity(token);
       await _saveSession(user);
+      await EnterpriseFcmService.registerToken();
       return (user, null);
     } on Failure catch (f) {
       return (null, f);
@@ -41,6 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<(bool, Failure?)> logout() async {
     try {
+      await EnterpriseFcmService.removeToken();
       await clearSession();
       return (true, null);
     } catch (e) {
