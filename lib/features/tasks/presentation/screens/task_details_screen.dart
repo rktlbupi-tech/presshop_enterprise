@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:presshop_enterprise/core/errors/failures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -125,7 +126,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           _localStatusOverride = status;
         }
         if (_localStatusOverride == 'started' ||
-            _localStatusOverride == 'in_progress') {
+            _localStatusOverride == 'in_progress' ||
+            _localStatusOverride == 'ongoing') {
           _initWorkTimer();
         } else {
           _workTimer?.cancel();
@@ -368,13 +370,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       builder: (_) => const Center(child: LoadingWidget()),
     );
     try {
-      // Commented out API Client Patch call as per instruction
-      /*
-      final resp = await _apiClient.patch(
-        'enterprise/tasks/${widget.taskId}',
-        data: {'status': 'completed'},
+      await _apiClient.post(
+        'enterprise/task-assignments/${widget.taskId}/complete',
+        data: {'completionNote': 'Photos uploaded, brief done.'},
       );
-      */
       if (!mounted) return;
       Navigator.pop(context);
       setState(() {
@@ -391,9 +390,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
+        final String errorMsg = e is Failure ? e.message : e.toString();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
       }
     }
   }
@@ -503,14 +503,22 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset(
-                      'assets/images/ic_black_rabbit.png',
-                      width: size.width * 0.12,
-                      height: size.width * 0.12,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        child: Image.asset(
+                          'assets/rabbits/rabbit_for_alert.png',
+                          height: size.width * 0.30,
+                          width: size.width * 0.35,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                    SizedBox(width: size.width * 0.03),
+                    SizedBox(width: size.width * 0.04),
                     Expanded(
                       child: Text(
                         'Your task has been marked as complete and logged successfully. Thank you.',
@@ -646,7 +654,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final isCompleted = _getUserAssignmentStatus() == 'completed';
     final isStarted =
         _getUserAssignmentStatus() == 'started' ||
-        _getUserAssignmentStatus() == 'in_progress';
+        _getUserAssignmentStatus() == 'in_progress' ||
+        _getUserAssignmentStatus() == 'ongoing';
     final companyName =
         (task.creatorSummary != null &&
             task.creatorSummary!.fullName.isNotEmpty)
@@ -1303,7 +1312,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                           ),
                           SizedBox(width: size.width * 0.02),
                           const Text(
-                            "Working Time Tracker:",
+                            "Time Worked :",
                             style: TextStyle(
                               fontFamily: 'AirbnbCereal',
                               fontWeight: FontWeight.bold,

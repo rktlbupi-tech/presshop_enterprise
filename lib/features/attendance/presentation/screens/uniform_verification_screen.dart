@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import '../../../../main.dart' show cameras;
 import '../bloc/attendance_bloc.dart';
 
@@ -271,23 +272,29 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.white,
-                        size: 20,
+                      icon: Image.asset(
+                        'assets/icons/ic_arrow_left.png',
+                        width: 24.w,
+                        height: 24.w,
+                        color: AppColors.cardBackground,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 22.sp,
+                            color: AppColors.textPrimary,
+                          );
+                        },
                       ),
+                      onPressed: () => Navigator.pop(context),
                     ),
-                    Expanded(
-                      child: Text(
-                        'Uniform Check',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'AirbnbCereal',
-                        ),
+                    Text(
+                      'Uniform Check',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'AirbnbCereal',
                       ),
                     ),
                     SizedBox(width: 48.w),

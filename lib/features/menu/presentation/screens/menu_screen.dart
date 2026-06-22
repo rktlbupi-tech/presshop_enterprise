@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/attendance/presentation/screens/uniform_verification_screen.dart';
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
@@ -28,6 +29,7 @@ import '../../../../features/settings/presentation/screens/faq_screen.dart';
 import '../../../../features/settings/presentation/screens/term_check_screen.dart';
 import '../../../duties/presentation/screens/duties_screen.dart';
 import '../../../payslip/presentation/screens/payslip_screen.dart';
+import '../../../camera/presentation/screens/employee_camera_screen.dart';
 
 const _iconsPath = 'assets/icons/';
 const Color colorLightGrey = Color(0xFFF3F5F4);
@@ -293,7 +295,18 @@ class _MenuScreenState extends State<MenuScreen> {
                             value: _onDuty,
                             inactiveColor: Colors.grey.shade400,
                             activeColor: AppColors.primary,
-                            onToggle: (v) => setState(() => _onDuty = v),
+                            onToggle: (v) {
+                              setState(() => _onDuty = v);
+                              if (v) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const UniformVerificationScreen(),
+                                  ),
+                                );
+                              }
+                            },
                           ),
                         ],
                       ),

@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:dots_indicator/dots_indicator.dart';
+import 'package:presshop_enterprise/core/errors/failures.dart';
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/loading_widget.dart';
 import '../../data/models/enterprise_feed_model.dart';
 import '../../../tasks/presentation/screens/task_chat_screen.dart';
@@ -33,6 +33,15 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
   Timer? _workTimer;
   String _workDuration = '';
 
+  @override
+  void initState() {
+    super.initState();
+    final status = _getUserAssignmentStatus();
+    if (status == 'started' || status == 'in_progress' || status == 'ongoing') {
+      _initWorkTimer();
+    }
+  }
+
   String get _taskId => widget.item.task.id;
 
   String _getUserAssignmentStatus() {
@@ -48,11 +57,6 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
       builder: (_) => const Center(child: LoadingWidget()),
     );
     try {
-      final apiClient = getIt<ApiClient>();
-      await apiClient.patch(
-        'enterprise/tasks/$_taskId',
-        data: {'status': 'started'},
-      );
       if (!mounted) return;
       Navigator.pop(context);
       setState(() => _localStatusOverride = 'started');
@@ -86,9 +90,9 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
     );
     try {
       final apiClient = getIt<ApiClient>();
-      await apiClient.patch(
-        'enterprise/tasks/$_taskId',
-        data: {'status': 'completed'},
+      await apiClient.post(
+        'enterprise/task-assignments/$_taskId/complete',
+        data: {'completionNote': 'Photos uploaded, brief done.'},
       );
       if (!mounted) return;
       Navigator.pop(context);
@@ -105,9 +109,10 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
+        final String errorMsg = e is Failure ? e.message : e.toString();
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error: $errorMsg')));
       }
     }
   }
@@ -202,14 +207,22 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset(
-                      'assets/images/ic_black_rabbit.png',
-                      width: size.width * 0.12,
-                      height: size.width * 0.12,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        child: Image.asset(
+                          'assets/rabbits/rabbit_for_alert.png',
+                          height: size.width * 0.30,
+                          width: size.width * 0.35,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                    SizedBox(width: size.width * 0.03),
+                    SizedBox(width: size.width * 0.04),
                     Expanded(
                       child: Text(
                         'Your task has been marked as complete and logged successfully. Thank you.',
@@ -291,7 +304,8 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
 
     final status = _getUserAssignmentStatus();
     final isCompleted = status == 'completed';
-    final isStarted = status == 'started' || status == 'in_progress';
+    final isStarted =
+        status == 'started' || status == 'in_progress' || status == 'ongoing';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -434,7 +448,7 @@ class _EvidenceDetailsScreenState extends State<EvidenceDetailsScreen> {
                             ),
                             SizedBox(width: 8.w),
                             const Text(
-                              "Working Time Tracker:",
+                              "Time Worked:",
                               style: TextStyle(
                                 fontFamily: 'AirbnbCereal',
                                 fontWeight: FontWeight.bold,

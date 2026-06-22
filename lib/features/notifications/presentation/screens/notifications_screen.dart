@@ -254,32 +254,36 @@ class _NotificationsViewState extends State<_NotificationsView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: EdgeInsets.only(right: 10.w),
-                      child: Text(
-                        DateFormat('hh:mm a, dd MMM yyyy').format(notification.createdAt),
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w300,
-                          fontFamily: 'AirbnbCereal',
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          notification.title,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: notification.isRead
+                                ? FontWeight.w600
+                                : FontWeight.bold,
+                            color: Colors.black,
+                            fontFamily: 'AirbnbCereal',
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  Text(
-                    notification.title,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: notification.isRead
-                          ? FontWeight.w600
-                          : FontWeight.bold,
-                      color: Colors.black,
-                      fontFamily: 'AirbnbCereal',
-                    ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: EdgeInsets.only(right: 10.w),
+                        child: Text(
+                          DateFormat('hh:mm a, dd MMM yyyy').format(notification.createdAt),
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w300,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 4.h),
                   Text(

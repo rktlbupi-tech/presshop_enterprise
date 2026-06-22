@@ -14,6 +14,7 @@ import '../bloc/attendance_bloc.dart';
 import '../widgets/sliding_tabs.dart';
 import '../widgets/custom_dropdown.dart';
 import 'check_in_out_screen.dart';
+import 'uniform_verification_screen.dart';
 
 class AttendanceScreen extends StatelessWidget {
   const AttendanceScreen({super.key});
@@ -734,15 +735,27 @@ class _AttendanceViewState extends State<_AttendanceView>
         if (index == 0) {
           return GestureDetector(
             onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CheckInOutScreen(
-                    isCheckingIn: !isCheckedIn,
-                    attendanceBloc: context.read<AttendanceBloc>(),
+              if (!isCheckedIn) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<AttendanceBloc>(),
+                      child: const UniformVerificationScreen(),
+                    ),
                   ),
-                ),
-              );
+                );
+              } else {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CheckInOutScreen(
+                      isCheckingIn: !isCheckedIn,
+                      attendanceBloc: context.read<AttendanceBloc>(),
+                    ),
+                  ),
+                );
+              }
               if (context.mounted) {
                 context.read<AttendanceBloc>().add(const FetchAttendanceLog());
               }
@@ -812,15 +825,27 @@ class _AttendanceViewState extends State<_AttendanceView>
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CheckInOutScreen(
-                            isCheckingIn: !isCheckedIn,
-                            attendanceBloc: context.read<AttendanceBloc>(),
+                      if (!isCheckedIn) {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<AttendanceBloc>(),
+                              child: const UniformVerificationScreen(),
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CheckInOutScreen(
+                              isCheckingIn: !isCheckedIn,
+                              attendanceBloc: context.read<AttendanceBloc>(),
+                            ),
+                          ),
+                        );
+                      }
                       if (context.mounted) {
                         context.read<AttendanceBloc>().add(
                           const FetchAttendanceLog(),

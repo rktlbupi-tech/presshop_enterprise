@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:presshop_enterprise/presentation/widgets/app_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../presentation/widgets/company_logo_widget.dart';
 import '../../../../presentation/widgets/employee_app_bar.dart';
 import '../../../../presentation/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';

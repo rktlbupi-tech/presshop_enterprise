@@ -239,8 +239,11 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     final clean = phoneNumber.replaceAll(RegExp(r'[^\d+*#]'), '');
     final uri = Uri(scheme: 'tel', path: clean);
     try {
+      debugPrint('[AlertPanel] Launching tel URI: $uri (Original: $phoneNumber)');
       await launchUrl(uri);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[AlertPanel] Error launching tel URI: $e');
+    }
   }
 
   Future<void> _navigateToLocation(double lat, double lng) async {
@@ -556,6 +559,7 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     final dialNumber = station.phoneNumber.isNotEmpty
         ? station.phoneNumber
         : getEmergencyNumber(category);
+    debugPrint('[AlertPanel] Building card for ${station.name}: Phone="${station.phoneNumber}", DialNumber="$dialNumber"');
 
     return Container(
       margin: EdgeInsets.only(bottom: w * 0.02),

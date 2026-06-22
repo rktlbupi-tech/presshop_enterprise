@@ -83,8 +83,8 @@ class ApiClient {
         final statusCode = e.response?.statusCode;
         final message =
             e.response?.data?['message'] as String? ?? 'Server error occurred.';
-        if (statusCode == 401) return const UnauthorizedFailure();
-        if (statusCode == 404) return const NotFoundFailure();
+        if (statusCode == 401) return UnauthorizedFailure(message);
+        if (statusCode == 404) return NotFoundFailure(message);
         return ServerFailure(message);
       default:
         return const UnknownFailure();

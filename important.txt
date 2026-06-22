@@ -51,3 +51,31 @@ keytool -genkey -v \
 
 1. Remove scan from camera and give a back buttion for apple devices 
 2. Cta buttion api integration in evidence page correct text and color of the cta button 
+3. check why 999 is showing in each plan for emergency  service 
+
+
+
+show  a person image in team chat 
+
+toggle open shoudl open scan camera screen 
+correct back arrow use same desing 
+
+
+
+
+// meeting of 22 june 
+
+1. splash 
+2. onboarding screen 
+
+
+
+Group Team Chat 
+Individual Team Chat
+Task Chat
+
+
+Group Team Chat
+Netfin Entire Team (Default)
+Group Chat Name 1
+Group Chat Name 2

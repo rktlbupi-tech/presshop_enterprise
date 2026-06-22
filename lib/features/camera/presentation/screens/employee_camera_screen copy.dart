@@ -654,101 +654,72 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                // ── Mode selector ──────────────────────────────────────────────
-                Center(
-                  child: SizedBox(
-                    width: responsiveWidth,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        left: responsiveWidth * numD05,
-                        right: responsiveWidth * numD05,
-                        top: 50,
-                        bottom: 8,
+            // ── Mode selector ──────────────────────────────────────────────
+            Center(
+              child: SizedBox(
+                width: responsiveWidth,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: responsiveWidth * numD05,
+                    vertical: responsiveWidth * numD02,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _modeTab(
+                        scanText,
+                        onTap: () {
+                          recordingTime = '';
+                          myTimer?.cancel();
+                          selectedType = scanText;
+                          cameraController?.pausePreview();
+                          openImageScanner();
+                          setState(() {});
+                        },
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // _modeTab(
-                          //   scanText,
-                          //   onTap: () {
-                          //     recordingTime = '';
-                          //     myTimer?.cancel();
-                          //     selectedType = scanText;
-                          //     cameraController?.pausePreview();
-                          //     openImageScanner();
-                          //     setState(() {});
-                          //   },
-                          // ),
-                          _modeTab(
-                            photoText,
-                            onTap: () {
-                              recordingTime = '';
-                              myTimer?.cancel();
-                              selectedType = photoText;
-                              frontCamera = false;
-                              if (cameras.isNotEmpty) initCamera(cameras[0]);
-                              setState(() {});
-                            },
-                          ),
-                          _modeTab(
-                            videoText,
-                            onTap: () {
-                              recordingTime = '';
-                              myTimer?.cancel();
-                              selectedType = videoText;
-                              frontCamera = false;
-                              if (cameras.isNotEmpty) initCamera(cameras[0]);
-                              setState(() {});
-                            },
-                          ),
-                          _modeTab(
-                            audioText,
-                            onTap: () {
-                              recordingTime = '';
-                              myTimer?.cancel();
-                              selectedType = audioText;
-                              setState(() {});
-                            },
-                          ),
-                        ],
+                      _modeTab(
+                        photoText,
+                        onTap: () {
+                          recordingTime = '';
+                          myTimer?.cancel();
+                          selectedType = photoText;
+                          frontCamera = false;
+                          if (cameras.isNotEmpty) initCamera(cameras[0]);
+                          setState(() {});
+                        },
                       ),
-                    ),
+                      _modeTab(
+                        videoText,
+                        onTap: () {
+                          recordingTime = '';
+                          myTimer?.cancel();
+                          selectedType = videoText;
+                          frontCamera = false;
+                          if (cameras.isNotEmpty) initCamera(cameras[0]);
+                          setState(() {});
+                        },
+                      ),
+                      _modeTab(
+                        audioText,
+                        onTap: () {
+                          recordingTime = '';
+                          myTimer?.cancel();
+                          selectedType = audioText;
+                          setState(() {});
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                // ── Main view ─────────────────────────────────────────────────
-                Expanded(
-                  child: selectedType == audioText
-                      ? _buildAudioView(size)
-                      : _buildCameraView(size),
-                ),
-              ],
-            ),
-            // ── Floating back button ──────────────────────────────────────
-            Positioned(
-              top: 0,
-              left: responsiveWidth * numD01,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: Image.asset(
-                  'assets/icons/ic_arrow_left.png',
-                  width: responsiveWidth * 0.06,
-                  height: responsiveWidth * 0.06,
-                  color: Colors.white,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(
-                      Icons.arrow_back_ios_new,
-                      size: responsiveWidth * 0.05,
-                      color: Colors.white,
-                    );
-                  },
-                ),
-                onPressed: () => Navigator.pop(context),
               ),
+            ),
+            // ── Main view ─────────────────────────────────────────────────
+            Expanded(
+              child: selectedType == audioText
+                  ? _buildAudioView(size)
+                  : _buildCameraView(size),
             ),
           ],
         ),

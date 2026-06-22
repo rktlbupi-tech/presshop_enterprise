@@ -150,11 +150,9 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     _audioRecorder.dispose();
     if (_conversationId != null) {
       final socket = SocketManager.instance.chatSocket;
-      socket.emitWithAck(
-        SocketEvents.conversationUnsubscribe,
-        {'conversationId': _conversationId},
-        ack: (_) {},
-      );
+      socket.emitWithAck(SocketEvents.conversationUnsubscribe, {
+        'conversationId': _conversationId,
+      }, ack: (_) {});
       socket.off(SocketEvents.taskMessageNew);
     }
     _chatScrollController.dispose();
@@ -198,13 +196,15 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       }
       _conversationId = taskId;
       try {
-        final resp =
-            await _apiClient.get('chat-v2/enterprise/tasks/$taskId/conversation');
+        final resp = await _apiClient.get(
+          'chat-v2/enterprise/tasks/$taskId/conversation',
+        );
         final d = resp.data;
         if (d['success'] == true && d['data'] != null) {
           final conv = d['data']['conversation'];
           final resolved = conv?['_id']?.toString();
-          if (resolved != null && resolved.isNotEmpty) _conversationId = resolved;
+          if (resolved != null && resolved.isNotEmpty)
+            _conversationId = resolved;
           final members = (d['data']['members'] as List<dynamic>?) ?? [];
           for (final m in members) {
             final id = m['actorId']?.toString() ?? m['_id']?.toString() ?? '';
@@ -226,7 +226,9 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         final items = (d['data']['items'] as List<dynamic>?) ?? [];
         if (mounted) {
           setState(() {
-            _chatMessages = items.where((m) => m['kind'] != 'task_evidence').toList();
+            _chatMessages = items
+                .where((m) => m['kind'] != 'task_evidence')
+                .toList();
             _sortMessages();
           });
         }
@@ -244,7 +246,9 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
               .where((m) => m['kind'] != 'task_evidence')
               .toList();
           setState(() {
-            for (final m in synced) { _addMessageUniquely(m); }
+            for (final m in synced) {
+              _addMessageUniquely(m);
+            }
             _sortMessages();
           });
         }
@@ -257,8 +261,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
 
   void _sortMessages() {
     _chatMessages.sort((a, b) {
-      final dateA = a['createdAt'] != null ? DateTime.tryParse(a['createdAt'].toString()) : null;
-      final dateB = b['createdAt'] != null ? DateTime.tryParse(b['createdAt'].toString()) : null;
+      final dateA = a['createdAt'] != null
+          ? DateTime.tryParse(a['createdAt'].toString())
+          : null;
+      final dateB = b['createdAt'] != null
+          ? DateTime.tryParse(b['createdAt'].toString())
+          : null;
       if (dateA == null && dateB == null) return 0;
       if (dateA == null) return 1;
       if (dateB == null) return -1;
@@ -275,7 +283,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
 
   void _addMessageUniquely(dynamic message) {
     if (message['kind'] == 'task_evidence') return;
-    final String? msgId = message['_id'] ?? message['id'] ?? message['clientMessageId'];
+    final String? msgId =
+        message['_id'] ?? message['id'] ?? message['clientMessageId'];
     if (msgId == null) {
       _chatMessages.insert(0, message);
       _sortMessages();
@@ -288,7 +297,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         final String? optText = m['payload']?['text'] ?? m['text'];
         final String? msgText = message['payload']?['text'] ?? message['text'];
         final String? optSender = m['senderId']?.toString();
-        final String? msgSender = message['senderId']?.toString() ??
+        final String? msgSender =
+            message['senderId']?.toString() ??
             message['senderUserId']?.toString() ??
             message['actingAsId']?.toString();
         if (optText == msgText && optSender == msgSender) return true;
@@ -357,9 +367,14 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         return;
       }
       final dir = await getApplicationCacheDirectory();
-      final path = '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final path =
+          '${dir.path}/rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
       await _audioRecorder.start(const RecordConfig(), path: path);
-      if (mounted) setState(() { _isRecording = true; _recordDuration = 0; });
+      if (mounted)
+        setState(() {
+          _isRecording = true;
+          _recordDuration = 0;
+        });
       _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _recordDuration++);
       });
@@ -374,7 +389,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Microphone permission',
-          style: TextStyle(fontFamily: 'AirbnbCereal', fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontFamily: 'AirbnbCereal',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         content: const Text(
           'Microphone access is needed to record voice notes. Please enable it for PressHop in Settings.',
@@ -435,7 +453,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       } else {
         _showSnack("Failed to send audio. Please try again.");
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _chatUploading = false);
     }
   }
@@ -444,7 +463,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     if (_conversationId == null) return;
     if (mounted) setState(() => _chatUploading = true);
     try {
-      final assetIds = await _prepareAndUploadMedia(conversationId: _conversationId!, files: files);
+      final assetIds = await _prepareAndUploadMedia(
+        conversationId: _conversationId!,
+        files: files,
+      );
       if (!mounted) return;
       if (assetIds != null && assetIds.isNotEmpty) {
         SocketManager.instance.chatSocket.emitWithAck(
@@ -467,7 +489,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       } else {
         _showSnack("Failed to upload attachment. Please try again.");
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _chatUploading = false);
     }
   }
@@ -478,9 +501,20 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       if (taskId.isEmpty) return;
       final formData = FormData();
       for (final f in files) {
-        formData.files.add(MapEntry('files', await MultipartFile.fromFile(f.path, filename: f.path.split('/').last)));
+        formData.files.add(
+          MapEntry(
+            'files',
+            await MultipartFile.fromFile(
+              f.path,
+              filename: f.path.split('/').last,
+            ),
+          ),
+        );
       }
-      await _apiClient.post('enterprise/tasks/$taskId/chat-evidence', data: formData);
+      await _apiClient.post(
+        'enterprise/tasks/$taskId/chat-evidence',
+        data: formData,
+      );
     } catch (_) {}
   }
 
@@ -490,16 +524,21 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     void Function(double)? onProgress,
   }) async {
     try {
-      final items = files.map((f) => {
-        'fileName': p.basename(f.path),
-        'contentType': lookupMimeType(f.path) ?? 'application/octet-stream',
-        'size': f.lengthSync(),
-      }).toList();
+      final items = files
+          .map(
+            (f) => {
+              'fileName': p.basename(f.path),
+              'contentType':
+                  lookupMimeType(f.path) ?? 'application/octet-stream',
+              'size': f.lengthSync(),
+            },
+          )
+          .toList();
 
-      final resp = await _apiClient.post('chat-v2/media/prepare', data: {
-        'conversationId': conversationId,
-        'items': items,
-      });
+      final resp = await _apiClient.post(
+        'chat-v2/media/prepare',
+        data: {'conversationId': conversationId, 'items': items},
+      );
       if (resp.statusCode != 200 && resp.statusCode != 201) return null;
 
       final raw = resp.data;
@@ -512,14 +551,18 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         final uploadUrl = asset['uploadUrl'] as String;
         final assetId = asset['assetId'] as String;
         final file = files[i];
-        final contentType = lookupMimeType(file.path) ?? 'application/octet-stream';
+        final contentType =
+            lookupMimeType(file.path) ?? 'application/octet-stream';
         final fileLength = await file.length();
         final uploadDio = Dio();
         final putResp = await uploadDio.put(
           uploadUrl,
           data: file.openRead(),
           options: Options(
-            headers: {'Content-Type': contentType, 'Content-Length': fileLength},
+            headers: {
+              'Content-Type': contentType,
+              'Content-Length': fileLength,
+            },
             followRedirects: false,
             validateStatus: (s) => s != null && s < 400,
           ),
@@ -532,14 +575,17 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         }
       }
       return assetIds.isEmpty ? null : assetIds;
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _launchCameraScreen() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => const EmployeeCameraScreen(picAgain: true)),
+        builder: (context) => const EmployeeCameraScreen(picAgain: true),
+      ),
     );
     if (result == null || result is! List) return;
 
@@ -554,7 +600,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     final previewResult = await Navigator.push<List<CameraData>>(
       context,
       MaterialPageRoute(
-          builder: (_) => _TaskMediaPreviewScreen(initialItems: captured)),
+        builder: (_) => _TaskMediaPreviewScreen(initialItems: captured),
+      ),
     );
     if (previewResult != null && previewResult.isNotEmpty) {
       final files = previewResult
@@ -572,7 +619,8 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
   Future<void> _openUrl(String url) async {
     try {
       final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(uri))
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {}
   }
 
@@ -586,10 +634,25 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     final dt = DateTime.tryParse(createdAt);
     if (dt == null) return '';
     final local = dt.toLocal();
-    final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+    final h = local.hour > 12
+        ? local.hour - 12
+        : (local.hour == 0 ? 12 : local.hour);
     final m = local.minute.toString().padLeft(2, '0');
     final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '$h:$m $ampm, ${local.day} ${months[local.month - 1]} ${local.year}';
   }
 
@@ -618,7 +681,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                 width: size.width,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8F8F8),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -644,7 +710,13 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: const Color(0xFFE2E8F0), blurRadius: 4, spreadRadius: 1)],
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFE2E8F0),
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
                           ),
                           child: ClipOval(
                             child: Container(
@@ -652,9 +724,18 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                               height: size.width * 0.1,
                               color: Colors.grey.shade100,
                               child: profileImage.isNotEmpty
-                                  ? Image.network(profileImage, fit: BoxFit.cover,
-                                      errorBuilder: (_, e, s) => const Icon(Icons.person, color: Colors.grey))
-                                  : const Icon(Icons.business, color: Colors.grey),
+                                  ? Image.network(
+                                      profileImage,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, e, s) => const Icon(
+                                        Icons.person,
+                                        color: Colors.grey,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.business,
+                                      color: Colors.grey,
+                                    ),
                             ),
                           ),
                         ),
@@ -705,7 +786,11 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(LucideIcons.check, color: Colors.white, size: checkRadius * 1.0),
+                  child: Icon(
+                    LucideIcons.check,
+                    color: Colors.white,
+                    size: checkRadius * 1.0,
+                  ),
                 ),
               ),
             ],
@@ -721,9 +806,19 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       children: [
         Icon(Icons.chat_bubble_outline, size: 52, color: Colors.grey.shade300),
         const SizedBox(height: 12),
-        Text('No messages yet', style: TextStyle(fontSize: 15, color: Colors.grey.shade400, fontWeight: FontWeight.w600)),
+        Text(
+          'No messages yet',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade400,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 6),
-        Text('Conversation will appear here', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+        Text(
+          'Conversation will appear here',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+        ),
       ],
     );
   }
@@ -739,7 +834,9 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       msg['senderUserId']?.toString(),
       msg['actingAsId']?.toString(),
     ];
-    final bool isMe = possibleIds.any((id) => id != null && id == myId && id.isNotEmpty);
+    final bool isMe = possibleIds.any(
+      (id) => id != null && id == myId && id.isNotEmpty,
+    );
 
     String text = '';
     if (msg['payload']?['text'] != null) {
@@ -751,28 +848,42 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     final String time = _formatMsgTime(msg['createdAt']?.toString());
     final List<dynamic> attachments = msg['attachments'] ?? [];
 
-    final String senderId = msg['senderId']?.toString() ??
+    final String senderId =
+        msg['senderId']?.toString() ??
         msg['sender']?['actorId']?.toString() ??
-        msg['actorId']?.toString() ?? 'unknown';
+        msg['actorId']?.toString() ??
+        'unknown';
     final memberInfo = _membersMap[senderId];
-    final String avatarUrl = msg['payload']?['senderProfileImage']?.toString() ??
+    final String avatarUrl =
+        msg['payload']?['senderProfileImage']?.toString() ??
         msg['senderProfileImage']?.toString() ??
         msg['sender']?['profileImage']?.toString() ??
-        memberInfo?['profileImage']?.toString() ?? '';
+        memberInfo?['profileImage']?.toString() ??
+        '';
 
     final Widget avatar = Container(
       height: size.width * 0.11,
       width: size.width * 0.11,
-      decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        shape: BoxShape.circle,
+      ),
       child: ClipOval(
         child: avatarUrl.isNotEmpty
-            ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, e, s) => const Icon(Icons.person, color: Colors.grey))
+            ? Image.network(
+                avatarUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, e, s) =>
+                    const Icon(Icons.person, color: Colors.grey),
+              )
             : const Icon(Icons.person, color: Colors.grey),
       ),
     );
 
     final bubble = Column(
-      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         if (!isMe)
           Padding(
@@ -781,21 +892,36 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
               msg['senderDisplayName']?.toString() ??
                   msg['payload']?['senderDisplayName']?.toString() ??
                   memberInfo?['displayName']?.toString() ??
-                  msg['senderName']?.toString() ?? 'Member',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: primaryColor, letterSpacing: 0.1),
+                  msg['senderName']?.toString() ??
+                  'Member',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: primaryColor,
+                letterSpacing: 0.1,
+              ),
             ),
           ),
         text.trim().isEmpty && attachments.isNotEmpty
             ? Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: isMe
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: attachments.map<Widget>((att) => _buildAttachment(att, msg, isMe, size)).toList(),
+                children: attachments
+                    .map<Widget>(
+                      (att) => _buildAttachment(att, msg, isMe, size),
+                    )
+                    .toList(),
               )
             : Container(
                 constraints: BoxConstraints(maxWidth: size.width * 0.68),
                 padding: text.trim().isEmpty
                     ? EdgeInsets.zero
-                    : EdgeInsets.symmetric(horizontal: size.width * 0.05, vertical: size.width * 0.025),
+                    : EdgeInsets.symmetric(
+                        horizontal: size.width * 0.05,
+                        vertical: size.width * 0.025,
+                      ),
                 decoration: BoxDecoration(
                   color: text.trim().isEmpty
                       ? Colors.transparent
@@ -811,14 +937,24 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                           bottomLeft: Radius.circular(size.width * 0.04),
                           bottomRight: Radius.circular(size.width * 0.04),
                         ),
-                  boxShadow: text.trim().isEmpty ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+                  boxShadow: text.trim().isEmpty
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (attachments.isNotEmpty) ...[
-                      ...attachments.map<Widget>((att) => _buildAttachment(att, msg, isMe, size)),
+                      ...attachments.map<Widget>(
+                        (att) => _buildAttachment(att, msg, isMe, size),
+                      ),
                       if (text.isNotEmpty) const SizedBox(height: 6),
                     ],
                     if (text.isNotEmpty)
@@ -835,16 +971,29 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                   ],
                 ),
               ),
-        if (time.isNotEmpty && !attachments.any((a) => a['mediaType'] == 'image')) ...[
+        if (time.isNotEmpty &&
+            !attachments.any((a) => a['mediaType'] == 'image')) ...[
           const SizedBox(height: 3),
           Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             children: [
-              Text(time, style: TextStyle(fontSize: size.width * 0.028, color: const Color(0xFFADB5BD))),
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: size.width * 0.028,
+                  color: const Color(0xFFADB5BD),
+                ),
+              ),
               if (isMe) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.done_all, size: size.width * 0.04, color: Colors.green.shade400),
+                Icon(
+                  Icons.done_all,
+                  size: size.width * 0.04,
+                  color: Colors.green.shade400,
+                ),
               ],
             ],
           ),
@@ -856,12 +1005,20 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     if (isMe) {
       return Align(
         alignment: Alignment.centerRight,
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [bubble, const SizedBox(width: 6), avatar]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [bubble, const SizedBox(width: 6), avatar],
+        ),
       );
     }
     return Align(
       alignment: Alignment.centerLeft,
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [avatar, const SizedBox(width: 6), bubble]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [avatar, const SizedBox(width: 6), bubble],
+      ),
     );
   }
 
@@ -873,16 +1030,31 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       final locText = msg['payload']?['location']?.toString() ?? '';
       final lat = msg['payload']?['latitude']?.toString() ?? '';
       final lng = msg['payload']?['longitude']?.toString() ?? '';
-      final displayLoc = locText.isNotEmpty ? locText : (lat.isNotEmpty && lng.isNotEmpty ? '$lat, $lng' : 'No location');
+      final displayLoc = locText.isNotEmpty
+          ? locText
+          : (lat.isNotEmpty && lng.isNotEmpty ? '$lat, $lng' : 'No location');
       return Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => _FullImageScreen(url: url))),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => _FullImageScreen(url: url)),
+            ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(size.width * 0.04),
-              child: Image.network(url, width: size.width * 0.64, fit: BoxFit.cover,
-                  errorBuilder: (_, e, s) => const Icon(Icons.broken_image, size: 40, color: Colors.grey)),
+              child: Image.network(
+                url,
+                width: size.width * 0.64,
+                fit: BoxFit.cover,
+                errorBuilder: (_, e, s) => const Icon(
+                  Icons.broken_image,
+                  size: 40,
+                  color: Colors.grey,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -891,18 +1063,44 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.access_time, size: size.width * 0.028, color: Colors.grey),
+                Icon(
+                  Icons.access_time,
+                  size: size.width * 0.028,
+                  color: Colors.grey,
+                ),
                 SizedBox(width: size.width * 0.012),
-                Text(_formatMsgTime(msg['createdAt']?.toString()),
-                    style: TextStyle(fontSize: size.width * 0.028, color: Colors.grey)),
+                Text(
+                  _formatMsgTime(msg['createdAt']?.toString()),
+                  style: TextStyle(
+                    fontSize: size.width * 0.028,
+                    color: Colors.grey,
+                  ),
+                ),
                 SizedBox(width: size.width * 0.018),
-                Icon(Icons.location_on, size: size.width * 0.028, color: Colors.grey),
+                Icon(
+                  Icons.location_on,
+                  size: size.width * 0.028,
+                  color: Colors.grey,
+                ),
                 SizedBox(width: size.width * 0.01),
-                Flexible(child: Text(displayLoc, overflow: TextOverflow.ellipsis, maxLines: 1,
-                    style: TextStyle(fontSize: size.width * 0.028, color: Colors.grey))),
+                Flexible(
+                  child: Text(
+                    displayLoc,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: size.width * 0.028,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
                 if (isMe) ...[
                   SizedBox(width: size.width * 0.012),
-                  Icon(Icons.done_all, size: size.width * 0.04, color: Colors.green.shade400),
+                  Icon(
+                    Icons.done_all,
+                    size: size.width * 0.04,
+                    color: Colors.green.shade400,
+                  ),
                 ],
               ],
             ),
@@ -926,13 +1124,33 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Container(width: 44, height: 44,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 26)),
-                  Positioned(bottom: 8, left: 10,
-                      child: Text(att['fileName'] ?? 'Video',
-                          style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w500),
-                          maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    left: 10,
+                    child: Text(
+                      att['fileName'] ?? 'Video',
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -942,7 +1160,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     }
 
     if (mediaType == 'audio') {
-      return _AudioBubble(audioUrl: url, fileName: att['fileName'] ?? 'Voice note');
+      return _AudioBubble(
+        audioUrl: url,
+        fileName: att['fileName'] ?? 'Voice note',
+      );
     }
 
     return GestureDetector(
@@ -960,9 +1181,18 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             children: [
               const Icon(Icons.insert_drive_file, color: Colors.black87),
               const SizedBox(width: 8),
-              Expanded(child: Text(att['fileName'] ?? 'Document',
-                  style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w500),
-                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                child: Text(
+                  att['fileName'] ?? 'Document',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -977,7 +1207,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
       children: [
         const Divider(height: 1, thickness: 1, color: Color(0xFFF1F3F5)),
         Container(
-          padding: EdgeInsets.fromLTRB(12, 10, 12, 12 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(
+            12,
+            10,
+            12,
+            12 + MediaQuery.of(context).padding.bottom,
+          ),
           color: Colors.white,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -988,18 +1223,27 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                       height: 44,
                       child: LoadingWidget(size: 20),
                     )
-                  : _inputIconButton(icon: LucideIcons.plus, onTap: _showAttachmentOptions),
+                  : _inputIconButton(
+                      icon: LucideIcons.plus,
+                      onTap: _showAttachmentOptions,
+                    ),
               const SizedBox(width: 8),
               Expanded(
                 child: Stack(
                   alignment: Alignment.centerRight,
                   children: [
                     Container(
-                      constraints: const BoxConstraints(minHeight: 44, maxHeight: 120),
+                      constraints: const BoxConstraints(
+                        minHeight: 44,
+                        maxHeight: 120,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF5F6F8),
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                        border: Border.all(
+                          color: const Color(0xFFE2E8F0),
+                          width: 1.0,
+                        ),
                       ),
                       child: TextField(
                         controller: _messageController,
@@ -1019,7 +1263,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                           ),
                           border: InputBorder.none,
                           isDense: true,
-                          contentPadding: EdgeInsets.only(left: 14, right: 44, top: 12, bottom: 12),
+                          contentPadding: EdgeInsets.only(
+                            left: 14,
+                            right: 44,
+                            top: 12,
+                            bottom: 12,
+                          ),
                         ),
                       ),
                     ),
@@ -1027,8 +1276,17 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                       right: 6,
                       child: GestureDetector(
                         onTap: _sendMessage,
-                        child: const SizedBox(width: 36, height: 36,
-                            child: Center(child: Icon(Icons.arrow_forward, color: Colors.black87, size: 22))),
+                        child: const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: Center(
+                            child: Icon(
+                              Icons.arrow_forward,
+                              color: Colors.black87,
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                     if (_isRecording)
@@ -1038,14 +1296,29 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFF5F6F8),
                             borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              width: 1.0,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.mic_none_outlined, color: Colors.red, size: 18),
+                              const Icon(
+                                Icons.mic_none_outlined,
+                                color: Colors.red,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
-                              Text(Duration(seconds: _recordDuration).toString().split('.').first,
-                                  style: const TextStyle(fontSize: 14, fontFamily: 'AirbnbCereal', color: Colors.black87)),
+                              Text(
+                                Duration(
+                                  seconds: _recordDuration,
+                                ).toString().split('.').first,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontFamily: 'AirbnbCereal',
+                                  color: Colors.black87,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1059,11 +1332,13 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                 child: SizedBox(
                   width: 44,
                   height: 44,
-                  child: Center(child: Icon(
-                    _isRecording ? Icons.send_rounded : Icons.mic_none_sharp,
-                    color: _isRecording ? primaryColor : Colors.black87,
-                    size: 26,
-                  )),
+                  child: Center(
+                    child: Icon(
+                      _isRecording ? Icons.send_rounded : Icons.mic_none_sharp,
+                      color: _isRecording ? primaryColor : Colors.black87,
+                      size: 26,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1073,7 +1348,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     );
   }
 
-  Widget _inputIconButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _inputIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -1083,7 +1361,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Colors.transparent,
-          border: Border.all(color: const Color(0xFF1677FF).withValues(alpha: 0.45), width: 1.5),
+          border: Border.all(
+            color: const Color(0xFF1677FF).withValues(alpha: 0.45),
+            width: 1.5,
+          ),
         ),
         child: Center(
           child: Container(
@@ -1092,7 +1373,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF1677FF),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.18),
+                width: 1,
+              ),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
           ),
@@ -1122,7 +1406,12 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
         titleSpacing: 3,
         title: Text(
           widget.title ?? 'Manage Task',
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 20, fontFamily: 'AirbnbCereal'),
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+            fontFamily: 'AirbnbCereal',
+          ),
         ),
         centerTitle: false,
         actions: const [CompanyLogoAction()],
@@ -1157,7 +1446,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
                             );
                           } else {
                             return Padding(
-                              padding: const EdgeInsets.only(top: 40, bottom: 20),
+                              padding: const EdgeInsets.only(
+                                top: 40,
+                                bottom: 20,
+                              ),
                               child: _buildNoMessagesPlaceholder(),
                             );
                           }
@@ -1185,20 +1477,22 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     final Color timerColor = _isTimeOver
         ? Colors.red
         : _isExtraTime
-            ? Colors.orange
-            : const Color(0xFF1677FF);
+        ? Colors.orange
+        : const Color(0xFF1677FF);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: const Color(0xFFE2E8F0), width: 1)),
+        border: Border(
+          top: BorderSide(color: const Color(0xFFE2E8F0), width: 1),
+        ),
       ),
       child: Row(
         children: [
           Icon(Icons.timer_outlined, size: 16, color: timerColor),
           const SizedBox(width: 6),
           Text(
-            _isTimeOver ? 'Time over' : 'Time remaining',
+            "Time Worked : ",
             style: TextStyle(
               fontSize: 12,
               color: const Color(0xFF64748B),
@@ -1235,7 +1529,10 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
     final pct = (_uploadProgress * 100).clamp(0, 100).toInt();
     return Container(
       color: Colors.grey.shade50,
-      padding: EdgeInsets.symmetric(horizontal: size.width * 0.04, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: size.width * 0.04,
+        vertical: 10,
+      ),
       child: Row(
         children: [
           SizedBox(
@@ -1244,13 +1541,20 @@ class _TaskChatScreenState extends State<TaskChatScreen> {
             child: LoadingWidget(size: size.width * 0.05),
           ),
           SizedBox(width: size.width * 0.025),
-          Text('Uploading • $pct%', style: TextStyle(fontSize: size.width * 0.031, fontFamily: 'AirbnbCereal', fontWeight: FontWeight.w600, color: Colors.black87)),
+          Text(
+            'Uploading • $pct%',
+            style: TextStyle(
+              fontSize: size.width * 0.031,
+              fontFamily: 'AirbnbCereal',
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
 
 class _FullImageScreen extends StatelessWidget {
   final String url;
@@ -1269,7 +1573,12 @@ class _FullImageScreen extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(url, fit: BoxFit.contain, errorBuilder: (_, e, s) => const Icon(Icons.broken_image, color: Colors.white, size: 60)),
+          child: Image.network(
+            url,
+            fit: BoxFit.contain,
+            errorBuilder: (_, e, s) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 60),
+          ),
         ),
       ),
     );
@@ -1292,7 +1601,8 @@ class _AudioBubbleState extends State<_AudioBubble> {
       onTap: () async {
         try {
           final uri = Uri.parse(widget.audioUrl);
-          if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (await canLaunchUrl(uri))
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
         } catch (_) {}
       },
       child: Container(
@@ -1305,14 +1615,34 @@ class _AudioBubbleState extends State<_AudioBubble> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.play_circle_outline, color: AppColors.primary, size: 28),
+            const Icon(
+              Icons.play_circle_outline,
+              color: AppColors.primary,
+              size: 28,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.fileName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, fontFamily: 'AirbnbCereal'), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const Text('Voice note', style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'AirbnbCereal')),
+                  Text(
+                    widget.fileName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Text(
+                    'Voice note',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1355,7 +1685,8 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (_) => const EmployeeCameraScreen(picAgain: true)),
+        builder: (_) => const EmployeeCameraScreen(picAgain: true),
+      ),
     );
     if (result != null && result is List) {
       for (final e in result) {
@@ -1379,7 +1710,9 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
       Navigator.pop(context);
       return;
     }
-    final nextPage = _currentPage >= items.length ? items.length - 1 : _currentPage;
+    final nextPage = _currentPage >= items.length
+        ? items.length - 1
+        : _currentPage;
     setState(() => _currentPage = nextPage);
     _pageController.jumpToPage(nextPage);
   }
@@ -1401,7 +1734,8 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
               itemCount: items.length,
               itemBuilder: (context, i) {
                 final item = items[i];
-                final isImage = item.mimeType.startsWith('image') ||
+                final isImage =
+                    item.mimeType.startsWith('image') ||
                     item.mimeType.isEmpty ||
                     item.path.toLowerCase().endsWith('.jpg') ||
                     item.path.toLowerCase().endsWith('.jpeg') ||
@@ -1420,9 +1754,10 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                             File(item.path),
                             fit: BoxFit.contain,
                             errorBuilder: (_, e, s) => const Icon(
-                                Icons.broken_image,
-                                color: Colors.white,
-                                size: 60),
+                              Icons.broken_image,
+                              color: Colors.white,
+                              size: 60,
+                            ),
                           ),
                         )
                       else
@@ -1430,13 +1765,18 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.videocam,
-                                  color: Colors.white, size: 64),
+                              const Icon(
+                                Icons.videocam,
+                                color: Colors.white,
+                                size: 64,
+                              ),
                               const SizedBox(height: 12),
                               Text(
                                 item.path.split('/').last,
                                 style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13),
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -1451,9 +1791,14 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                           onPressed: _removeCurrentPage,
                           icon: Container(
                             decoration: const BoxDecoration(
-                                color: Colors.white, shape: BoxShape.circle),
-                            child: Icon(Icons.close,
-                                color: Colors.black, size: size.width * 0.06),
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              color: Colors.black,
+                              size: size.width * 0.06,
+                            ),
                           ),
                         ),
                       ),
@@ -1476,27 +1821,30 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                       Container(
                         margin: EdgeInsets.only(bottom: size.width * 0.03),
                         padding: EdgeInsets.symmetric(
-                            horizontal: size.width * 0.04,
-                            vertical: size.width * 0.04),
+                          horizontal: size.width * 0.04,
+                          vertical: size.width * 0.04,
+                        ),
                         child: Row(
                           children: [
                             Expanded(
-                                child: _infoPill(
-                              size,
-                              icon: Icons.access_time,
-                              text: item.dateTime,
-                              isAlert: false,
-                            )),
+                              child: _infoPill(
+                                size,
+                                icon: Icons.access_time,
+                                text: item.dateTime,
+                                isAlert: false,
+                              ),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
-                                child: _infoPill(
-                              size,
-                              icon: Icons.location_on,
-                              text: item.location.isEmpty
-                                  ? 'No Location'
-                                  : item.location,
-                              isAlert: item.location.isEmpty,
-                            )),
+                              child: _infoPill(
+                                size,
+                                icon: Icons.location_on,
+                                text: item.location.isEmpty
+                                    ? 'No Location'
+                                    : item.location,
+                                isAlert: item.location.isEmpty,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1510,8 +1858,12 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
           // ── Bottom action bar (Add More / Submit) ───────────────────────
           Container(
             color: Colors.white,
-            padding: EdgeInsets.fromLTRB(size.width * 0.03, size.width * 0.02,
-                size.width * 0.03, size.width * 0.08),
+            padding: EdgeInsets.fromLTRB(
+              size.width * 0.03,
+              size.width * 0.02,
+              size.width * 0.03,
+              size.width * 0.08,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -1522,17 +1874,20 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                         backgroundColor: Colors.black,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(size.width * 0.03)),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.03,
+                          ),
+                        ),
                       ),
                       onPressed: _addMore,
                       child: Text(
                         'Add More',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: size.width * 0.035,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'AirbnbCereal'),
+                          color: Colors.white,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
                       ),
                     ),
                   ),
@@ -1546,17 +1901,20 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
                         backgroundColor: AppColors.primary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(size.width * 0.03)),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.03,
+                          ),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(context, items),
                       child: Text(
                         'Submit',
                         style: TextStyle(
-                            color: Colors.white,
-                            fontSize: size.width * 0.035,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'AirbnbCereal'),
+                          color: Colors.white,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
                       ),
                     ),
                   ),
@@ -1569,8 +1927,12 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
     );
   }
 
-  Widget _infoPill(Size size,
-      {required IconData icon, required String text, required bool isAlert}) {
+  Widget _infoPill(
+    Size size, {
+    required IconData icon,
+    required String text,
+    required bool isAlert,
+  }) {
     return Container(
       height: size.width * 0.11,
       decoration: BoxDecoration(
@@ -1588,9 +1950,11 @@ class _TaskMediaPreviewScreenState extends State<_TaskMediaPreviewScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon,
-              size: size.width * 0.04,
-              color: isAlert ? Colors.red : const Color(0xFF64748B)),
+          Icon(
+            icon,
+            size: size.width * 0.04,
+            color: isAlert ? Colors.red : const Color(0xFF64748B),
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(

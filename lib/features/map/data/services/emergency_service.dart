@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 
-/// Represents a single nearby emergency station (police / hospital / fire).
 class EmergencyStation {
   final String name;
   final String address;
@@ -13,7 +12,6 @@ class EmergencyStation {
   final double lat;
   final double lng;
 
-  /// Human-readable distance, computed against the user's current location.
   String? distanceStr;
 
   EmergencyStation({
@@ -26,25 +24,23 @@ class EmergencyStation {
   });
 
   factory EmergencyStation.fromJson(Map<String, dynamic> json) {
+    final phone =
+        json['formatted_phone_number'] ??
+        json['international_phone_number'] ??
+        '';
     return EmergencyStation(
       name: json['name'] ?? 'Unknown',
       address: json['vicinity'] ?? 'Address not available',
-      phoneNumber: json['formatted_phone_number'] ?? '',
+      phoneNumber: phone,
       lat: (json['geometry']?['location']?['lat'] as num?)?.toDouble() ?? 0.0,
       lng: (json['geometry']?['location']?['lng'] as num?)?.toDouble() ?? 0.0,
-      distance: 0.0, // Calculated later via Geolocator.distanceBetween
+      distance: 0.0,
     );
   }
 }
 
-/// Fetches nearby emergency stations using the Google Places API
-/// (nearbysearch + place details). Mirrors the legacy app behaviour.
 class EmergencyService {
   final String _apiKey = googleMapAPiKey;
-
-  /// Searches for [type] (police / hospital / fire_station) within a 5km radius
-  /// of [lat]/[lng], then enriches the top results with phone numbers via the
-  /// place-details endpoint, and finally sorts the list by distance.
   Future<List<EmergencyStation>> fetchNearbyStations({
     required double lat,
     required double lng,
@@ -103,22 +99,47 @@ class EmergencyService {
   }
 
   Future<EmergencyStation?> _fetchPlaceDetails(String placeId) async {
+    final String maskedKey = _apiKey.length > 10
+        ? '${_apiKey.substring(0, 5)}...${_apiKey.substring(_apiKey.length - 5)}'
+        : _apiKey;
+
     final String url =
         'https://maps.googleapis.com/maps/api/place/details/json'
         '?place_id=$placeId'
-        '&fields=name,vicinity,formatted_phone_number,geometry'
+        '&fields=name,vicinity,formatted_phone_number,international_phone_number,geometry'
         '&key=$_apiKey';
 
     try {
+      debugPrint(
+        '[EmergencyService] Fetching details for placeId: $placeId, using key: $maskedKey',
+      );
       final response = await http.get(Uri.parse(url));
+      debugPrint(
+        '[EmergencyService] Place Details Response Code: ${response.statusCode}',
+      );
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
+        debugPrint('[EmergencyService] Place Details Response Body: $data');
+
         if (data['status'] == 'OK') {
-          return EmergencyStation.fromJson(data['result']);
+          final station = EmergencyStation.fromJson(data['result']);
+          debugPrint(
+            '[EmergencyService] Successfully parsed station: ${station.name}, Phone: ${station.phoneNumber}',
+          );
+          return station;
+        } else {
+          debugPrint(
+            '[EmergencyService] Place Details returned non-OK status: ${data['status']}, error: ${data['error_message']}',
+          );
         }
+      } else {
+        debugPrint(
+          '[EmergencyService] HTTP Error: ${response.statusCode} for URL: $url',
+        );
       }
     } catch (e) {
-      debugPrint('Error fetching place details: $e');
+      debugPrint('[EmergencyService] Error fetching place details: $e');
     }
     return null;
   }
