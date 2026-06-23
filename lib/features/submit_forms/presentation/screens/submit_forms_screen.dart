@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:presshop_enterprise/common/widgets/sliding_tabs.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,11 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../config/di/injection.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../common/widgets/app_app_bar.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../config/routes/app_router.dart';
+import '../../domain/entities/form_entity.dart';
+import '../bloc/submit_forms_bloc.dart';
 
 class SubmitFormsScreen extends StatefulWidget {
   const SubmitFormsScreen({super.key});
@@ -21,33 +23,14 @@ class SubmitFormsScreen extends StatefulWidget {
 }
 
 class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
-  final ApiClient _apiClient = getIt<ApiClient>();
   final TextEditingController _searchController = TextEditingController();
   final PageController _pageController = PageController();
-
-  // Available forms state
-  List<dynamic> _allForms = [];
-  List<dynamic> _filteredForms = [];
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  // Submissions state
-  List<dynamic> _submissions = [];
-  List<dynamic> _filteredSubmissions = [];
-  bool _isSubmissionsLoading = false;
-  String? _submissionsError;
 
   // Tabs navigation
   bool _showSubmissionsTab = false;
 
   String _searchQuery = "";
   Timer? _debounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAvailableForms();
-  }
 
   @override
   void dispose() {
@@ -57,261 +40,250 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchAvailableForms({String? query}) async {
-    final q = query ?? _searchQuery;
-    if (_allForms.isEmpty) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
-    try {
-      final response = await _apiClient.get(
-        'enterprise/forms/available',
-        queryParameters: q.isNotEmpty ? {'q': q} : null,
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
-        if (data != null && data['success'] == true) {
-          setState(() {
-            _allForms = data['items'] ?? [];
-            _errorMessage = null;
-            _isLoading = false;
-          });
-          _applyFilters();
-        } else {
-          setState(() {
-            _errorMessage = data?['message'] ?? "Failed to fetch forms.";
-            _isLoading = false;
-          });
-        }
-      } else {
-        setState(() {
-          _errorMessage = "Server returned status code: ${response.statusCode}";
-          _isLoading = false;
-        });
+  String _getFormNameById(String formId, List<FormEntity> forms) {
+    for (final form in forms) {
+      if (form.id == formId) {
+        return form.name;
       }
-    } catch (e) {
-      setState(() {
-        _errorMessage = "Error occurred: $e";
-        _isLoading = false;
-      });
     }
+    return 'Form';
   }
 
-  Future<void> _fetchSubmissions({String? query}) async {
-    final q = query ?? _searchQuery;
-    if (_submissions.isEmpty) {
-      setState(() {
-        _isSubmissionsLoading = true;
-      });
-    }
-    try {
-      final response = await _apiClient.get(
-        'enterprise/forms/submissions/mine',
-        queryParameters: q.isNotEmpty ? {'q': q} : null,
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
-        if (data != null && data['success'] == true) {
-          setState(() {
-            _submissions = data['items'] ?? [];
-            _submissionsError = null;
-            _isSubmissionsLoading = false;
-          });
-          _applyFilters();
-        } else {
-          setState(() {
-            _submissionsError =
-                data?['message'] ?? "Failed to fetch submissions.";
-            _isSubmissionsLoading = false;
-          });
-        }
-      } else {
-        setState(() {
-          _submissionsError =
-              "Server returned status code: ${response.statusCode}";
-          _isSubmissionsLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _submissionsError = "Error occurred: $e";
-        _isSubmissionsLoading = false;
-      });
-    }
-  }
-
-  void _applyFilters() {
-    setState(() {
-      final query = _searchQuery.toLowerCase();
-
-      if (_showSubmissionsTab) {
-        _filteredSubmissions = _submissions.where((sub) {
-          final formId = sub['formId'];
-          final formName = _getFormNameById(formId).toLowerCase();
-          final code = (sub['submissionCode'] ?? '').toString().toLowerCase();
-          final status = (sub['status'] ?? '').toString().toLowerCase();
-
-          if (query.isNotEmpty) {
-            final matchesSearch =
-                formName.contains(query) ||
-                code.contains(query) ||
-                status.contains(query);
-            if (!matchesSearch) return false;
-          }
-          return true;
-        }).toList();
-      } else {
-        _filteredForms = _allForms.where((form) {
-          final name = (form['name'] ?? '').toString().toLowerCase();
-          final description = (form['description'] ?? '')
-              .toString()
-              .toLowerCase();
-          final tags = (form['tags'] as List? ?? [])
-              .map((t) => t.toString().toLowerCase())
-              .toList();
-
-          if (query.isNotEmpty) {
-            final matchesSearch =
-                name.contains(query) ||
-                description.contains(query) ||
-                tags.any((tag) => tag.contains(query));
-            if (!matchesSearch) return false;
-          }
-          return true;
-        }).toList();
-      }
-    });
-  }
-
-  dynamic _getFormById(String formId) {
-    for (final form in _allForms) {
-      if (form['id'] == formId) {
+  FormEntity? _getFormById(String formId, List<FormEntity> forms) {
+    for (final form in forms) {
+      if (form.id == formId) {
         return form;
       }
     }
     return null;
   }
 
-  String _getFormNameById(String formId) {
-    for (final form in _allForms) {
-      if (form['id'] == formId) {
-        return form['name'] ?? 'Form';
-      }
-    }
-    return 'Form';
-  }
-
   Color _getCardIconColor(int index) => AppColors.primary;
 
   Color _getCardBgColor(int index) => AppColors.primary.withValues(alpha: 0.08);
+
+  void _shareSubmission(
+    BuildContext buttonContext,
+    FormSubmissionEntity submission,
+    String formName,
+  ) {
+    final formId = submission.formId;
+    final submissionId = submission.id;
+    final token = getIt<SharedPreferences>().getString('auth_token') ?? '';
+
+    final viewUrl =
+        "https://presshop.dev/f/$formId/view/$submissionId?token=$token";
+
+    Rect? shareOrigin;
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    if (box != null) {
+      shareOrigin = box.localToGlobal(Offset.zero) & box.size;
+    }
+    if (shareOrigin == null ||
+        shareOrigin.width == 0 ||
+        shareOrigin.height == 0) {
+      shareOrigin = const Rect.fromLTWH(0, 0, 100, 100);
+    }
+
+    Share.share(
+      "Check out my submission for $formName:\n$viewUrl",
+      sharePositionOrigin: shareOrigin,
+    );
+  }
+
+  void _onSubmissionTap(FormSubmissionEntity submission, String formName) {
+    final formId = submission.formId;
+    final submissionId = submission.id;
+    final token = getIt<SharedPreferences>().getString('auth_token') ?? '';
+
+    final viewUrl =
+        "https://presshop.dev/f/$formId/view/$submissionId?token=$token";
+
+    context.push(
+      AppRoutes.webViewForm,
+      extra: {'formId': formId, 'formName': formName, 'customUrl': viewUrl},
+    );
+  }
+
+  void _openForm(String formId, String formName) {
+    context
+        .push(
+          AppRoutes.webViewForm,
+          extra: {'formId': formId, 'formName': formName},
+        )
+        .then((_) {
+          // Reload on return
+          if (mounted) {
+            context.read<SubmitFormsBloc>().add(
+              const FetchAvailableFormsEvent(),
+            );
+            if (_showSubmissionsTab) {
+              context.read<SubmitFormsBloc>().add(
+                const FetchSubmissionsEvent(),
+              );
+            }
+          }
+        });
+  }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppAppBar(
-        title: "Submit forms",
-        elevation: 0.5,
-        centerTitle: false,
-        titleSpacing: 0,
-        showBack: true,
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Persistent Search Bar
-          Container(
-            padding: EdgeInsets.fromLTRB(
-              size.width * 0.03,
-              size.width * 0.03,
-              size.width * 0.03,
-              0,
-            ),
-            color: Colors.white,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: _showSubmissionsTab
-                    ? "Search submitted forms..."
-                    : "Search available forms...",
-                prefixIcon: const Icon(LucideIcons.search, size: 20),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
-                _applyFilters();
+    return BlocProvider<SubmitFormsBloc>(
+      create: (_) =>
+          getIt<SubmitFormsBloc>()..add(const FetchAvailableFormsEvent()),
+      child: BlocBuilder<SubmitFormsBloc, SubmitFormsState>(
+        builder: (context, state) {
+          final query = _searchQuery.toLowerCase();
 
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  if (_showSubmissionsTab) {
-                    _fetchSubmissions(query: val);
-                  } else {
-                    _fetchAvailableForms(query: val);
-                  }
-                });
-              },
-            ),
-          ),
+          // Reactively filter lists locally for fast visual feedback
+          final filteredForms = state.availableForms.where((form) {
+            if (query.isEmpty) return true;
+            final name = form.name.toLowerCase();
+            final description = form.description.toLowerCase();
+            final tags = form.tags.map((t) => t.toLowerCase()).toList();
+            return name.contains(query) ||
+                description.contains(query) ||
+                tags.any((tag) => tag.contains(query));
+          }).toList();
 
-          // Top Segmented Tab Selector
-          Container(
-            color: Colors.white,
-            padding: EdgeInsets.all(size.width * 0.03),
-            child: SlidingTabs(
-              selectedIndex: _showSubmissionsTab ? 1 : 0,
-              onTabChanged: (index) {
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              tabs: const ["Available", "Submitted"],
-            ),
-          ),
+          final filteredSubmissions = state.submissions.where((sub) {
+            if (query.isEmpty) return true;
+            final formName = _getFormNameById(
+              sub.formId,
+              state.availableForms,
+            ).toLowerCase();
+            final code = sub.submissionCode.toLowerCase();
+            final status = sub.status.toLowerCase();
+            return formName.contains(query) ||
+                code.contains(query) ||
+                status.contains(query);
+          }).toList();
 
-          // Sliding View
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _showSubmissionsTab = (index == 1);
-                });
-                if (index == 1 && _submissions.isEmpty) {
-                  _fetchSubmissions();
-                } else {
-                  _applyFilters();
-                }
-              },
+          return Scaffold(
+            backgroundColor: const Color(0xFFF5F6FA),
+            appBar: AppAppBar(
+              title: "Submit forms",
+              elevation: 0.5,
+              centerTitle: false,
+              titleSpacing: 0,
+              showBack: true,
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildAvailableFormsList(size),
-                _buildSubmissionsList(size),
+                // Persistent Search Bar
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    size.width * 0.03,
+                    size.width * 0.03,
+                    size.width * 0.03,
+                    0,
+                  ),
+                  color: Colors.white,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: _showSubmissionsTab
+                          ? "Search submitted forms..."
+                          : "Search available forms...",
+                      prefixIcon: const Icon(LucideIcons.search, size: 20),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+                      _debounce = Timer(const Duration(milliseconds: 500), () {
+                        if (_showSubmissionsTab) {
+                          context.read<SubmitFormsBloc>().add(
+                            FetchSubmissionsEvent(query: val),
+                          );
+                        } else {
+                          context.read<SubmitFormsBloc>().add(
+                            FetchAvailableFormsEvent(query: val),
+                          );
+                        }
+                      });
+                    },
+                  ),
+                ),
+
+                // Top Segmented Tab Selector
+                Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.all(size.width * 0.03),
+                  child: SlidingTabs(
+                    selectedIndex: _showSubmissionsTab ? 1 : 0,
+                    onTabChanged: (index) {
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    tabs: const ["Available", "Submitted"],
+                  ),
+                ),
+
+                // Sliding View
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _showSubmissionsTab = (index == 1);
+                      });
+                      if (index == 1 && state.submissions.isEmpty) {
+                        context.read<SubmitFormsBloc>().add(
+                          FetchSubmissionsEvent(query: _searchQuery),
+                        );
+                      }
+                    },
+                    children: [
+                      _buildAvailableFormsList(
+                        context,
+                        state,
+                        filteredForms,
+                        size,
+                      ),
+                      _buildSubmissionsList(
+                        context,
+                        state,
+                        filteredSubmissions,
+                        size,
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildAvailableFormsList(Size size) {
-    if (_isLoading) {
+  Widget _buildAvailableFormsList(
+    BuildContext context,
+    SubmitFormsState state,
+    List<FormEntity> forms,
+    Size size,
+  ) {
+    if (state.isAvailableFormsLoading && forms.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_errorMessage != null) {
+    if (state.availableFormsError != null && forms.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -319,13 +291,17 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                _errorMessage!,
+                state.availableFormsError!,
                 style: const TextStyle(color: Colors.red, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _fetchAvailableForms,
+                onPressed: () {
+                  context.read<SubmitFormsBloc>().add(
+                    FetchAvailableFormsEvent(query: _searchQuery),
+                  );
+                },
                 child: const Text("Retry"),
               ),
             ],
@@ -335,8 +311,12 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () async => _fetchAvailableForms(),
-      child: _filteredForms.isEmpty
+      onRefresh: () async {
+        context.read<SubmitFormsBloc>().add(
+          FetchAvailableFormsEvent(query: _searchQuery),
+        );
+      },
+      child: forms.isEmpty
           ? SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: SizedBox(
@@ -358,14 +338,9 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 size.width * 0.04,
                 size.width * 0.03,
               ),
-              itemCount: _filteredForms.length,
+              itemCount: forms.length,
               itemBuilder: (context, index) {
-                final form = _filteredForms[index];
-                final formId = form['id'];
-                final formName = form['name'] ?? '';
-                final formCode = (form['form_code'] ?? '').toString();
-                final thumbnailUrl = form['thumbnailUrl'] ?? '';
-
+                final form = forms[index];
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom: 8.0,
@@ -373,10 +348,10 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                   ),
                   child: _buildFormCard(
                     size: size,
-                    formId: formId,
-                    formName: formName,
-                    formCode: formCode,
-                    thumbnailUrl: thumbnailUrl,
+                    formId: form.id,
+                    formName: form.name,
+                    formCode: form.formCode,
+                    thumbnailUrl: form.thumbnailUrl,
                     index: index,
                   ),
                 );
@@ -385,12 +360,17 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     );
   }
 
-  Widget _buildSubmissionsList(Size size) {
-    if (_isSubmissionsLoading) {
+  Widget _buildSubmissionsList(
+    BuildContext context,
+    SubmitFormsState state,
+    List<FormSubmissionEntity> submissions,
+    Size size,
+  ) {
+    if (state.isSubmissionsLoading && submissions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_submissionsError != null) {
+    if (state.submissionsError != null && submissions.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -398,13 +378,17 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                _submissionsError!,
+                state.submissionsError!,
                 style: const TextStyle(color: Colors.red, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _fetchSubmissions,
+                onPressed: () {
+                  context.read<SubmitFormsBloc>().add(
+                    FetchSubmissionsEvent(query: _searchQuery),
+                  );
+                },
                 child: const Text("Retry"),
               ),
             ],
@@ -414,8 +398,12 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: () async => _fetchSubmissions(),
-      child: _filteredSubmissions.isEmpty
+      onRefresh: () async {
+        context.read<SubmitFormsBloc>().add(
+          FetchSubmissionsEvent(query: _searchQuery),
+        );
+      },
+      child: submissions.isEmpty
           ? SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: SizedBox(
@@ -436,36 +424,34 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                 size.width * 0.04,
                 size.width * 0.03,
               ),
-              itemCount: _filteredSubmissions.length,
+              itemCount: submissions.length,
               itemBuilder: (context, index) {
-                final sub = _filteredSubmissions[index];
+                final sub = submissions[index];
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom: 8.0,
                     top: index == 0 ? 8.0 : 0.0,
                   ),
-                  child: _buildSubmissionCard(size, sub, index),
+                  child: _buildSubmissionCard(context, state, sub, index),
                 );
               },
             ),
     );
   }
 
-  Widget _buildSubmissionCard(Size size, dynamic submission, int index) {
-    final formId = submission['formId'] ?? '';
-    final formName = _getFormNameById(formId);
-    final code = submission['submissionCode'] ?? '';
-    final dateStr = submission['createdAt'] ?? '';
-    String formattedDate = '';
-    try {
-      if (dateStr.isNotEmpty) {
-        final date = DateTime.parse(dateStr);
-        formattedDate = DateFormat('MMM d, yyyy').format(date);
-      }
-    } catch (_) {}
+  Widget _buildSubmissionCard(
+    BuildContext context,
+    SubmitFormsState state,
+    FormSubmissionEntity submission,
+    int index,
+  ) {
+    final formName = _getFormNameById(submission.formId, state.availableForms);
+    final code = submission.submissionCode;
+    final dateStr = submission.createdAt;
+    final formattedDate = DateFormat('MMM d, yyyy').format(dateStr);
 
-    final form = _getFormById(formId);
-    final thumbnailUrl = form != null ? (form['thumbnailUrl'] ?? '') : '';
+    final form = _getFormById(submission.formId, state.availableForms);
+    final thumbnailUrl = form != null ? form.thumbnailUrl : '';
     final cardBg = _getCardBgColor(index);
     final cardIconColor = _getCardIconColor(index);
 
@@ -489,7 +475,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
         ),
         child: Row(
           children: [
-            // Left: PDF Thumbnail Container
             Container(
               width: 44,
               height: 58,
@@ -503,7 +488,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(5),
-                child: (thumbnailUrl.isNotEmpty)
+                child: thumbnailUrl.isNotEmpty
                     ? Image.network(
                         thumbnailUrl,
                         fit: BoxFit.cover,
@@ -525,8 +510,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
               ),
             ),
             const SizedBox(width: 12),
-
-            // Middle: Title & Description (Code + Date)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,32 +536,29 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (formattedDate.isNotEmpty) const SizedBox(height: 4),
-                  if (formattedDate.isNotEmpty)
-                    Row(
-                      children: [
-                        const Icon(
-                          LucideIcons.calendar,
-                          size: 10,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        LucideIcons.calendar,
+                        size: 10,
+                        color: Color(0xFF6B7280),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        formattedDate,
+                        style: const TextStyle(
                           color: Color(0xFF6B7280),
+                          fontSize: 10,
+                          fontFamily: 'AirbnbCereal',
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(
-                            color: Color(0xFF6B7280),
-                            fontSize: 10,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-
-            // Right: Share Icon button
             Builder(
               builder: (buttonContext) {
                 return IconButton(
@@ -595,49 +575,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _onSubmissionTap(dynamic submission, String formName) {
-    final formId = submission['formId'] ?? '';
-    final submissionId = submission['id'] ?? '';
-    final token = getIt<SharedPreferences>().getString('auth_token') ?? '';
-
-    final viewUrl =
-        "https://presshop.dev/f/$formId/view/$submissionId?token=$token";
-
-    context.push(
-      AppRoutes.webViewForm,
-      extra: {'formId': formId, 'formName': formName, 'customUrl': viewUrl},
-    );
-  }
-
-  void _shareSubmission(
-    BuildContext buttonContext,
-    dynamic submission,
-    String formName,
-  ) {
-    final formId = submission['formId'] ?? '';
-    final submissionId = submission['id'] ?? '';
-    final token = getIt<SharedPreferences>().getString('auth_token') ?? '';
-
-    final viewUrl =
-        "https://presshop.dev/f/$formId/view/$submissionId?token=$token";
-
-    Rect? shareOrigin;
-    final box = buttonContext.findRenderObject() as RenderBox?;
-    if (box != null) {
-      shareOrigin = box.localToGlobal(Offset.zero) & box.size;
-    }
-    if (shareOrigin == null ||
-        shareOrigin.width == 0 ||
-        shareOrigin.height == 0) {
-      shareOrigin = const Rect.fromLTWH(0, 0, 100, 100);
-    }
-
-    Share.share(
-      "Check out my submission for $formName:\n$viewUrl",
-      sharePositionOrigin: shareOrigin,
     );
   }
 
@@ -672,7 +609,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
         ),
         child: Row(
           children: [
-            // Left: PDF Thumbnail Container
             Container(
               width: 44,
               height: 58,
@@ -686,7 +622,7 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(5),
-                child: (thumbnailUrl.isNotEmpty)
+                child: thumbnailUrl.isNotEmpty
                     ? Image.network(
                         thumbnailUrl,
                         fit: BoxFit.cover,
@@ -738,8 +674,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
               ),
             ),
             const SizedBox(width: 12),
-
-            // Right: Chevron
             const Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -749,13 +683,6 @@ class _SubmitFormsScreenState extends State<SubmitFormsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _openForm(String formId, String formName) {
-    context.push(
-      AppRoutes.webViewForm,
-      extra: {'formId': formId, 'formName': formName},
     );
   }
 }

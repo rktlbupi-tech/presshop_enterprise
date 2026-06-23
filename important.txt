@@ -105,6 +105,9 @@ These features have standard data/ and presentation/ layers, but they bypass the
 📁 duties (data/, presentation/)
 📁 splash (data/, presentation/)
 📁 map (core/, data/, presentation/)
+
+//////////////////
+
 Group 3: Architecture Violators (Direct API Calls in UI Layer)
 These features bypass Clean Architecture completely. They lack BLoCs, usecases, and repository layers, and make direct HTTP requests (getIt<ApiClient>()) inside the Widgets/Screens.
 
@@ -113,6 +116,9 @@ These features bypass Clean Architecture completely. They lack BLoCs, usecases, 
 📁 sos: Invokes emergency triggers directly from sos_dialog.dart via getIt<ApiClient>().
 Group 4: UI-Only Features (Clean Presentation-Only)
 These features consist only of a presentation/ layer. However, they do not perform any network operations or possess complex business logic (they delegate actions or simply act as static UI shells/drawers). Therefore, their simple folder structure is acceptable.
+
+
+//////////
 
 📁 dashboard (Hosts main bottom bar shell)
 📁 menu (Hosts drawer menu navigation items)

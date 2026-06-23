@@ -1,11 +1,10 @@
-// ignore_for_file: unused_field
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../common/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
-import '../../../../core/network/api_client.dart';
+import '../bloc/submit_forms_bloc.dart';
 
 class WebViewForFormScreen extends StatefulWidget {
   final String? formId;
@@ -23,37 +22,43 @@ class WebViewForFormScreen extends StatefulWidget {
 }
 
 class _WebViewForFormScreenState extends State<WebViewForFormScreen> {
-  bool _isLoading = true;
-  String? _webViewUrl;
-  String? _errorMessage;
   WebViewController? _webViewController;
+  bool _localLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchFormTokenAndLoadUrl();
+
+    _initStaticUrl();
   }
 
-  WebViewController _createWebViewController(String url) {
-    return WebViewController()
+  void _initStaticUrl() {
+    final token = getIt<SharedPreferences>().getString('auth_token') ?? "";
+    if (widget.customUrl != null) {
+      _setupWebViewController(widget.customUrl!);
+    } else if (widget.formId != null) {
+      _setupWebViewController(
+        "https://presshop.dev/f/${widget.formId}?token=$token",
+      );
+    }
+  }
+
+  void _setupWebViewController(String url) {
+    _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0x00000000))
       ..addJavaScriptChannel(
         'FormChannel',
         onMessageReceived: (JavaScriptMessage message) {
-          debugPrint("FormChannel received message: ${message.message}");
-          if (mounted) {
-            Navigator.pop(context);
-          }
+          debugPrint("FormChannel message: ${message.message}");
+          if (mounted) Navigator.pop(context);
         },
       )
       ..addJavaScriptChannel(
         'FlutterChannel',
         onMessageReceived: (JavaScriptMessage message) {
-          debugPrint("FlutterChannel received message: ${message.message}");
-          if (mounted) {
-            Navigator.pop(context);
-          }
+          debugPrint("FlutterChannel message: ${message.message}");
+          if (mounted) Navigator.pop(context);
         },
       )
       ..setNavigationDelegate(
@@ -61,21 +66,24 @@ class _WebViewForFormScreenState extends State<WebViewForFormScreen> {
           onProgress: (int progress) {
             debugPrint("WebView progress: $progress");
           },
-          onPageStarted: (String url) {
-            debugPrint("WebView started loading: $url");
-            final lowerUrl = url.toLowerCase();
+          onPageStarted: (String pageUrl) {
+            debugPrint("WebView started loading: $pageUrl");
+            final lowerUrl = pageUrl.toLowerCase();
             if (lowerUrl.contains('/success') ||
                 lowerUrl.contains('/submitted') ||
                 lowerUrl.contains('status=success') ||
                 lowerUrl.contains('/thank-you') ||
                 lowerUrl.contains('/form-success')) {
-              if (mounted) {
-                Navigator.pop(context);
-              }
+              if (mounted) Navigator.pop(context);
             }
           },
-          onPageFinished: (String url) {
-            debugPrint("WebView finished loading: $url");
+          onPageFinished: (String pageUrl) {
+            debugPrint("WebView finished loading: $pageUrl");
+            if (mounted) {
+              setState(() {
+                _localLoading = false;
+              });
+            }
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint("WebView error: $error");
@@ -87,9 +95,7 @@ class _WebViewForFormScreenState extends State<WebViewForFormScreen> {
                 lowerUrl.contains('status=success') ||
                 lowerUrl.contains('/thank-you') ||
                 lowerUrl.contains('/form-success')) {
-              if (mounted) {
-                Navigator.pop(context);
-              }
+              if (mounted) Navigator.pop(context);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -99,108 +105,79 @@ class _WebViewForFormScreenState extends State<WebViewForFormScreen> {
       ..loadRequest(Uri.parse(url));
   }
 
-  Future<void> _fetchFormTokenAndLoadUrl() async {
-    try {
-      final token = getIt<SharedPreferences>().getString('auth_token') ?? "";
-
-      if (widget.customUrl != null) {
-        final url = widget.customUrl!;
-        setState(() {
-          _webViewUrl = url;
-          _webViewController = _createWebViewController(url);
-          _isLoading = false;
-        });
-        return;
-      }
-
-      if (widget.formId != null) {
-        final url = "https://presshop.dev/f/${widget.formId}?token=$token";
-        setState(() {
-          _webViewUrl = url;
-          _webViewController = _createWebViewController(url);
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final apiClient = getIt<ApiClient>();
-      final response = await apiClient.post('enterprise/forms/app-token');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
-        if (data != null && data['success'] == true && data['url'] != null) {
-          final url = data['url'];
-          setState(() {
-            _webViewUrl = url;
-            _webViewController = _createWebViewController(url);
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _errorMessage = data?['message'] ?? "Failed to retrieve form URL.";
-            _isLoading = false;
-          });
-        }
-      } else {
-        setState(() {
-          _errorMessage = "Server returned error: ${response.statusCode}";
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = "An error occurred: $e";
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        if (_webViewController != null &&
-            await _webViewController!.canGoBack()) {
-          _webViewController!.goBack();
-          return false;
+    final showWebView = widget.customUrl != null || widget.formId != null;
+
+    return BlocProvider<SubmitFormsBloc>(
+      create: (context) {
+        final bloc = getIt<SubmitFormsBloc>();
+        if (!showWebView) {
+          bloc.add(const FetchAppTokenUrlEvent());
         }
-        return true;
+        return bloc;
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F6FA),
-        appBar: AppAppBar(
-          title: widget.formName ?? 'Forms',
-          elevation: 0.5,
-          centerTitle: false,
-          titleSpacing: 0,
-          showBack: true,
-          onBackTap: () async {
-            if (_webViewController != null &&
-                await _webViewController!.canGoBack()) {
-              _webViewController!.goBack();
-            } else {
-              if (mounted) Navigator.pop(context);
-            }
-          },
-        ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _errorMessage != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              )
-            : WebViewWidget(controller: _webViewController!),
+      child: BlocConsumer<SubmitFormsBloc, SubmitFormsState>(
+        listener: (context, state) {
+          if (state.appTokenUrl != null && _webViewController == null) {
+            _setupWebViewController(state.appTokenUrl!);
+          }
+        },
+        builder: (context, state) {
+          final isLoading = showWebView
+              ? _localLoading
+              : (state.isAppTokenLoading || _webViewController == null);
+          final errorMessage = showWebView ? null : state.appTokenError;
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final navigator = Navigator.of(context);
+              if (_webViewController != null && await _webViewController!.canGoBack()) {
+                _webViewController!.goBack();
+              } else {
+                navigator.pop();
+              }
+            },
+            child: Scaffold(
+              backgroundColor: const Color(0xFFF5F6FA),
+              appBar: AppAppBar(
+                title: widget.formName ?? 'Forms',
+                elevation: 0.5,
+                centerTitle: false,
+                titleSpacing: 0,
+                showBack: true,
+                onBackTap: () async {
+                  final navigator = Navigator.of(context);
+                  if (_webViewController != null && await _webViewController!.canGoBack()) {
+                    _webViewController!.goBack();
+                  } else {
+                    navigator.pop();
+                  }
+                },
+              ),
+              body: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          errorMessage,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    )
+                  : WebViewWidget(controller: _webViewController!),
+            ),
+          );
+        },
       ),
     );
   }

@@ -43,6 +43,12 @@ import '../../features/team_chat/data/repositories/team_chat_repository_impl.dar
 import '../../features/team_chat/domain/repositories/team_chat_repository.dart';
 import '../../features/team_chat/presentation/bloc/team_chat_bloc.dart';
 
+// Submit Forms
+import '../../features/submit_forms/data/datasources/submit_forms_remote_datasource.dart';
+import '../../features/submit_forms/data/repositories/submit_forms_repository_impl.dart';
+import '../../features/submit_forms/domain/repositories/submit_forms_repository.dart';
+import '../../features/submit_forms/presentation/bloc/submit_forms_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -101,4 +107,9 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => TeamChatRemoteDataSource(getIt()));
   getIt.registerLazySingleton<TeamChatRepository>(() => TeamChatRepositoryImpl(getIt()));
   getIt.registerFactory(() => TeamChatBloc(getIt()));
+
+  // Submit Forms
+  getIt.registerLazySingleton(() => SubmitFormsRemoteDataSource(getIt()));
+  getIt.registerLazySingleton<SubmitFormsRepository>(() => SubmitFormsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => SubmitFormsBloc(getIt()));
 }
