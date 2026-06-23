@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/di/injection.dart';
+import '../../config/routes/app_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_icons.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
@@ -205,34 +207,37 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   fit: BoxFit.contain,
                 ),
               ),
-            Container(
-              height: 40.w,
-              width: 40.w,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.grey.shade200, width: 1),
-                image: (companyLogo != null && companyLogo.isNotEmpty)
-                    ? DecorationImage(
-                        image: NetworkImage(companyLogo),
-                        fit: BoxFit.cover,
+            GestureDetector(
+              onTap: () => context.go(AppRoutes.dashboard),
+              child: Container(
+                height: 40.w,
+                width: 40.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade200, width: 1),
+                  image: (companyLogo != null && companyLogo.isNotEmpty)
+                      ? DecorationImage(
+                          image: NetworkImage(companyLogo),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: (companyLogo == null || companyLogo.isEmpty)
+                    ? Padding(
+                        padding: EdgeInsets.all(6.w),
+                        child: Image.asset(
+                          AppIcons.appLogo,
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, e, st) => Icon(
+                            Icons.business,
+                            color: AppColors.primary,
+                            size: 20.sp,
+                          ),
+                        ),
                       )
                     : null,
               ),
-              child: (companyLogo == null || companyLogo.isEmpty)
-                  ? Padding(
-                      padding: EdgeInsets.all(6.w),
-                      child: Image.asset(
-                        AppIcons.appLogo,
-                        fit: BoxFit.contain,
-                        errorBuilder: (ctx, e, st) => Icon(
-                          Icons.business,
-                          color: AppColors.primary,
-                          size: 20.sp,
-                        ),
-                      ),
-                    )
-                  : null,
             ),
           ],
         ),

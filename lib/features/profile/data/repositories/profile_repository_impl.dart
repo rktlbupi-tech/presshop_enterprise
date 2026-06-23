@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/profile_entity.dart';
@@ -38,5 +39,17 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try { return (await _ds.updateProfile(data), null); }
     on Failure catch (f) { return (false, f); }
     catch (e) { return (false, UnknownFailure(e.toString())); }
+  }
+
+  @override
+  Future<(String?, Failure?)> uploadMedia(File file) async {
+    try {
+      final url = await _ds.uploadMedia(file);
+      return (url, null);
+    } on Failure catch (f) {
+      return (null, f);
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
   }
 }

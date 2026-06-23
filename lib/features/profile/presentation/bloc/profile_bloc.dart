@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/profile_entity.dart';
@@ -10,8 +11,9 @@ abstract class ProfileEvent extends Equatable {
 class FetchProfile extends ProfileEvent { const FetchProfile(); }
 class UpdateProfile extends ProfileEvent {
   final Map<String, dynamic> data;
-  const UpdateProfile(this.data);
-  @override List<Object?> get props => [data];
+  final File? imageFile;
+  const UpdateProfile(this.data, {this.imageFile});
+  @override List<Object?> get props => [data, imageFile];
 }
 
 abstract class ProfileState extends Equatable {
@@ -48,7 +50,20 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
   Future<void> _onUpdate(UpdateProfile e, Emitter<ProfileState> emit) async {
     emit(const ProfileLoading());
-    final (success, failure) = await _repo.updateProfile(e.data);
+    
+    final Map<String, dynamic> updateData = Map.from(e.data);
+    if (e.imageFile != null) {
+      final (url, failure) = await _repo.uploadMedia(e.imageFile!);
+      if (failure != null) {
+        emit(ProfileError(failure.message));
+        return;
+      }
+      if (url != null) {
+        updateData['profile_image'] = url;
+      }
+    }
+
+    final (success, failure) = await _repo.updateProfile(updateData);
     if (failure != null) { emit(ProfileError(failure.message)); return; }
     if (success) {
       emit(const ProfileUpdateSuccess());

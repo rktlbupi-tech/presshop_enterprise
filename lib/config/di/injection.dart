@@ -49,6 +49,12 @@ import '../../features/submit_forms/data/repositories/submit_forms_repository_im
 import '../../features/submit_forms/domain/repositories/submit_forms_repository.dart';
 import '../../features/submit_forms/presentation/bloc/submit_forms_bloc.dart';
 
+// SOS
+import '../../features/sos/data/datasources/sos_remote_datasource.dart';
+import '../../features/sos/data/repositories/sos_repository_impl.dart';
+import '../../features/sos/domain/repositories/sos_repository.dart';
+import '../../features/sos/presentation/bloc/sos_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -112,4 +118,9 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => SubmitFormsRemoteDataSource(getIt()));
   getIt.registerLazySingleton<SubmitFormsRepository>(() => SubmitFormsRepositoryImpl(getIt()));
   getIt.registerFactory(() => SubmitFormsBloc(getIt()));
+
+  // SOS
+  getIt.registerLazySingleton(() => SosRemoteDataSource(getIt()));
+  getIt.registerLazySingleton<SosRepository>(() => SosRepositoryImpl(getIt()));
+  getIt.registerFactory(() => SosBloc(getIt()));
 }

@@ -97,6 +97,9 @@ These features perfectly separate concerns into data/, domain/, and presentation
 📁 profile
 📁 settings
 📁 tasks
+📁 team_chat
+📁 submit_forms
+📁 sos
 Group 2: Partially Compliant (Missing Domain Layer)
 These features have standard data/ and presentation/ layers, but they bypass the domain/ layer (no usecases or separate entities). The repository implementation or BLoC directly handles domain/business logic.
 
@@ -109,11 +112,8 @@ These features have standard data/ and presentation/ layers, but they bypass the
 //////////////////
 
 Group 3: Architecture Violators (Direct API Calls in UI Layer)
-These features bypass Clean Architecture completely. They lack BLoCs, usecases, and repository layers, and make direct HTTP requests (getIt<ApiClient>()) inside the Widgets/Screens.
+None (All violations successfully refactored and moved to Group 1).
 
-📁 team_chat: Calls raw chat API and handles web-socket logic directly inside team_chat_message_page.dart and team_chat_screen.dart.
-📁 submit_forms: Calls the API endpoints directly inside submit_forms_screen.dart and web_view_form_screen.dart.
-📁 sos: Invokes emergency triggers directly from sos_dialog.dart via getIt<ApiClient>().
 Group 4: UI-Only Features (Clean Presentation-Only)
 These features consist only of a presentation/ layer. However, they do not perform any network operations or possess complex business logic (they delegate actions or simply act as static UI shells/drawers). Therefore, their simple folder structure is acceptable.
 

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
@@ -8,13 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as path;
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
-import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../common/widgets/loading_widget.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -153,51 +150,6 @@ class _ProfileViewState extends State<_ProfileView> {
   }
 
   Future<void> _saveProfile() async {
-    String? uploadedImageUrl;
-
-    if (_imageFile != null) {
-      try {
-        String fileName = path.basename(_imageFile!.path);
-        FormData uploadFormData = FormData.fromMap({
-          "media": await MultipartFile.fromFile(
-            _imageFile!.path,
-            filename: fileName,
-          ),
-          "path": "user",
-        });
-
-        var dio = Dio();
-        final prefs = getIt<SharedPreferences>();
-        final token = prefs.getString('auth_token') ?? '';
-        dio.options.headers["Authorization"] = "Bearer $token";
-
-        var response = await dio.post(
-          "${AppConfig.apiBaseUrl}hopper/uploadUserMedia",
-          data: uploadFormData,
-        );
-
-        if (response.statusCode == 200) {
-          var responseData = response.data;
-          uploadedImageUrl =
-              responseData['mediaurl'] ?? responseData['mediaUrl'];
-          if (uploadedImageUrl == null && responseData['fileName'] != null) {
-            uploadedImageUrl = AppConfig.apiBaseUrl + responseData['fileName'];
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to upload profile image")),
-          );
-          return;
-        }
-      } catch (e) {
-        debugPrint("Error uploading image: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error uploading profile image")),
-        );
-        return;
-      }
-    }
-
     final Map<String, dynamic> updateData = {
       'first_name': _firstNameController.text.trim(),
       'last_name': _lastNameController.text.trim(),
@@ -213,9 +165,7 @@ class _ProfileViewState extends State<_ProfileView> {
       'emergency_contacts': _emergencyContacts.map((c) => c.toJson()).toList(),
     };
 
-    if (uploadedImageUrl != null) {
-      updateData['profile_image'] = uploadedImageUrl;
-    } else {
+    if (_imageFile == null) {
       final profileState = context.read<ProfileBloc>().state;
       if (profileState is ProfileLoaded &&
           profileState.profile.profileImage != null) {
@@ -226,7 +176,7 @@ class _ProfileViewState extends State<_ProfileView> {
       }
     }
 
-    context.read<ProfileBloc>().add(UpdateProfile(updateData));
+    context.read<ProfileBloc>().add(UpdateProfile(updateData, imageFile: _imageFile));
   }
 
   @override

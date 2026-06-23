@@ -1,16 +1,12 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as path;
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
-import '../../../../core/config/app_config.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../common/widgets/loading_widget.dart';
 import '../../domain/entities/profile_entity.dart';
@@ -59,94 +55,39 @@ class _DigitalIdView extends StatefulWidget {
 }
 
 class _DigitalIdViewState extends State<_DigitalIdView> {
-  bool _isUploading = false;
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage(ImageSource source, ProfileEntity profile) async {
     final XFile? image = await _picker.pickImage(source: source);
     if (image != null) {
+      final file = File(image.path);
       setState(() {
-        _imageFile = File(image.path);
+        _imageFile = file;
       });
-      _uploadImage(File(image.path), profile);
+      _updateProfileImage(file, profile);
     }
   }
 
-  Future<void> _uploadImage(File file, ProfileEntity profile) async {
-    setState(() {
-      _isUploading = true;
-    });
+  void _updateProfileImage(File file, ProfileEntity profile) {
+    final Map<String, dynamic> updateData = {
+      'first_name': profile.firstName,
+      'last_name': profile.lastName,
+      'phone': profile.phone ?? '',
+      'email': profile.email,
+      'profile_city': profile.city ?? profile.profileCity ?? '',
+      'profile_country': profile.country ?? profile.profileCountry ?? '',
+      'profile_post_code': profile.profilePostCode ?? '',
+      'address': profile.address ?? profile.profileAddress ?? '',
+      'emergency_contacts': profile.emergencyContacts
+          .map((c) => c.toJson())
+          .toList(),
+      'latitude': profile.latitude ?? '',
+      'longitude': profile.longitude ?? '',
+      'current_location': profile.currentLocation ?? '',
+    };
 
-    try {
-      String fileName = path.basename(file.path);
-      FormData uploadFormData = FormData.fromMap({
-        "media": await MultipartFile.fromFile(file.path, filename: fileName),
-        "path": "user",
-      });
-
-      var dio = Dio();
-      final prefs = getIt<SharedPreferences>();
-      final token = prefs.getString('auth_token') ?? '';
-      dio.options.headers["Authorization"] = "Bearer $token";
-
-      var response = await dio.post(
-        "${AppConfig.apiBaseUrl}hopper/uploadUserMedia",
-        data: uploadFormData,
-      );
-
-      if (response.statusCode == 200) {
-        var responseData = response.data;
-        String? uploadedImageUrl =
-            responseData['mediaurl'] ?? responseData['mediaUrl'];
-        if (uploadedImageUrl == null && responseData['fileName'] != null) {
-          uploadedImageUrl = AppConfig.apiBaseUrl + responseData['fileName'];
-        }
-
-        if (uploadedImageUrl != null) {
-          final Map<String, dynamic> updateData = {
-            'first_name': profile.firstName,
-            'last_name': profile.lastName,
-            'phone': profile.phone ?? '',
-            'email': profile.email,
-            'profile_city': profile.city ?? profile.profileCity ?? '',
-            'profile_country': profile.country ?? profile.profileCountry ?? '',
-            'profile_post_code': profile.profilePostCode ?? '',
-            'address': profile.address ?? profile.profileAddress ?? '',
-            'profile_image': uploadedImageUrl,
-            'emergency_contacts': profile.emergencyContacts
-                .map((c) => c.toJson())
-                .toList(),
-            'latitude': profile.latitude ?? '',
-            'longitude': profile.longitude ?? '',
-            'current_location': profile.currentLocation ?? '',
-          };
-
-          if (mounted) {
-            context.read<ProfileBloc>().add(UpdateProfile(updateData));
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to upload image")),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("Error uploading image: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Error uploading image")));
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-        });
-      }
-    }
+    context.read<ProfileBloc>().add(UpdateProfile(updateData, imageFile: file));
   }
 
   void _showPicker(Size size, ProfileEntity profile) {
@@ -203,7 +144,7 @@ class _DigitalIdViewState extends State<_DigitalIdView> {
       child: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, state) {
           final profile = state is ProfileLoaded ? state.profile : null;
-          final isLoading = state is ProfileLoading || _isUploading;
+          final isLoading = state is ProfileLoading;
 
           if (profile == null && state is ProfileLoading) {
             return const Scaffold(
