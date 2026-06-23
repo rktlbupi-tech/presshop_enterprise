@@ -17,7 +17,17 @@ import '../../../../config/di/injection.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int initialIndex;
-  const DashboardScreen({super.key, this.initialIndex = 2});
+
+  /// One-shot token used to force the active tab back to [initialIndex] even
+  /// when go_router reuses an existing dashboard instance (e.g. tapping the
+  /// company logo from a pushed screen). A new token value re-selects the tab.
+  final String? selectTabToken;
+
+  const DashboardScreen({
+    super.key,
+    this.initialIndex = 2,
+    this.selectTabToken,
+  });
 
   @override
   State<DashboardScreen> createState() => DashboardScreenState();
@@ -54,6 +64,18 @@ class DashboardScreenState extends State<DashboardScreen> {
       child: const HomeScreen3(),
     );
     _menuScreen = const MenuScreen();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-select the requested tab only when a fresh token arrives, so normal
+    // internal tab switches (and rebuilds from pushing other routes) are left
+    // untouched.
+    if (widget.selectTabToken != null &&
+        widget.selectTabToken != oldWidget.selectTabToken) {
+      setState(() => _currentIndex = widget.initialIndex);
+    }
   }
 
   @override

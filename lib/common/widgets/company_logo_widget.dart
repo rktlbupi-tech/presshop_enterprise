@@ -8,6 +8,7 @@ import '../../config/di/injection.dart';
 import '../../config/routes/app_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_icons.dart';
+import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 
 class CompanyLogoWidget extends StatelessWidget {
@@ -33,7 +34,7 @@ class CompanyLogoWidget extends StatelessWidget {
     final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => context.go(AppRoutes.dashboard),
+      onTap: () => goToDashboardHome(context),
       child: Container(
         width: s,
         height: s,
@@ -60,6 +61,28 @@ class CompanyLogoWidget extends StatelessWidget {
               ),
       ),
     );
+  }
+}
+
+/// Tapping the company logo always lands the user on the dashboard Home tab.
+///
+/// - If we're already inside the dashboard (e.g. on the Evidence/Tasks/Team/Menu
+///   tab), switch the active tab back to Home (index 2) without re-navigating —
+///   `context.go(dashboard)` would be a no-op there since the route is unchanged.
+/// - Otherwise (on a separate pushed screen), navigate to the dashboard, which
+///   builds with Home as the initial tab.
+void goToDashboardHome(BuildContext context) {
+  final dashboardState = context
+      .findAncestorStateOfType<DashboardScreenState>();
+  if (dashboardState != null) {
+    dashboardState.changeTab(2);
+  } else {
+    // The dashboard may already be alive underneath this pushed screen on a
+    // different tab. A plain go('/dashboard') would reuse that state and keep
+    // the old tab, so we pass a one-shot token (`ts`) that forces the Home
+    // tab (index 2) once the dashboard rebuilds.
+    final token = DateTime.now().microsecondsSinceEpoch;
+    context.go('${AppRoutes.dashboard}?tab=2&ts=$token');
   }
 }
 

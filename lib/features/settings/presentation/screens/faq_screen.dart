@@ -178,7 +178,7 @@ class FAQScreenState extends State<FAQScreen> {
       appBar: AppAppBar(
         title: widget.priceTipsSelected ? "Price Tips" : "FAQs",
         showBack: true,
-        showLogo: false,
+        showLogo: true,
       ),
       body: SafeArea(
         child: isApiSuccess

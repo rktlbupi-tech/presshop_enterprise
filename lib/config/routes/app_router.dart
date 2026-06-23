@@ -177,7 +177,11 @@ GoRouter createRouter(SharedPreferences prefs) {
         builder: (context, state) {
           final tabStr = state.uri.queryParameters['tab'];
           final index = tabStr != null ? int.tryParse(tabStr) ?? 2 : 2;
-          return DashboardScreen(initialIndex: index);
+          final selectTabToken = state.uri.queryParameters['ts'];
+          return DashboardScreen(
+            initialIndex: index,
+            selectTabToken: selectTabToken,
+          );
         },
       ),
       GoRoute(

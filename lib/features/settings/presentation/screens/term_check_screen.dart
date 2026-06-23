@@ -140,7 +140,7 @@ class _TermCheckScreenState extends State<TermCheckScreen> {
             ? "Privacy policy"
             : "Legal T&Cs",
         showBack: true,
-        showLogo: false,
+        showLogo: true,
       ),
       body: isLoading
           ? const LoadingWidget()

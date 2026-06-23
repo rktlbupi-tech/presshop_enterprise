@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/di/injection.dart';
-import '../../config/routes/app_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_icons.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/domain/entities/profile_entity.dart';
+import 'company_logo_widget.dart';
 
 /// Shared dashboard top bar — port of the old app's [EmployeeDashboardAppBar].
 /// Left: circular avatar with an online dot, employee name, media house.
@@ -208,7 +207,7 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             GestureDetector(
-              onTap: () => context.go(AppRoutes.dashboard),
+              onTap: () => goToDashboardHome(context),
               child: Container(
                 height: 40.w,
                 width: 40.w,
