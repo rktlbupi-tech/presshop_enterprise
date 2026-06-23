@@ -113,5 +113,440 @@ Two Socket.io namespaces, both managed by `SocketManager`:
 The map feature uses a *separate* `MapSocketClient` (in `features/map/core/`) that connects to the same host but manages heatmap, location updates, alerts, and SOS independently from `SocketManager`.
 
 Connect lifecycle:
+
 1. After successful login → `SocketManager.instance.connectAll(token)`
 2. After logout / 401 clear → `SocketManager.instance.disconnectAll()`
+
+# Flutter Clean Architecture Rules
+
+## 1. Layer Structure
+
+```text
+Presentation
+    ↓
+Domain
+    ↓
+Data
+```
+
+Dependency Rule:
+
+```text
+Presentation → Domain
+Data → Domain
+
+Domain must NOT depend on Presentation or Data.
+```
+
+---
+
+# 2. Presentation Layer Rules
+
+Location:
+
+```text
+presentation/
+├── bloc/
+├── screens/
+└── widgets/
+```
+
+Responsibilities:
+
+- UI rendering
+- User interaction
+- Navigation
+- State management
+- Calling UseCases
+
+Allowed:
+
+```dart
+Bloc
+Cubit
+Widgets
+Screens
+Navigation
+Controllers
+```
+
+Not Allowed:
+
+```dart
+API Calls
+Dio Requests
+Firebase Calls
+Database Queries
+Complex Business Logic
+```
+
+Example:
+
+```dart
+Login Button Click
+↓
+LoginEvent
+↓
+AuthBloc
+↓
+LoginUseCase
+```
+
+---
+
+# 3. Domain Layer Rules
+
+Location:
+
+```text
+domain/
+├── entities/
+├── repositories/
+└── usecases/
+```
+
+Purpose:
+
+Contains business logic and business rules.
+
+---
+
+## Entities
+
+Responsibilities:
+
+- Pure business objects
+- No API dependencies
+- No Flutter imports
+
+Example:
+
+```dart
+UserEntity
+TaskEntity
+WorkerEntity
+```
+
+Not Allowed:
+
+```dart
+fromJson()
+toJson()
+API Logic
+```
+
+---
+
+## Repositories (Abstract)
+
+Responsibilities:
+
+- Define contracts
+- Define available operations
+
+Example:
+
+```dart
+abstract class AuthRepository {
+  Future<UserEntity> login();
+}
+```
+
+Not Allowed:
+
+```dart
+Dio Calls
+API Logic
+```
+
+---
+
+## UseCases
+
+Responsibilities:
+
+- Business rules
+- Validation
+- Workflow decisions
+
+Examples:
+
+```text
+LoginUseCase
+StartTaskUseCase
+CheckInUseCase
+CompleteTaskUseCase
+UploadEvidenceUseCase
+CalculateSalaryUseCase
+```
+
+Allowed:
+
+```dart
+Validation
+Permission Checks
+Business Rules
+Calculations
+Workflow Decisions
+```
+
+Not Allowed:
+
+```dart
+UI Code
+Widgets
+Navigation
+API Calls
+```
+
+Example:
+
+```dart
+if (!worker.isCheckedIn) {
+  throw Exception("Check in first");
+}
+```
+
+---
+
+# 4. Data Layer Rules
+
+Location:
+
+```text
+data/
+├── datasources/
+├── models/
+└── repositories/
+```
+
+Responsibilities:
+
+- API communication
+- Database communication
+- Data conversion
+
+---
+
+## DataSources
+
+Responsibilities:
+
+```text
+REST API Calls
+Firebase Calls
+Local Storage
+Database Access
+```
+
+Example:
+
+```dart
+auth_remote_datasource.dart
+task_remote_datasource.dart
+```
+
+Allowed:
+
+```dart
+Dio
+Http
+Firebase
+SharedPreferences
+Hive
+```
+
+---
+
+## Models
+
+Responsibilities:
+
+```text
+JSON Parsing
+Serialization
+Deserialization
+```
+
+Example:
+
+```dart
+UserModel
+TaskModel
+```
+
+Allowed:
+
+```dart
+fromJson()
+toJson()
+```
+
+---
+
+## Repository Implementations
+
+Responsibilities:
+
+```text
+Connect Domain and Data
+Convert Models → Entities
+Call DataSources
+```
+
+Example:
+
+```dart
+AuthRepositoryImpl
+TaskRepositoryImpl
+```
+
+---
+
+# 5. Bloc Rules
+
+Responsibilities:
+
+```text
+Receive Events
+Call UseCases
+Emit States
+Handle Loading/Error/Success
+```
+
+Allowed:
+
+```dart
+emit(Loading)
+emit(Success)
+emit(Error)
+Call UseCases
+```
+
+Not Allowed:
+
+```dart
+Business Logic
+API Calls
+Complex Calculations
+```
+
+Good Example:
+
+```dart
+on<LoginRequested>((event, emit) async {
+  emit(AuthLoading());
+
+  final user = await loginUseCase(
+    event.email,
+    event.password,
+  );
+
+  emit(AuthSuccess(user));
+});
+```
+
+Bad Example:
+
+```dart
+on<LoginRequested>((event, emit) async {
+
+  if(email.isEmpty) {
+     ...
+  }
+
+  await dio.post(...);
+
+});
+```
+
+---
+
+# 6. Testing Rules
+
+Priority:
+
+```text
+UseCase Tests     → Highest Priority
+Bloc Tests        → Medium Priority
+Repository Tests  → Low Priority
+Widget Tests      → Optional
+```
+
+UseCases must be independently testable.
+
+Example:
+
+```dart
+test(
+  'worker must check in before starting task',
+  () {}
+);
+```
+
+---
+
+# 7. Naming Conventions
+
+UseCases:
+
+```text
+LoginUseCase
+LogoutUseCase
+CheckInUseCase
+CheckOutUseCase
+StartTaskUseCase
+CompleteTaskUseCase
+```
+
+Repositories:
+
+```text
+AuthRepository
+TaskRepository
+AttendanceRepository
+```
+
+Repository Implementations:
+
+```text
+AuthRepositoryImpl
+TaskRepositoryImpl
+AttendanceRepositoryImpl
+```
+
+Data Sources:
+
+```text
+AuthRemoteDataSource
+TaskRemoteDataSource
+AttendanceRemoteDataSource
+```
+
+Entities:
+
+```text
+UserEntity
+TaskEntity
+AttendanceEntity
+```
+
+Models:
+
+```text
+UserModel
+TaskModel
+AttendanceModel
+```
+
+---
+
+# Golden Rule
+
+```text
+Screen → Bloc → UseCase → Repository → DataSource → API
+
+API → DataSource → Repository → UseCase → Bloc → Screen
+```
+
+Never skip layers unless there is a strong technical reason.

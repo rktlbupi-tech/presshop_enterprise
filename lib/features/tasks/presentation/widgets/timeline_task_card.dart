@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:presshop_enterprise/config/routes/app_router.dart';
 import '../../data/models/employee_task_model.dart';
 
 class TimelineTaskCard extends StatelessWidget {
@@ -59,7 +58,10 @@ class TimelineTaskCard extends StatelessWidget {
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -127,14 +129,24 @@ class TimelineTaskCard extends StatelessWidget {
                     ],
                   ),
                   child: ClipOval(
-                    child: (task.mediaHouseLogo != null && task.mediaHouseLogo!.isNotEmpty)
+                    child:
+                        (task.mediaHouseLogo != null &&
+                            task.mediaHouseLogo!.isNotEmpty)
                         ? Image.network(
                             task.mediaHouseLogo!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.business, size: 20, color: Colors.grey),
+                                const Icon(
+                                  Icons.business,
+                                  size: 20,
+                                  color: Colors.grey,
+                                ),
                           )
-                        : const Icon(Icons.business, size: 20, color: Colors.grey),
+                        : const Icon(
+                            Icons.business,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
                   ),
                 ),
               ),

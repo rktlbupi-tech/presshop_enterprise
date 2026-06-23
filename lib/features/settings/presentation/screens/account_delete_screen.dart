@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:presshop_enterprise/config/di/injection.dart';
@@ -77,39 +78,13 @@ class _AccountDeleteScreenContentState
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
+        appBar: AppAppBar(
+          showBack: true,
+          title: "Delete account",
           elevation: 0,
           centerTitle: false,
           titleSpacing: 0,
           backgroundColor: Colors.white,
-          leading: InkWell(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              margin: EdgeInsets.only(
-                left: 0,
-                top: size.width * 0.01,
-              ),
-              padding: EdgeInsets.all(
-                size.width * 0.043,
-              ),
-              child: Image.asset(
-                "assets/icons/ic_arrow_left.png",
-                height: size.width * 0.025,
-                width: size.width * 0.025,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          leadingWidth: size.width * 0.14,
-          title: Text(
-            "Delete account",
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: size.width * 0.045,
-              fontFamily: 'AirbnbCereal',
-            ),
-          ),
         ),
         body: BlocBuilder<SettingsBloc, SettingsState>(
           builder: (context, state) {

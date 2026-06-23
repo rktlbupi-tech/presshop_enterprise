@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:presshop_enterprise/config/routes/app_router.dart';
+import 'package:presshop_enterprise/core/constants/constant_data.dart';
 import 'package:presshop_enterprise/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:presshop_enterprise/features/map/presentation/screens/location_error_screen_map_news.dart';
 import 'package:http/http.dart' as http;
@@ -661,9 +662,9 @@ class _TeamMapScreenState extends State<TeamMapScreen>
         _animatedAlertIds.contains(alert.id))
       return;
 
-    final alertData = alertTypesForEmployee.firstWhere(
+    final alertData = AppConstantData.alertTypesForEmployee.firstWhere(
       (e) => _alertTypeMatches(alert.type, e['type'] ?? ''),
-      orElse: () => alertTypesForEmployee.first,
+      orElse: () => AppConstantData.alertTypesForEmployee.first,
     );
 
     try {

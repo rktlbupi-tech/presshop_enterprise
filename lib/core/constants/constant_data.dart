@@ -79,4 +79,67 @@ class AppConstantData {
       'iconBg': const Color(0xFFFEE2E2),
     },
   ];
+
+  static final List<Map<String, String>> alertTypesForEmployee = [
+    {
+      'type': 'contact-my-family',
+      'icon': 'assets/markers/gifs/contact-family.webp',
+      'label': 'Contact my family',
+    },
+    {
+      'type': 'need-help',
+      'icon': 'assets/markers/gifs/need-help.webp',
+      'label': 'Need help',
+    },
+    {
+      'type': 'send-backup',
+      'icon': 'assets/markers/gifs/send-backup.webp',
+      'label': 'Send backup',
+    },
+    {
+      'type': 'call-police',
+      'icon': 'assets/markers/gifs/call police.webp',
+      'label': 'Call police',
+    },
+    {
+      'type': 'call-ambulance',
+      'icon': 'assets/markers/gifs/medicine.webp',
+      'label': 'Call ambulance',
+    },
+    {
+      'type': 'under-threat',
+      'icon': 'assets/markers/gifs/vandalism.webp',
+      'label': 'Under threat',
+    },
+    {
+      'type': 'being-followed',
+      'icon': 'assets/markers/gifs/being-followed.webp',
+      'label': 'Being followed',
+    },
+    {
+      'type': 'get-me-out',
+      'icon': 'assets/markers/gifs/get-me-out.webp',
+      'label': 'Get me out',
+    },
+    {
+      'type': 'im-safe',
+      'icon': 'assets/markers/gifs/i-am-safe.webp',
+      'label': "I'm safe",
+    },
+    {
+      'type': 'send-support',
+      'icon': 'assets/markers/gifs/safe.webp',
+      'label': 'Send support',
+    },
+    {
+      'type': 'no-signal',
+      'icon': 'assets/markers/gifs/no-signal.webp',
+      'label': 'No signal',
+    },
+    {
+      'type': 'low-battery',
+      'icon': 'assets/markers/gifs/low-battery.webp',
+      'label': 'Low battery',
+    },
+  ];
 }

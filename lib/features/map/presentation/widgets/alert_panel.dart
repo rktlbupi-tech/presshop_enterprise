@@ -2,74 +2,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:presshop_enterprise/core/constants/constant_data.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:presshop_enterprise/common/widgets/loading_widget.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/map/data/services/emergency_service.dart';
-
-const List<Map<String, String>> alertTypesForEmployee = [
-  {
-    'type': 'contact-my-family',
-    'icon': 'assets/markers/gifs/contact-family.gif',
-    'label': 'Contact my family',
-  },
-  {
-    'type': 'need-help',
-    'icon': 'assets/markers/gifs/need-help.gif',
-    'label': 'Need help',
-  },
-  {
-    'type': 'send-backup',
-    'icon': 'assets/markers/gifs/send-backup.gif',
-    'label': 'Send backup',
-  },
-  {
-    'type': 'call-police',
-    'icon': 'assets/markers/gifs/call police.gif',
-    'label': 'Call police',
-  },
-  {
-    'type': 'call-ambulance',
-    'icon': 'assets/markers/gifs/medicine.webp',
-    'label': 'Call ambulance',
-  },
-  {
-    'type': 'under-threat',
-    'icon': 'assets/markers/gifs/vandalism.webp',
-    'label': 'Under threat',
-  },
-  {
-    'type': 'being-followed',
-    'icon': 'assets/markers/gifs/being-followed.gif',
-    'label': 'Being followed',
-  },
-  {
-    'type': 'get-me-out',
-    'icon': 'assets/markers/gifs/get-me-out.gif',
-    'label': 'Get me out',
-  },
-  {
-    'type': 'im-safe',
-    'icon': 'assets/markers/gifs/i-am-safe.gif',
-    'label': "I'm safe",
-  },
-  {
-    'type': 'send-support',
-    'icon': 'assets/markers/gifs/safe.gif',
-    'label': 'Send support',
-  },
-  {
-    'type': 'no-signal',
-    'icon': 'assets/markers/gifs/no-signal .gif',
-    'label': 'No signal',
-  },
-  {
-    'type': 'low-battery',
-    'icon': 'assets/markers/gifs/low-battery .gif',
-    'label': 'Low battery',
-  },
-];
 
 class AlertPanelEmployee extends StatefulWidget {
   final VoidCallback onClose;
@@ -91,28 +29,21 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
 
   final EmergencyService _emergencyService = EmergencyService();
 
-  // Nearby stations grouped by category. Populated as each fetch resolves.
   Map<String, List<EmergencyStation>> realEmergencyServices = {
     'Police': [],
     'Ambulance': [],
     'Fire Brigade': [],
   };
 
-  // Categories still awaiting their Places API response.
   final Set<String> _loadingCategories = {};
-
-  // Whether a fetch has already been kicked off (so reopening doesn't refetch).
   bool _fetchStarted = false;
 
-  /// Country-correct default emergency number, used when a station exposes no
-  /// phone number or when nearby search returns nothing. Ported from old app.
   String getEmergencyNumber(String category) {
     String countryCode = '';
     try {
       countryCode = _prefs?.getString('country_code') ?? '';
     } catch (_) {}
 
-    // Strip any formatting, e.g. "+91" -> "91", "+44" -> "44".
     countryCode = countryCode.replaceAll(RegExp(r'[^\d]'), '');
 
     if (countryCode == '44') {
@@ -143,9 +74,6 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
     });
   }
 
-  /// Triggered when the user opens the Emergency services view. Fetches the
-  /// user's current location, then fans out nearby Police / Ambulance / Fire
-  /// searches in parallel, updating the UI as each category resolves.
   Future<void> _fetchRealEmergencyData() async {
     if (!mounted) return;
     setState(() {
@@ -216,7 +144,6 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
         .then((r) => updateCategory('Fire Brigade', r));
   }
 
-  /// Default single-card-per-category fallback so the panel is never empty.
   void _loadFallbackData() {
     EmergencyStation fallback(String category) => EmergencyStation(
       name: category,
@@ -399,7 +326,8 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                           shrinkWrap: true,
                           padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: alertTypesForEmployee.length,
+                          itemCount:
+                              AppConstantData.alertTypesForEmployee.length,
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 3,
@@ -408,7 +336,8 @@ class _AlertPanelEmployeeState extends State<AlertPanelEmployee> {
                                 mainAxisSpacing: w * 0.012,
                               ),
                           itemBuilder: (context, i) {
-                            final item = alertTypesForEmployee[i];
+                            final item =
+                                AppConstantData.alertTypesForEmployee[i];
                             return GestureDetector(
                               onTap: () {
                                 widget.onAlertSelected?.call(item['type']!);

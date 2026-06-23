@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
+import 'package:presshop_enterprise/features/settings/presentation/screens/account_delete_screen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
@@ -518,14 +519,14 @@ class _MenuScreenState extends State<MenuScreen> {
               //   iconSize: size.width * 0.055,
               //   onTap: () => _open(const ChangePasswordScreen()),
               // ),
-              // _MenuGroupItem(
-              //   name: 'Account settings',
-              //   iconPath: '${_iconsPath}ic_alert.png',
-              //   iconColor: const Color(0xFF10B981),
-              //   iconBgColor: const Color(0xFFD1FAE5),
-              //   iconSize: size.width * 0.055,
-              //   onTap: () => _open(const AccountDeleteScreen()),
-              // ),
+              _MenuGroupItem(
+                name: 'Account settings',
+                iconPath: '${_iconsPath}ic_alert.png',
+                iconColor: const Color(0xFF10B981),
+                iconBgColor: const Color(0xFFD1FAE5),
+                iconSize: size.width * 0.075,
+                onTap: () => _open(AppRoutes.deleteAccount),
+              ),
               _MenuGroupItem(
                 name: 'Logout',
                 iconPath: '${_iconsPath}ic_logout.png',

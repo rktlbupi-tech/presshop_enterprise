@@ -7,10 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
 import '../../../../config/di/injection.dart';
 import '../../../../common/widgets/loading_widget.dart';
-
 import '../../../../features/map/core/map_constants.dart';
 import '../../../../common/widgets/app_app_bar.dart';
 import '../../../../features/mileage/presentation/widgets/custom_dropdown.dart';

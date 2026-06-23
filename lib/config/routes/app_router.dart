@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/settings/presentation/screens/account_delete_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:presshop_enterprise/main.dart';
@@ -120,6 +121,7 @@ class AppRoutes {
   static const String dutiesHistoryDetails = '/duties-history-details';
   static const String employeeCamera = '/employee-camera';
   static const String taskDetails = '/task-details/:taskId';
+  static const String deleteAccount = '/delete-account';
 }
 
 GoRouter createRouter(SharedPreferences prefs) {
@@ -428,6 +430,12 @@ GoRouter createRouter(SharedPreferences prefs) {
             initialType: initialType,
             hideAppBar: hideAppBar,
           );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        builder: (context, state) {
+          return AccountDeleteScreen();
         },
       ),
     ],
