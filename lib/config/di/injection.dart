@@ -37,6 +37,12 @@ import '../../features/notifications/data/repositories/notifications_repository_
 import '../../features/notifications/domain/repositories/notifications_repository.dart';
 import '../../features/notifications/presentation/bloc/notifications_bloc.dart';
 
+// Team Chat
+import '../../features/team_chat/data/datasources/team_chat_remote_datasource.dart';
+import '../../features/team_chat/data/repositories/team_chat_repository_impl.dart';
+import '../../features/team_chat/domain/repositories/team_chat_repository.dart';
+import '../../features/team_chat/presentation/bloc/team_chat_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -90,4 +96,9 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => NotificationsRemoteDatasource(getIt()));
   getIt.registerLazySingleton<NotificationsRepository>(() => NotificationsRepositoryImpl(getIt()));
   getIt.registerFactory(() => NotificationsBloc(getIt()));
+
+  // Team Chat
+  getIt.registerLazySingleton(() => TeamChatRemoteDataSource(getIt()));
+  getIt.registerLazySingleton<TeamChatRepository>(() => TeamChatRepositoryImpl(getIt()));
+  getIt.registerFactory(() => TeamChatBloc(getIt()));
 }

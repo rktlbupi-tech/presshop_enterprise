@@ -79,3 +79,44 @@ Group Team Chat
 Netfin Entire Team (Default)
 Group Chat Name 1
 Group Chat Name 2
+
+
+
+
+
+Here is a comprehensive architectural compliance audit of all 23 features in lib/features/ compared against the guidelines in docs/architecture.md.
+
+Group 1: Fully Compliant (100% Correct Folder Structure)
+These features perfectly separate concerns into data/, domain/, and presentation/ layers, with logic separated into UseCases, Repositories, and BLoCs.
+
+📁 attendance
+📁 auth (Note: Needs a SignupUseCase instead of direct repository call in BLoC)
+📁 documents
+📁 earnings
+📁 notifications
+📁 profile
+📁 settings
+📁 tasks
+Group 2: Partially Compliant (Missing Domain Layer)
+These features have standard data/ and presentation/ layers, but they bypass the domain/ layer (no usecases or separate entities). The repository implementation or BLoC directly handles domain/business logic.
+
+📁 camera (data/, presentation/, utils/)
+📁 content (data/, presentation/)
+📁 duties (data/, presentation/)
+📁 splash (data/, presentation/)
+📁 map (core/, data/, presentation/)
+Group 3: Architecture Violators (Direct API Calls in UI Layer)
+These features bypass Clean Architecture completely. They lack BLoCs, usecases, and repository layers, and make direct HTTP requests (getIt<ApiClient>()) inside the Widgets/Screens.
+
+📁 team_chat: Calls raw chat API and handles web-socket logic directly inside team_chat_message_page.dart and team_chat_screen.dart.
+📁 submit_forms: Calls the API endpoints directly inside submit_forms_screen.dart and web_view_form_screen.dart.
+📁 sos: Invokes emergency triggers directly from sos_dialog.dart via getIt<ApiClient>().
+Group 4: UI-Only Features (Clean Presentation-Only)
+These features consist only of a presentation/ layer. However, they do not perform any network operations or possess complex business logic (they delegate actions or simply act as static UI shells/drawers). Therefore, their simple folder structure is acceptable.
+
+📁 dashboard (Hosts main bottom bar shell)
+📁 menu (Hosts drawer menu navigation items)
+📁 mileage (Static forms, actions handled via map or other workflows)
+📁 onboarding (Onboarding intro carousel page)
+📁 payslip (Simple payslip layout view)
+📁 others (Obsolete folder; unused)

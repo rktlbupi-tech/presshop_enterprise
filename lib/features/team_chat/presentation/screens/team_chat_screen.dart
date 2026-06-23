@@ -1,29 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/network/socket/socket_events.dart';
-import '../../../../core/network/socket/socket_manager.dart';
 import '../../../../common/widgets/company_logo_widget.dart';
 import '../../../tasks/data/models/employee_task_model.dart';
-
-class _ChatMessage {
-  final String id, senderId, senderName, text;
-  final DateTime time;
-  final bool isMe;
-  _ChatMessage({
-    required this.id,
-    required this.senderId,
-    required this.senderName,
-    required this.text,
-    required this.time,
-    required this.isMe,
-  });
-}
+import '../../domain/entities/team_chat_message_entity.dart';
+import '../bloc/team_chat_bloc.dart';
 
 class TeamChatScreen extends StatefulWidget {
   final String roomId, roomName;
@@ -41,14 +26,8 @@ class TeamChatScreen extends StatefulWidget {
 class _TeamChatScreenState extends State<TeamChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final List<_ChatMessage> _messages = [];
   String _myId = '';
   String _myName = '';
-  String _conversationId = '';
-  bool _otherTyping = false;
-  String _typingName = '';
-  Timer? _typingDebounce;
-  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -56,187 +35,28 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     _initChat();
   }
 
-  Future<void> _initChat() async {
+  void _initChat() {
     final prefs = getIt<SharedPreferences>();
     _myId = prefs.getString('user_id') ?? '';
     _myName =
         '${prefs.getString('first_name') ?? ''} ${prefs.getString('last_name') ?? ''}'
             .trim();
-    final token = prefs.getString('auth_token') ?? '';
-    if (token.isNotEmpty) SocketManager.instance.connectAll(token);
-
-    _conversationId = widget.roomId;
-
-    // Load messages from REST API
-    try {
-      final api = getIt<ApiClient>();
-      final resp = await api.get(
-        'chat-v2/conversations/$_conversationId/messages',
-        queryParameters: {'limit': 50},
-      );
-      final d = resp.data;
-      if (d != null && d['success'] == true && d['data'] != null) {
-        final items = (d['data']['items'] as List<dynamic>?) ?? [];
-        if (mounted) {
-          setState(() {
-            for (final m in items) {
-              _addFromRaw(m);
-            }
-          });
-        }
-      }
-    } catch (_) {}
-
-    // Subscribe to conversation via socket (ACK-based)
-    final socket = SocketManager.instance.chatSocket;
-    socket.emitWithAck(
-      SocketEvents.conversationSubscribe,
-      {'conversationId': _conversationId, 'afterSeq': 0, 'limit': 100},
-      ack: (ack) {
-        if (_isDisposed || !mounted) return;
-        if (ack != null && ack['success'] == true && ack['data'] != null) {
-          final items = (ack['data']['items'] as List<dynamic>?) ?? [];
-          setState(() {
-            for (final m in items) {
-              _addFromRaw(m);
-            }
-          });
-        }
-      },
-    );
-    socket.on(SocketEvents.taskMessageNew, _onMessage);
-    socket.on(SocketEvents.typingStart, _onTyping);
   }
 
-  void _addFromRaw(dynamic m) {
-    if (m is! Map) return;
-    final senderId =
-        m['senderId']?.toString() ?? m['senderUserId']?.toString() ?? '';
-    final text =
-        (m['payload'] is Map ? m['payload']['text'] : m['text'])?.toString() ??
-        '';
-    final id =
-        m['_id']?.toString() ??
-        DateTime.now().millisecondsSinceEpoch.toString();
-    if (_messages.any((msg) => msg.id == id)) return;
-    _messages.add(
-      _ChatMessage(
-        id: id,
-        senderId: senderId,
-        senderName: m['senderName']?.toString() ?? '',
-        text: text,
-        time: m['createdAt'] != null
-            ? DateTime.tryParse(m['createdAt'].toString()) ?? DateTime.now()
-            : DateTime.now(),
-        isMe: senderId == _myId,
-      ),
-    );
-  }
-
-  void _onMessage(dynamic data) {
-    if (_isDisposed || !mounted || data is! Map) return;
-    if (data['conversationId']?.toString() != _conversationId) return;
-
-    final senderId =
-        data['senderId']?.toString() ?? data['senderUserId']?.toString() ?? '';
-    final text =
-        (data['payload'] is Map ? data['payload']['text'] : data['text'])
-            ?.toString() ??
-        '';
-    final id =
-        data['_id']?.toString() ??
-        DateTime.now().millisecondsSinceEpoch.toString();
-
-    if (_messages.any((msg) => msg.id == id)) return;
-
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          id: id,
-          senderId: senderId,
-          senderName: data['senderName']?.toString() ?? '',
-          text: text,
-          time: data['createdAt'] != null
-              ? DateTime.tryParse(data['createdAt'].toString()) ??
-                    DateTime.now()
-              : DateTime.now(),
-          isMe: senderId == _myId,
-        ),
-      );
-    });
-    _scrollToBottom();
-  }
-
-  void _onTyping(dynamic data) {
-    if (data is! Map) return;
-    final actorId =
-        data['actorId']?.toString() ?? data['userId']?.toString() ?? '';
-    if (actorId == _myId) return;
-    if (data['conversationId']?.toString() != _conversationId) return;
-    setState(() {
-      _otherTyping = true;
-      _typingName =
-          data['actorName']?.toString() ?? data['userName']?.toString() ?? '';
-    });
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) setState(() => _otherTyping = false);
-    });
-  }
-
-  void _sendMessage() {
+  void _sendMessage(BuildContext context) {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    _controller.clear();
-
-    SocketManager.instance.chatSocket.emitWithAck(
-      SocketEvents.taskMessageSend,
-      {
-        'conversationId': _conversationId,
-        'clientMessageId': 'msg-${DateTime.now().millisecondsSinceEpoch}',
-        'kind': 'text',
-        'payload': {'text': text},
-      },
-      ack: (ack) {
-        if (ack != null && ack['success'] == false && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                ack['error']?.toString() ?? 'Failed to send message',
-              ),
-            ),
-          );
-        }
-      },
+    context.read<TeamChatBloc>().add(
+      SendTeamChatMessageEvent(text: text, myId: _myId, myName: _myName),
     );
-
-    setState(() {
-      _messages.add(
-        _ChatMessage(
-          id: 'optimistic-${DateTime.now().millisecondsSinceEpoch}',
-          senderId: _myId,
-          senderName: _myName,
-          text: text,
-          time: DateTime.now(),
-          isMe: true,
-        ),
-      );
-    });
+    _controller.clear();
     _scrollToBottom();
   }
 
-  void _onTypingInput(String _) {
-    SocketManager.instance.chatSocket.emit(SocketEvents.typingStart, {
-      'conversationId': _conversationId,
-      'actorId': _myId,
-      'actorName': _myName,
-    });
-    _typingDebounce?.cancel();
-    _typingDebounce = Timer(const Duration(seconds: 2), () {
-      SocketManager.instance.chatSocket.emit(SocketEvents.typingStop, {
-        'conversationId': _conversationId,
-        'actorId': _myId,
-      });
-    });
+  void _onTypingInput(BuildContext context, String _) {
+    context.read<TeamChatBloc>().add(
+      SendTeamChatTypingInputEvent(myId: _myId, myName: _myName),
+    );
   }
 
   void _scrollToBottom() {
@@ -253,18 +73,8 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
 
   @override
   void dispose() {
-    _isDisposed = true;
     _controller.dispose();
     _scrollController.dispose();
-    _typingDebounce?.cancel();
-    final socket = SocketManager.instance.chatSocket;
-    socket.off(SocketEvents.taskMessageNew);
-    socket.off(SocketEvents.typingStart);
-    if (_conversationId.isNotEmpty) {
-      socket.emitWithAck(SocketEvents.conversationUnsubscribe, {
-        'conversationId': _conversationId,
-      }, ack: (_) {});
-    }
     super.dispose();
   }
 
@@ -378,8 +188,8 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     );
   }
 
-  Widget _buildBody(Size size) {
-    if (_messages.isEmpty) {
+  Widget _buildBody(Size size, TeamChatState state) {
+    if (state.messages.isEmpty) {
       if (widget.task != null) {
         return Column(
           children: [
@@ -455,16 +265,19 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     }
 
     final hasHeader = widget.task != null;
+
+    final messages = state.messages.reversed.toList();
+
     return ListView.builder(
       controller: _scrollController,
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-      itemCount: _messages.length + (hasHeader ? 1 : 0),
+      itemCount: messages.length + (hasHeader ? 1 : 0),
       itemBuilder: (context, i) {
         if (hasHeader && i == 0) {
           return _buildTaskHeader(size);
         }
-        final msg = _messages[hasHeader ? i - 1 : i];
-        return _MessageBubble(msg: msg);
+        final msg = messages[hasHeader ? i - 1 : i];
+        return _MessageBubble(msg: msg, myId: _myId);
       },
     );
   }
@@ -472,63 +285,95 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
-        title: Text(
-          widget.task != null ? "Manage Task" : widget.roomName,
-          style: const TextStyle(
-            color: Colors.black,
-            fontFamily: 'AirbnbCereal',
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: false,
-        actions: const [CompanyLogoAction()],
-      ),
-      body: Column(
-        children: [
-          Expanded(child: _buildBody(size)),
-          if (_otherTyping)
-            Padding(
-              padding: EdgeInsets.only(left: 16.w, bottom: 4.h),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '$_typingName is typing...',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
+    final prefs = getIt<SharedPreferences>();
+    final token = prefs.getString('auth_token') ?? '';
+
+    return BlocProvider<TeamChatBloc>(
+      create: (context) => getIt<TeamChatBloc>()
+        ..add(InitTeamChatEvent(conversationId: widget.roomId, token: token)),
+      child: BlocConsumer<TeamChatBloc, TeamChatState>(
+        listener: (context, state) {
+          if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          }
+          // Scroll to bottom when a new message is received
+          _scrollToBottom();
+        },
+        builder: (context, state) {
+          final otherTypers = state.typingMembers.entries
+              .where((e) => e.key != _myId)
+              .map((e) => e.value)
+              .toList();
+          final otherTyping = otherTypers.isNotEmpty;
+          final typingName = otherTypers.join(', ');
+
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              ),
+              titleSpacing: 0,
+              title: Text(
+                widget.task != null ? "Manage Task" : widget.roomName,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontFamily: 'AirbnbCereal',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
+              centerTitle: false,
+              actions: const [CompanyLogoAction()],
             ),
-          _InputBar(
-            controller: _controller,
-            onSend: _sendMessage,
-            onChanged: _onTypingInput,
-          ),
-        ],
+            body: state.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : Column(
+                    children: [
+                      Expanded(child: _buildBody(size, state)),
+                      if (otherTyping)
+                        Padding(
+                          padding: EdgeInsets.only(left: 16.w, bottom: 4.h),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '$typingName ${otherTypers.length > 1 ? 'are' : 'is'} typing...',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ),
+                      _InputBar(
+                        controller: _controller,
+                        onSend: () => _sendMessage(context),
+                        onChanged: (val) => _onTypingInput(context, val),
+                      ),
+                    ],
+                  ),
+          );
+        },
       ),
     );
   }
 }
 
 class _MessageBubble extends StatelessWidget {
-  final _ChatMessage msg;
-  const _MessageBubble({required this.msg});
+  final TeamChatMessageEntity msg;
+  final String myId;
+  const _MessageBubble({required this.msg, required this.myId});
 
   @override
   Widget build(BuildContext context) {
-    final isMe = msg.isMe;
+    final isMe = msg.isMyMessage(myId);
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Column(
@@ -627,7 +472,7 @@ class _MessageBubble extends StatelessWidget {
               right: isMe ? 20.w : 0,
             ),
             child: Text(
-              '${msg.time.hour.toString().padLeft(2, '0')}:${msg.time.minute.toString().padLeft(2, '0')}',
+              '${msg.createdAt.hour.toString().padLeft(2, '0')}:${msg.createdAt.minute.toString().padLeft(2, '0')}',
               style: TextStyle(
                 fontFamily: 'AirbnbCereal',
                 fontSize: 11.sp,

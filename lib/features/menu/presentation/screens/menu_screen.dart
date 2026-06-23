@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:presshop_enterprise/features/notifications/data/services/enterprise_fcm_service.dart';
 import 'package:flutter_switch/flutter_switch.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
-import 'package:presshop_enterprise/features/settings/presentation/screens/account_delete_screen.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
@@ -28,7 +25,6 @@ class MenuScreen extends StatefulWidget {
 // 9792728283
 class _MenuScreenState extends State<MenuScreen> {
   bool _onDuty = false;
-  // ignore: prefer_final_fields
   int _notificationCount = 0;
 
   void _open(String path, {Object? extra}) {

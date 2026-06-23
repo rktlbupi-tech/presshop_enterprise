@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:dots_indicator/dots_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'package:mime/mime.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
@@ -15,12 +13,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/network/api_client.dart';
-import '../../../../core/network/socket/socket_events.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../config/routes/app_router.dart';
-import '../../../../core/network/socket/socket_manager.dart';
 import '../../../camera/data/models/camera_data.dart';
+import '../../domain/entities/team_chat_message_entity.dart';
+import '../bloc/team_chat_bloc.dart';
 
 class TeamChatMessagePage extends StatefulWidget {
   final String conversationId;
@@ -39,17 +36,10 @@ class TeamChatMessagePage extends StatefulWidget {
 }
 
 class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
-  late final ApiClient _apiClient;
   late final SharedPreferences _prefs;
 
-  List<dynamic> _chatMessages = [];
-  bool _chatLoading = false;
-  bool _chatUploading = false;
-  String? _conversationId;
   final ScrollController _chatScrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
-  final Map<String, Map<String, dynamic>> _membersMap = {};
-  bool _isDisposed = false;
 
   bool _isRecording = false;
   int _recordDuration = 0;
@@ -59,177 +49,32 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
   @override
   void initState() {
     super.initState();
-    _apiClient = getIt<ApiClient>();
     _prefs = getIt<SharedPreferences>();
-    _loadConversation();
   }
 
   @override
   void dispose() {
-    _isDisposed = true;
     _recordTimer?.cancel();
     _audioRecorder.dispose();
-    if (_conversationId != null) {
-      final socket = SocketManager.instance.chatSocket;
-      socket.emitWithAck(SocketEvents.conversationUnsubscribe, {
-        'conversationId': _conversationId,
-      }, ack: (_) {});
-      socket.off(SocketEvents.taskMessageNew);
-    }
     _chatScrollController.dispose();
     _messageController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadConversation() async {
-    if (mounted) setState(() => _chatLoading = true);
-
-    final token = _prefs.getString('auth_token') ?? '';
-    if (token.isNotEmpty) SocketManager.instance.chatSocket.connect(token);
-
-    _conversationId = widget.conversationId;
-    if (_conversationId == null || _conversationId!.isEmpty) {
-      if (mounted) setState(() => _chatLoading = false);
-      return;
-    }
-
-    try {
-      final resp = await _apiClient.get(
-        'chat-v2/conversations/$_conversationId/messages',
-        queryParameters: {'limit': 50},
-      );
-      final d = resp.data;
-      if (d['success'] == true && d['data'] != null) {
-        final items = (d['data']['items'] as List<dynamic>?) ?? [];
-        if (mounted) {
-          setState(() {
-            _chatMessages = items
-                .where((m) => m['kind'] != 'task_evidence')
-                .toList();
-            _sortMessages();
-          });
-        }
-      }
-    } catch (_) {}
-
-    final socket = SocketManager.instance.chatSocket;
-    socket.emitWithAck(
-      SocketEvents.conversationSubscribe,
-      {'conversationId': _conversationId!, 'afterSeq': 0, 'limit': 100},
-      ack: (ack) {
-        if (_isDisposed || !mounted) return;
-        if (ack != null && ack['success'] == true && ack['data'] != null) {
-          final synced = (ack['data']['items'] as List<dynamic>? ?? [])
-              .where((m) => m['kind'] != 'task_evidence')
-              .toList();
-          setState(() {
-            for (final m in synced) {
-              _addMessageUniquely(m);
-            }
-            _sortMessages();
-          });
-        }
-      },
-    );
-    socket.on(SocketEvents.taskMessageNew, _onMessageNew);
-
-    if (mounted) setState(() => _chatLoading = false);
-  }
-
-  void _sortMessages() {
-    _chatMessages.sort((a, b) {
-      final dateA = a['createdAt'] != null
-          ? DateTime.tryParse(a['createdAt'].toString())
-          : null;
-      final dateB = b['createdAt'] != null
-          ? DateTime.tryParse(b['createdAt'].toString())
-          : null;
-      if (dateA == null && dateB == null) return 0;
-      if (dateA == null) return 1;
-      if (dateB == null) return -1;
-      return dateB.compareTo(dateA);
-    });
-  }
-
-  void _onMessageNew(dynamic payload) {
-    if (_isDisposed || !mounted) return;
-    if (payload['conversationId'] != _conversationId) return;
-    if (payload['kind'] == 'task_evidence') return;
-    setState(() => _addMessageUniquely(payload));
-  }
-
-  void _addMessageUniquely(dynamic message) {
-    if (message['kind'] == 'task_evidence') return;
-    final String? msgId =
-        message['_id'] ?? message['id'] ?? message['clientMessageId'];
-    if (msgId == null) {
-      _chatMessages.insert(0, message);
-      _sortMessages();
-      return;
-    }
-    final int idx = _chatMessages.indexWhere((m) {
-      final String? mId = m['_id'] ?? m['id'] ?? m['clientMessageId'];
-      if (mId == msgId) return true;
-      if (mId != null && mId.startsWith('optimistic-')) {
-        final String? optText = m['payload']?['text'] ?? m['text'];
-        final String? msgText = message['payload']?['text'] ?? message['text'];
-        final String? optSender = m['senderId']?.toString();
-        final String? msgSender =
-            message['senderId']?.toString() ??
-            message['senderUserId']?.toString() ??
-            message['actingAsId']?.toString();
-        if (optText == msgText && optSender == msgSender) return true;
-      }
-      return false;
-    });
-    if (idx == -1) {
-      _chatMessages.insert(0, message);
-    } else {
-      _chatMessages[idx] = message;
-    }
-    _sortMessages();
-  }
-
-  void _sendMessage() {
+  void _sendMessage(BuildContext context) {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    if (_conversationId == null) {
-      _showSnack("Chat is loading, please wait…");
-      return;
-    }
-
-    final socket = SocketManager.instance.chatSocket;
-    if (!socket.isConnected) {
-      final token = _prefs.getString('auth_token') ?? '';
-      if (token.isNotEmpty) socket.connect(token);
-    }
 
     final myId = _prefs.getString('user_id') ?? '';
-    final optimistic = {
-      'clientMessageId': 'optimistic-${DateTime.now().millisecondsSinceEpoch}',
-      'senderId': myId,
-      'payload': {'text': text},
-      'createdAt': DateTime.now().toIso8601String(),
-    };
-    setState(() {
-      _chatMessages.insert(0, optimistic);
-      _sortMessages();
-    });
+    final myName = '${_prefs.getString('first_name') ?? ''} ${_prefs.getString('last_name') ?? ''}'.trim();
 
-    socket.emitWithAck(
-      SocketEvents.taskMessageSend,
-      {
-        'conversationId': _conversationId!,
-        'clientMessageId': 'msg-${DateTime.now().millisecondsSinceEpoch}',
-        'kind': 'text',
-        'payload': {'text': text},
-      },
-      ack: (ack) {
-        if (ack != null && ack['success'] == false) {
-          _showSnack(ack['error']?.toString() ?? 'Failed to send message');
-        }
-      },
-    );
+    context.read<TeamChatBloc>().add(
+          SendTeamChatMessageEvent(
+            text: text,
+            myId: myId,
+            myName: myName,
+          ),
+        );
     _messageController.clear();
   }
 
@@ -294,141 +139,26 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
   }
 
-  void _onMediaSendAck(dynamic ack) {
-    debugPrint('[Team Chat Socket] message.send ack: $ack');
-    if (ack is Map && ack['success'] == false) {
-      _showSnack(ack['error']?.toString() ?? 'Failed to send media message');
-    }
-  }
-
-  Future<void> _stopAndSendAudio() async {
+  Future<void> _stopAndSendAudio(BuildContext context) async {
     _recordTimer?.cancel();
     try {
       final path = await _audioRecorder.stop();
       if (mounted) setState(() => _isRecording = false);
-      if (path == null || _conversationId == null) return;
-      if (mounted) setState(() => _chatUploading = true);
-      final assetIds = await _prepareAndUploadMedia(
-        conversationId: _conversationId!,
-        files: [File(path)],
-      );
-      if (!mounted) return;
-      if (assetIds != null && assetIds.isNotEmpty) {
-        SocketManager.instance.chatSocket.emitWithAck(
-          SocketEvents.taskMessageSend,
-          {
-            'conversationId': _conversationId!,
-            'clientMessageId': 'msg-${DateTime.now().millisecondsSinceEpoch}',
-            'kind': 'media',
-            'payload': {'text': ''},
-            'mediaAssetIds': assetIds,
-          },
-          ack: _onMediaSendAck,
-        );
-      } else {
-        _showSnack("Failed to send audio. Please try again.");
+      if (path == null) return;
+      if (context.mounted) {
+        context.read<TeamChatBloc>().add(
+              SendTeamChatMediaEvent(files: [File(path)]),
+            );
       }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _chatUploading = false);
-    }
+    } catch (_) {}
   }
 
-  Future<void> _uploadAndSendFiles(List<File> files) async {
-    if (_conversationId == null) return;
-    if (mounted) setState(() => _chatUploading = true);
-    try {
-      final assetIds = await _prepareAndUploadMedia(
-        conversationId: _conversationId!,
-        files: files,
-      );
-      if (!mounted) return;
-      if (assetIds != null && assetIds.isNotEmpty) {
-        SocketManager.instance.chatSocket.emitWithAck(
-          SocketEvents.taskMessageSend,
-          {
-            'conversationId': _conversationId!,
-            'clientMessageId': 'msg-${DateTime.now().millisecondsSinceEpoch}',
-            'kind': 'media',
-            'payload': {'text': ''},
-            'mediaAssetIds': assetIds,
-          },
-          ack: _onMediaSendAck,
-        );
-      } else {
-        _showSnack("Failed to upload attachment. Please try again.");
-      }
-    } catch (_) {
-    } finally {
-      if (mounted) setState(() => _chatUploading = false);
-    }
+  Future<void> _uploadAndSendFiles(BuildContext context, List<File> files) async {
+    if (files.isEmpty) return;
+    context.read<TeamChatBloc>().add(SendTeamChatMediaEvent(files: files));
   }
 
-  /// Conversation media flow: prepare presigned upload slots, PUT each file,
-  /// return the resulting asset ids. Identical to the task chat's flow.
-  Future<List<String>?> _prepareAndUploadMedia({
-    required String conversationId,
-    required List<File> files,
-    void Function(double)? onProgress,
-  }) async {
-    try {
-      final items = files
-          .map(
-            (f) => {
-              'fileName': p.basename(f.path),
-              'contentType':
-                  lookupMimeType(f.path) ?? 'application/octet-stream',
-              'size': f.lengthSync(),
-            },
-          )
-          .toList();
-
-      final resp = await _apiClient.post(
-        'chat-v2/media/prepare',
-        data: {'conversationId': conversationId, 'items': items},
-      );
-      if (resp.statusCode != 200 && resp.statusCode != 201) return null;
-
-      final raw = resp.data;
-      final data = raw is Map && raw['data'] != null ? raw['data'] : raw;
-      final list = data is List ? data : (data['items'] as List);
-
-      final List<String> assetIds = [];
-      for (int i = 0; i < list.length; i++) {
-        final asset = list[i];
-        final uploadUrl = asset['uploadUrl'] as String;
-        final assetId = asset['assetId'] as String;
-        final file = files[i];
-        final contentType =
-            lookupMimeType(file.path) ?? 'application/octet-stream';
-        final fileLength = await file.length();
-        final uploadDio = Dio();
-        final putResp = await uploadDio.put(
-          uploadUrl,
-          data: file.openRead(),
-          options: Options(
-            headers: {
-              'Content-Type': contentType,
-              'Content-Length': fileLength,
-            },
-            followRedirects: false,
-            validateStatus: (s) => s != null && s < 400,
-          ),
-          onSendProgress: (sent, total) {
-            if (total > 0) onProgress?.call((i + sent / total) / list.length);
-          },
-        );
-        if (putResp.statusCode != null && putResp.statusCode! < 400) {
-          assetIds.add(assetId);
-        }
-      }
-      return assetIds.isEmpty ? null : assetIds;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _launchCameraScreen() async {
+  Future<void> _launchCameraScreen(BuildContext context) async {
     final result = await context.push(
       AppRoutes.employeeCamera,
       extra: {'picAgain': true},
@@ -441,7 +171,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     }
     if (captured.isEmpty) return;
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     final previewResult = await Navigator.push<List<CameraData>>(
       context,
       MaterialPageRoute(
@@ -453,12 +183,10 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           .where((e) => e.path.isNotEmpty)
           .map((e) => File(e.path))
           .toList();
-      if (files.isNotEmpty) await _uploadAndSendFiles(files);
+      if (files.isNotEmpty && context.mounted) {
+        await _uploadAndSendFiles(context, files);
+      }
     }
-  }
-
-  void _showAttachmentOptions() {
-    _launchCameraScreen();
   }
 
   Future<void> _openUrl(String url) async {
@@ -475,11 +203,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  String _formatMsgTime(String? createdAt) {
-    if (createdAt == null) return '';
-    final dt = DateTime.tryParse(createdAt);
-    if (dt == null) return '';
-    final local = dt.toLocal();
+  String _formatMsgTime(DateTime createdAt) {
+    final local = createdAt.toLocal();
     final h = local.hour > 12
         ? local.hour - 12
         : (local.hour == 0 ? 12 : local.hour);
@@ -534,45 +259,16 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
   }
 
-  Widget _buildChatBubble(dynamic msg, Size size) {
+  Widget _buildChatBubble(TeamChatMessageEntity msg, Size size) {
     final myId = _prefs.getString('user_id') ?? '';
     const Color primaryColor = AppColors.primary;
+    final bool isMe = msg.isMyMessage(myId);
 
-    final List<String?> possibleIds = [
-      msg['senderId']?.toString(),
-      msg['sender']?['actorId']?.toString(),
-      msg['actorId']?.toString(),
-      msg['senderUserId']?.toString(),
-      msg['actingAsId']?.toString(),
-    ];
-    final bool isMe = possibleIds.any(
-      (id) => id != null && id == myId && id.isNotEmpty,
-    );
+    final String text = msg.text;
+    final String time = _formatMsgTime(msg.createdAt);
+    final attachments = msg.attachments;
 
-    String text = '';
-    if (msg['payload']?['text'] != null) {
-      text = msg['payload']['text'];
-    } else if (msg['text'] != null) {
-      text = msg['text'];
-    }
-
-    final String time = _formatMsgTime(msg['createdAt']?.toString());
-    final List<dynamic> attachments = msg['attachments'] ?? [];
-
-    final String senderId =
-        msg['senderId']?.toString() ??
-        msg['sender']?['actorId']?.toString() ??
-        msg['actorId']?.toString() ??
-        'unknown';
-    final memberInfo = _membersMap[senderId];
-    final String avatarUrl =
-        msg['payload']?['senderProfileImage']?.toString() ??
-        msg['senderProfileImage']?.toString() ??
-        msg['sender']?['profileImage']?.toString() ??
-        memberInfo?['profileImage']?.toString() ??
-        '';
-
-    final Widget avatar = Container(
+    final avatar = Container(
       height: size.width * 0.11,
       width: size.width * 0.11,
       decoration: BoxDecoration(
@@ -580,9 +276,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
         shape: BoxShape.circle,
       ),
       child: ClipOval(
-        child: avatarUrl.isNotEmpty
+        child: msg.senderProfileImage.isNotEmpty
             ? Image.network(
-                avatarUrl,
+                msg.senderProfileImage,
                 fit: BoxFit.cover,
                 errorBuilder: (_, e, s) =>
                     const Icon(Icons.person, color: Colors.grey),
@@ -592,19 +288,13 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
 
     final bubble = Column(
-      crossAxisAlignment: isMe
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
+      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (!isMe)
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 3),
             child: Text(
-              msg['senderDisplayName']?.toString() ??
-                  msg['payload']?['senderDisplayName']?.toString() ??
-                  memberInfo?['displayName']?.toString() ??
-                  msg['senderName']?.toString() ??
-                  'Member',
+              msg.senderName.isNotEmpty ? msg.senderName : 'Member',
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -615,9 +305,8 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           ),
         text.trim().isEmpty && attachments.isNotEmpty
             ? Column(
-                crossAxisAlignment: isMe
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: attachments
                     .map<Widget>(
@@ -683,13 +372,11 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                 ),
               ),
         if (time.isNotEmpty &&
-            !attachments.any((a) => a['mediaType'] == 'image')) ...[
+            !attachments.any((a) => a.mediaType == 'image')) ...[
           const SizedBox(height: 3),
           Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: isMe
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
+            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               Text(
                 time,
@@ -733,15 +420,18 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
   }
 
-  Widget _buildAttachment(dynamic att, dynamic msg, bool isMe, Size size) {
-    final mediaType = att['mediaType']?.toString() ?? '';
-    final url = att['url']?.toString() ?? '';
+  Widget _buildAttachment(
+    TeamChatAttachmentEntity att,
+    TeamChatMessageEntity msg,
+    bool isMe,
+    Size size,
+  ) {
+    final mediaType = att.mediaType;
+    final url = att.url;
 
     if (mediaType == 'image') {
       return Column(
-        crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           GestureDetector(
             onTap: () => Navigator.push(
@@ -775,7 +465,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                 ),
                 SizedBox(width: size.width * 0.012),
                 Text(
-                  _formatMsgTime(msg['createdAt']?.toString()),
+                  _formatMsgTime(msg.createdAt),
                   style: TextStyle(
                     fontSize: size.width * 0.028,
                     color: Colors.grey,
@@ -828,7 +518,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                     bottom: 8,
                     left: 10,
                     child: Text(
-                      att['fileName'] ?? 'Video',
+                      att.fileName.isNotEmpty ? att.fileName : 'Video',
                       style: const TextStyle(
                         color: Colors.white60,
                         fontSize: 10,
@@ -849,7 +539,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     if (mediaType == 'audio') {
       return _AudioBubble(
         audioUrl: url,
-        fileName: att['fileName'] ?? 'Voice note',
+        fileName: att.fileName.isNotEmpty ? att.fileName : 'Voice note',
       );
     }
 
@@ -870,7 +560,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  att['fileName'] ?? 'Document',
+                  att.fileName.isNotEmpty ? att.fileName : 'Document',
                   style: const TextStyle(
                     color: Colors.black87,
                     fontSize: 12,
@@ -887,7 +577,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
     );
   }
 
-  Widget _buildMessageInput() {
+  Widget _buildMessageInput(BuildContext context, TeamChatState state) {
     const Color primaryColor = AppColors.primary;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -904,7 +594,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _chatUploading
+              state.isUploading
                   ? const SizedBox(
                       width: 44,
                       height: 44,
@@ -921,7 +611,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                     )
                   : _inputIconButton(
                       icon: LucideIcons.plus,
-                      onTap: _showAttachmentOptions,
+                      onTap: () => _launchCameraScreen(context),
                     ),
               const SizedBox(width: 8),
               Expanded(
@@ -971,7 +661,7 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
                     Positioned(
                       right: 6,
                       child: GestureDetector(
-                        onTap: _sendMessage,
+                        onTap: () => _sendMessage(context),
                         child: const SizedBox(
                           width: 36,
                           height: 36,
@@ -1024,7 +714,9 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _isRecording ? _stopAndSendAudio : _startAudioRecording,
+                onTap: _isRecording
+                    ? () => _stopAndSendAudio(context)
+                    : _startAudioRecording,
                 child: SizedBox(
                   width: 44,
                   height: 44,
@@ -1141,44 +833,62 @@ class _TeamChatMessagePageState extends State<TeamChatMessagePage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: true,
-      appBar: _buildAppBar(),
-      body: _chatLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: _chatMessages.isEmpty
-                      ? _buildNoMessagesPlaceholder()
-                      : Align(
-                          alignment: Alignment.topCenter,
-                          child: ListView.builder(
-                            controller: _chatScrollController,
-                            reverse: true,
-                            shrinkWrap: true,
-                            padding: EdgeInsets.only(
-                              left: size.width * 0.04,
-                              right: size.width * 0.04,
-                              bottom: size.width * 0.03,
-                              top: 16,
-                            ),
-                            itemCount: _chatMessages.length,
-                            itemBuilder: (context, index) {
-                              return _buildChatBubble(
-                                _chatMessages[index],
-                                size,
-                              );
-                            },
-                          ),
-                        ),
-                ),
-                _buildMessageInput(),
-              ],
-            ),
+    return BlocProvider<TeamChatBloc>(
+      create: (_) => getIt<TeamChatBloc>()
+        ..add(
+          InitTeamChatEvent(
+            conversationId: widget.conversationId,
+            token: _prefs.getString('auth_token') ?? '',
+          ),
+        ),
+      child: BlocConsumer<TeamChatBloc, TeamChatState>(
+        listener: (context, state) {
+          if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+            _showSnack(state.errorMessage!);
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: Colors.white,
+            resizeToAvoidBottomInset: true,
+            appBar: _buildAppBar(),
+            body: state.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : Column(
+                    children: [
+                      Expanded(
+                        child: state.messages.isEmpty
+                            ? _buildNoMessagesPlaceholder()
+                            : Align(
+                                alignment: Alignment.topCenter,
+                                child: ListView.builder(
+                                  controller: _chatScrollController,
+                                  reverse: true,
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.only(
+                                    left: size.width * 0.04,
+                                    right: size.width * 0.04,
+                                    bottom: size.width * 0.03,
+                                    top: 16,
+                                  ),
+                                  itemCount: state.messages.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildChatBubble(
+                                      state.messages[index],
+                                      size,
+                                    );
+                                  },
+                                ),
+                              ),
+                      ),
+                      _buildMessageInput(context, state),
+                    ],
+                  ),
+          );
+        },
+      ),
     );
   }
 }
