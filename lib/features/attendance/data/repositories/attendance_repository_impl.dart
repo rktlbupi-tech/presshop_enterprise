@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/attendance_entity.dart';
 import '../../domain/repositories/attendance_repository.dart';
@@ -12,6 +13,37 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     try { return (await _ds.checkIn(lat, lng), null); }
     on Failure catch (f) { return (false, f); }
     catch (e) { return (false, UnknownFailure(e.toString())); }
+  }
+
+  @override
+  Future<(String?, Failure?)> uploadSelfie(File file) async {
+    try { return (await _ds.uploadSelfie(file), null); }
+    on Failure catch (f) { return (null, f); }
+    catch (e) { return (null, UnknownFailure(e.toString())); }
+  }
+
+  @override
+  Future<(bool, Failure?)> punch({
+    required String kind,
+    double? lat,
+    double? lng,
+    double? accuracyMeters,
+    String? photoUrl,
+  }) async {
+    try {
+      final ok = await _ds.punch(
+        kind: kind,
+        lat: lat,
+        lng: lng,
+        accuracyMeters: accuracyMeters,
+        photoUrl: photoUrl,
+      );
+      return (ok, null);
+    } on Failure catch (f) {
+      return (false, f);
+    } catch (e) {
+      return (false, UnknownFailure(e.toString()));
+    }
   }
 
   @override

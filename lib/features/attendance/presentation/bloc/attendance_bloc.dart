@@ -1,5 +1,6 @@
 // ignore_for_file: unused_field
 
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/attendance_entity.dart';
@@ -18,9 +19,20 @@ class FetchAttendanceLog extends AttendanceEvent {
 
 class CheckInRequested extends AttendanceEvent {
   final double lat, lng;
-  const CheckInRequested(this.lat, this.lng);
+  final double? accuracyMeters;
+
+  /// The uniform selfie to upload before clocking in (optional — required only
+  /// when the org enforces a photo on clock-in).
+  final File? photoFile;
+
+  const CheckInRequested(
+    this.lat,
+    this.lng, {
+    this.accuracyMeters,
+    this.photoFile,
+  });
   @override
-  List<Object?> get props => [lat, lng];
+  List<Object?> get props => [lat, lng, accuracyMeters, photoFile];
 }
 
 class CheckOutRequested extends AttendanceEvent {
@@ -176,14 +188,36 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     Emitter<AttendanceState> emit,
   ) async {
     emit(const AttendanceLoading());
-    await Future.delayed(const Duration(milliseconds: 400));
-    _isCheckedIn = true;
-    emit(
-      const AttendanceActionSuccess(
-        'Checked in successfully!',
-        isCheckedIn: true,
-      ),
+
+    // 1. Upload the uniform selfie (if captured) to get a hosted URL.
+    String? photoUrl;
+    if (e.photoFile != null) {
+      final (url, uploadErr) = await _repo.uploadSelfie(e.photoFile!);
+      // If the upload fails we still attempt the punch; the server will reply
+      // PHOTO_REQUIRED if a photo is mandatory, which we surface below.
+      if (uploadErr == null) photoUrl = url;
+    }
+
+    // 2. Clock in via the punch endpoint.
+    final (ok, err) = await _repo.punch(
+      kind: 'clock_in',
+      lat: e.lat,
+      lng: e.lng,
+      accuracyMeters: e.accuracyMeters,
+      photoUrl: photoUrl,
     );
+
+    if (ok) {
+      _isCheckedIn = true;
+      emit(
+        const AttendanceActionSuccess(
+          'Logged on duty',
+          isCheckedIn: true,
+        ),
+      );
+    } else {
+      emit(AttendanceError(err?.message ?? 'Unable to log on duty.'));
+    }
   }
 
   Future<void> _onCheckOut(

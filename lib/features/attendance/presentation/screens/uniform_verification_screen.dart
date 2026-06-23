@@ -7,6 +7,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import '../../../../main.dart' show cameras;
+import '../../../camera/utils/camera_location_service.dart';
 import '../bloc/attendance_bloc.dart';
 
 enum _Step { capture, verifying, success }
@@ -139,10 +140,23 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
     if (!mounted) return;
     setState(() => _step = _Step.success);
 
-    // Trigger actual check-in after a brief success display.
+    // Resolve the device location for the clock-in punch (the server uses it
+    // for the geofence check).
+    final location = await CameraLocationService().getCurrentLocation(context);
+
+    // Brief success display before triggering the real clock-in.
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-    context.read<AttendanceBloc>().add(const CheckInRequested(0.0, 0.0));
+
+    // Upload the selfie + clock in via /app/attendance/punch.
+    context.read<AttendanceBloc>().add(
+          CheckInRequested(
+            location?.latitude ?? 0.0,
+            location?.longitude ?? 0.0,
+            accuracyMeters: location?.accuracy,
+            photoFile: _selfiePhoto,
+          ),
+        );
     Navigator.of(context).pop();
   }
 

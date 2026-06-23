@@ -22,6 +22,13 @@ class ApiEndpoints {
   static const String checkOut = 'enterprise/attendance/check-out';
   static const String attendanceLog = 'enterprise/attendance/log';
 
+  // ── Attendance (worker app — self-scoped clock in/out) ────
+  static const String attendanceToday = 'enterprise/app/attendance/today';
+  static const String attendancePunch = 'enterprise/app/attendance/punch';
+
+  // ── Media upload (returns a hosted file URL) ──────────────
+  static const String uploadUserMedia = 'hopper/uploadUserMedia';
+
   // ── Tasks ────────────────────────────────────────────────
   static const String tasks = 'enterprise/tasks';
   static const String taskDetails = 'enterprise/tasks/'; // + id
