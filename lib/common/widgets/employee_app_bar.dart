@@ -209,12 +209,13 @@ class EmployeeAppBar extends StatelessWidget implements PreferredSizeWidget {
             GestureDetector(
               onTap: () => goToDashboardHome(context),
               child: Container(
-                height: 40.w,
-                width: 40.w,
+                height: 42.w,
+                width: 42.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade200, width: 1),
+                  // Matches the avatar's grey ring + size on the left.
+                  border: Border.all(color: Colors.grey.shade400, width: 1.5),
                   image: (companyLogo != null && companyLogo.isNotEmpty)
                       ? DecorationImage(
                           image: NetworkImage(companyLogo),

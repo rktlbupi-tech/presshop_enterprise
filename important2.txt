@@ -211,3 +211,8 @@ The worker's own attendance history (most recent first). `days` defaults to 28.
 1. leave management should be there  a page should be 
 2. show monthy everywhere
 3. Payslip have to give year filter and month filter for that year 
+
+1. logoff pop up  - done ( text changes is remaining)
+2. grey border for company profile - done  
+3. submit form not froms 
+4. flip camera - pending 

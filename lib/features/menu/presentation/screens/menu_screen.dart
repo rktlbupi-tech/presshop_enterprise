@@ -32,6 +32,161 @@ class _MenuScreenState extends State<MenuScreen> {
     context.push(path, extra: extra);
   }
 
+  /// Confirmation shown when the employee tries to go OFF duty — ported from
+  /// the old app's `_showStopServiceConfirmationNew` (employee variant).
+  void _showGoOffDutyDialog() {
+    final size = MediaQuery.of(context).size;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        contentPadding: EdgeInsets.zero,
+        insetPadding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+        content: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(size.width * 0.045),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: size.width * 0.04),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Go Off Duty?",
+                        style: AppTextStyles.h3.copyWith(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: size.width * 0.06,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+                child: const Divider(color: Colors.black, thickness: 0.5),
+              ),
+              SizedBox(height: size.width * 0.02),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: size.width * 0.04),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        border: Border.all(color: Colors.black),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                        child: Image.asset(
+                          "assets/rabbits/locationoffpopemployee.png",
+                          height: size.width * 0.30,
+                          width: size.width * 0.35,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: size.width * 0.04),
+                    Expanded(
+                      child: Text(
+                        "Going offline disables live tracking and visibility for your newsroom and nearby colleagues. For your safety, please remain online whilst on duty.",
+                        textAlign: TextAlign.justify,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: size.width * 0.035,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.04,
+                  vertical: size.width * 0.04,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: size.width * 0.12,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            setState(() => _onDuty = false);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                            ),
+                          ),
+                          child: const Text(
+                            "Go Off Duty",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: size.width * 0.04),
+                    Expanded(
+                      child: SizedBox(
+                        height: size.width * 0.12,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.employeeBlue,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                size.width * 0.03,
+                              ),
+                            ),
+                          ),
+                          child: const Text(
+                            "Stay Online",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _logout() async {
     final prefs = getIt<SharedPreferences>();
     await EnterpriseFcmService.removeToken();
@@ -268,9 +423,14 @@ class _MenuScreenState extends State<MenuScreen> {
                             inactiveColor: Colors.grey.shade400,
                             activeColor: AppColors.primary,
                             onToggle: (v) {
-                              setState(() => _onDuty = v);
                               if (v) {
+                                // Going ON duty → verify uniform.
+                                setState(() => _onDuty = true);
                                 context.push(AppRoutes.uniformVerification);
+                              } else {
+                                // Going OFF duty → confirm first. The switch
+                                // stays on until the user confirms in the popup.
+                                _showGoOffDutyDialog();
                               }
                             },
                           ),
@@ -339,7 +499,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 onTap: () => _open('${AppRoutes.evidence}?hideLeading=false'),
               ),
               _MenuGroupItem(
-                name: 'Submit forms',
+                name: 'Submit form',
                 iconPath: '${_iconsPath}ic_form_icon1.svg',
                 iconColor: const Color(0xFF7B61FF),
                 iconBgColor: const Color(0xFFF0EEFF),

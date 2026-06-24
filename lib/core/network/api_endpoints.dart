@@ -53,8 +53,9 @@ class ApiEndpoints {
   static const String tasks = 'enterprise/tasks';
   static const String taskDetails = 'enterprise/tasks/'; // + id
 
-  // ── Documents ────────────────────────────────────────────
-  static const String documents = 'enterprise/documents';
+  // ── Documents (worker app — self-scoped) ─────────────────
+  // See docs/api/my-documents.md
+  static const String documents = 'enterprise/app/documents';
 
   // ── Earnings ─────────────────────────────────────────────
   static const String earnings = 'enterprise/earnings';

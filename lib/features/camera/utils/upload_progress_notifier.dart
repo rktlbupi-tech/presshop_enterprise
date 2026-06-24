@@ -17,6 +17,7 @@ class UploadProgressNotifier extends ChangeNotifier {
   double _progress = 0.0;
   String _title = '';
   String _taskId = '';
+  String _progressTitle = 'Uploading Content';
   Future<bool> Function()? _onRetry;
 
   UploadStatus get status => _status;
@@ -58,9 +59,11 @@ class UploadProgressNotifier extends ChangeNotifier {
     required String taskId,
     required String title,
     Future<bool> Function()? onRetry,
+    String progressTitle = 'Uploading Content',
   }) {
     _taskId = taskId;
     _title = title;
+    _progressTitle = progressTitle;
     _status = UploadStatus.uploading;
     _progress = 0.0;
     _onRetry = onRetry;
@@ -85,7 +88,7 @@ class UploadProgressNotifier extends ChangeNotifier {
     }
   }
 
-  void completeUpload() {
+  void completeUpload({String? title, String? body}) {
     _status = UploadStatus.success;
     _progress = 1.0;
     notifyListeners();
@@ -94,8 +97,8 @@ class UploadProgressNotifier extends ChangeNotifier {
       _localNotifications.cancel(1);
       _localNotifications.show(
         1,
-        'Upload Complete',
-        'Your content has been submitted successfully.',
+        title ?? 'Upload Complete',
+        body ?? 'Your content has been submitted successfully.',
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'upload_channel',
@@ -145,8 +148,8 @@ class UploadProgressNotifier extends ChangeNotifier {
   void _showProgressNotification(int progressPct) {
     _localNotifications.show(
       1,
-      'Uploading Content',
-      'Progress: $progressPct%',
+      _progressTitle,
+      _title.isNotEmpty ? '$_title • $progressPct%' : 'Progress: $progressPct%',
       NotificationDetails(
         android: AndroidNotificationDetails(
           'upload_channel',

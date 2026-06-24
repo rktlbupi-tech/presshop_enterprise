@@ -1481,7 +1481,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         children: [
           GestureDetector(
             onTap: () => context.push(
-              AppRoutes.comingSoon,
+              AppRoutes.earnings,
               extra: {'title': 'Earnings Detail', 'icon': LucideIcons.wallet},
             ),
             child: Row(
@@ -1618,7 +1618,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
         children: [
           // ── Header ──────────────────────────────────────────────────
           GestureDetector(
-            onTap: () => context.push(AppRoutes.claimExpenses),
+            onTap: () => context.push(AppRoutes.trackMileage),
             child: Row(
               children: [
                 Container(

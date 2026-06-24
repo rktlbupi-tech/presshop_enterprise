@@ -97,6 +97,14 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
           'Upload photos, videos, scans and audio from the field, and track every assignment in real time.',
       image: 'assets/images/onboard_3.png',
     ),
+    OnboardSlide(
+      chip: '04 · MORE',
+      heading: 'Everything else,\nin one place',
+      highlights: ['one place'],
+      body:
+          'Mileage, expenses, payslips and your documents — manage it all from a single app.',
+      image: 'assets/images/onboard_4.png',
+    ),
   ];
 
   bool get _isLast => _index == _slides.length - 1;

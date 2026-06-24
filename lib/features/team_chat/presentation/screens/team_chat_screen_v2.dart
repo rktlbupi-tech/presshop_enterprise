@@ -12,6 +12,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/custom_dropdown.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../core/constants/app_text_styles.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Brand tokens (kept local so this file is standalone)
@@ -310,6 +315,38 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
+  // The company-wide default channel — everyone on the team is in it.
+  late final _Conversation _company;
+  String? _companyLogo;
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = getIt<SharedPreferences>();
+    final companyName =
+        prefs.getString('company_name') ?? 'PressHop Enterprise';
+    _companyLogo = prefs.getString('company_logo');
+    _company = _Conversation(
+      id: 'company',
+      title: companyName,
+      isGroup: true,
+      members: _kRoster, // everyone
+      unread: 0,
+      messages: [
+        _ChatMessage(
+          senderId: 'u8',
+          text:
+              'Welcome to the $companyName channel — everyone on the team is here. 👋',
+          time: DateTime.now().subtract(const Duration(minutes: 5)),
+        ),
+      ],
+    );
+  }
+
+  bool get _showCompany =>
+      _query.isEmpty ||
+      _company.title.toLowerCase().contains(_query.toLowerCase());
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -348,54 +385,60 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: _kInk, size: 20),
-          onPressed: () => Navigator.maybePop(context),
-        ),
-        titleSpacing: 0,
-        title: const Text(
-          'Team Chat',
-          style: TextStyle(
-            color: _kInk,
-            fontFamily: _kFont,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: false,
+      appBar: AppAppBar(
+        title: 'Team Chat',
+        showBack: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_square, color: _kPrimary, size: 22),
-            tooltip: 'New group',
-            onPressed: _createGroup,
+          CustomDropdown<String>(
+            value: '_menu',
+            items: const ['Create group'],
+            buttonWidth: 150.w,
+            buttonColor: Colors.transparent,
+            border: const Border.fromBorderSide(BorderSide.none),
+            icon: const SizedBox.shrink(),
+            itemBuilder: (val, isSelected) {
+              if (val == '_menu') {
+                return const Icon(Icons.more_vert, color: _kInk, size: 22);
+              }
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.group_add_rounded,
+                    color: _kPrimary,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10.w),
+                  Text(
+                    val,
+                    style: TextStyle(
+                      fontFamily: _kFont,
+                      fontSize: 14.sp,
+                      color: _kInk,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            },
+            onChanged: (val) {
+              if (val == 'Create group') _createGroup();
+            },
           ),
           SizedBox(width: 6.w),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createGroup,
-        backgroundColor: _kPrimary,
-        icon: const Icon(Icons.group_add_rounded, color: Colors.white),
-        label: const Text(
-          'New Group',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: _kFont,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ),
       body: Column(
         children: [
           _buildSearchBar(),
           Expanded(
             child: ListView(
-              padding: EdgeInsets.only(bottom: 96.h),
+              padding: EdgeInsets.only(bottom: 16.h),
               children: [
+                if (_showCompany) ...[
+                  const _SectionHeader(title: 'Default company chat'),
+                  _buildCompanyCard(),
+                ],
                 if (_filteredGroups.isNotEmpty) ...[
                   _SectionHeader(
                     title: 'Groups',
@@ -416,7 +459,9 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
                         _ChatTile(convo: c, onTap: () => _openConversation(c)),
                   ),
                 ],
-                if (_filteredGroups.isEmpty && _filteredIndividuals.isEmpty)
+                if (_filteredGroups.isEmpty &&
+                    _filteredIndividuals.isEmpty &&
+                    !_showCompany)
                   _buildEmptySearch(),
               ],
             ),
@@ -455,6 +500,114 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
     );
   }
 
+  // Pinned company-wide default channel at the top of the list.
+  Widget _buildCompanyCard() {
+    final last = _company.lastMessage;
+    final hasLogo = (_companyLogo != null && _companyLogo!.isNotEmpty);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 6.h),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14.r),
+          onTap: () => _openConversation(_company),
+          child: Container(
+            padding: EdgeInsets.all(11.w),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2979FF), Color(0xFF0D47A1)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14.r),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    image: hasLogo
+                        ? DecorationImage(
+                            image: NetworkImage(_companyLogo!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: hasLogo
+                      ? null
+                      : Icon(Icons.business_rounded,
+                          color: _kPrimary, size: 20.sp),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _company.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.h4.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 2.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.22),
+                              borderRadius: BorderRadius.circular(20.r),
+                            ),
+                            child: Text(
+                              'Company',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontFamily: _kFont,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        last?.text ??
+                            'Company channel · Everyone can chat here',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.white.withValues(alpha: 0.85),
+                  size: 20.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptySearch() {
     return Padding(
       padding: EdgeInsets.only(top: 80.h),
@@ -482,42 +635,40 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
 // ─────────────────────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final int count;
-  const _SectionHeader({required this.title, required this.count});
+  final int? count;
+  const _SectionHeader({required this.title, this.count});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 6.h),
+      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
       child: Row(
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontFamily: _kFont,
-              fontSize: 13.sp,
+            style: AppTextStyles.labelLarge.copyWith(
+              fontWeight: FontWeight.w400,
               letterSpacing: 0.4,
-              fontWeight: FontWeight.w800,
               color: _kInkSoft,
             ),
           ),
-          SizedBox(width: 8.w),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-            decoration: BoxDecoration(
-              color: _kPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Text(
-              '$count',
-              style: TextStyle(
-                fontFamily: _kFont,
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w700,
-                color: _kPrimary,
+          if (count != null) ...[
+            SizedBox(width: 8.w),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+              decoration: BoxDecoration(
+                color: _kPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Text(
+                '$count',
+                style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: _kPrimary,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -545,14 +696,15 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     final last = convo.lastMessage;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
         child: Row(
           children: [
-            _ConversationAvatar(convo: convo, size: 52),
+            _ConversationAvatar(convo: convo, size: 46),
             SizedBox(width: 12.w),
             Expanded(
               child: Column(
@@ -565,29 +717,22 @@ class _ChatTile extends StatelessWidget {
                           convo.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: _kFont,
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.w700,
-                            color: _kInk,
-                          ),
+                          style: AppTextStyles.bodyMediumW400numD036,
                         ),
                       ),
                       if (last != null)
                         Text(
                           _formatListTime(last.time),
-                          style: TextStyle(
-                            fontFamily: _kFont,
-                            fontSize: 11.sp,
+                          style: AppTextStyles.caption.copyWith(
                             color: convo.unread > 0 ? _kPrimary : _kMuted,
                             fontWeight: convo.unread > 0
-                                ? FontWeight.w700
-                                : FontWeight.w400,
+                                ? FontWeight.w600
+                                : FontWeight.w300,
                           ),
                         ),
                     ],
                   ),
-                  SizedBox(height: 3.h),
+                  SizedBox(height: 2.h),
                   Row(
                     children: [
                       Expanded(
@@ -595,13 +740,11 @@ class _ChatTile extends StatelessWidget {
                           _previewText(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: _kFont,
-                            fontSize: 13.sp,
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: convo.unread > 0 ? _kInkSoft : _kMuted,
                             fontWeight: convo.unread > 0
-                                ? FontWeight.w600
-                                : FontWeight.w400,
+                                ? FontWeight.w400
+                                : FontWeight.w300,
                           ),
                         ),
                       ),
@@ -617,9 +760,8 @@ class _ChatTile extends StatelessWidget {
                           child: Text(
                             '${convo.unread}',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: _kFont,
-                              fontSize: 10.sp,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              fontSize: size.width * 0.026,
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
@@ -659,48 +801,53 @@ class _ConversationAvatar extends StatelessWidget {
       );
     }
 
-    // Group: show up to two overlapping member avatars on a tinted backdrop.
+    // Group: two equal member avatars stacked as a clean overlapping pair.
     final m = convo.members;
+    final back = m.isNotEmpty ? m[0] : _me;
+    final front = m.length > 1 ? m[1] : null;
+
+    // Single-member group → just one full-size circle.
+    if (front == null) {
+      return _InitialsCircle(
+        text: back.initials,
+        color: back.color,
+        diameter: dim,
+      );
+    }
+
+    final circle = dim * 0.68;
     return SizedBox(
       width: dim,
       height: dim,
       child: Stack(
         children: [
-          Container(
-            width: dim,
-            height: dim,
-            decoration: BoxDecoration(
-              color: _kPrimary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
+          // Back avatar, top-left.
+          Positioned(
+            top: 0,
+            left: 0,
+            child: _InitialsCircle(
+              text: back.initials,
+              color: back.color,
+              diameter: circle,
             ),
           ),
-          if (m.isNotEmpty)
-            Positioned(
-              left: 0,
-              top: 0,
+          // Front avatar, bottom-right, with a white ring to separate it.
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(2),
               child: _InitialsCircle(
-                text: m[0].initials,
-                color: m[0].color,
-                diameter: dim * 0.62,
+                text: front.initials,
+                color: front.color,
+                diameter: circle - 4,
               ),
             ),
-          if (m.length > 1)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                padding: const EdgeInsets.all(1.5),
-                child: _InitialsCircle(
-                  text: m[1].initials,
-                  color: m[1].color,
-                  diameter: dim * 0.58,
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
@@ -934,7 +1081,7 @@ class _CreateGroupScreenState extends State<_CreateGroupScreen> {
                                 style: TextStyle(
                                   fontFamily: _kFont,
                                   fontSize: 15.sp,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                   color: _kInk,
                                 ),
                               ),
@@ -943,7 +1090,8 @@ class _CreateGroupScreenState extends State<_CreateGroupScreen> {
                                 user.role,
                                 style: TextStyle(
                                   fontFamily: _kFont,
-                                  fontSize: 12.sp,
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w400,
                                   color: _kMuted,
                                 ),
                               ),
@@ -1082,16 +1230,9 @@ class ConversationScreenV2State extends State<ConversationScreenV2> {
     final messages = widget.convo.messages;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: _kInk, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
-        title: Row(
+      appBar: AppAppBar(
+        showBack: true,
+        titleWidget: Row(
           children: [
             _ConversationAvatar(convo: widget.convo, size: 38),
             SizedBox(width: 10.w),
@@ -1104,31 +1245,20 @@ class ConversationScreenV2State extends State<ConversationScreenV2> {
                     widget.convo.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: _kFont,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: _kInk,
+                    style: AppTextStyles.h4.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     _subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: _kFont,
-                      fontSize: 11.sp,
-                      color: _kMuted,
-                    ),
+                    style: AppTextStyles.caption.copyWith(color: _kMuted),
                   ),
                 ],
               ),
             ),
           ],
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFECECEC), height: 1),
         ),
       ),
       body: Column(

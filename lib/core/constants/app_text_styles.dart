@@ -66,6 +66,12 @@ class AppTextStyles {
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
+  static TextStyle get bodyMediumW400numD036 => TextStyle(
+    fontSize: _screenWidth * AppDimensions.numD034,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textPrimary,
+    fontFamily: 'AirbnbCereal',
+  );
 
   static TextStyle get bodySmall => TextStyle(
     fontSize: _screenWidth * AppDimensions.fontSizeSmall,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../common/widgets/loading_widget.dart';
+import '../../../../features/camera/utils/upload_progress_notifier.dart';
 import '../../../../features/map/core/map_constants.dart';
 import '../../../../common/widgets/app_app_bar.dart';
 import '../../../../features/mileage/presentation/widgets/custom_dropdown.dart';
@@ -45,42 +47,6 @@ class _DocumentsViewState extends State<_DocumentsView> {
   double _uploadProgress = 0.0;
   String _selectedSort = 'Recent';
   List<DocumentEntity>? _documents;
-  bool _hasInitialized = false;
-
-  final List<DocumentEntity> _defaultMockDocuments = [
-    DocumentEntity(
-      id: 'mock_1',
-      name: 'Employment_Agreement_2026.pdf',
-      category: 'Contracts',
-      size: '1.4 MB',
-      type: 'pdf',
-      uploadedAt: DateTime(2026, 1, 15),
-    ),
-    DocumentEntity(
-      id: 'mock_2',
-      name: 'Passport_Scan.pdf',
-      category: 'ID Proofs',
-      size: '2.1 MB',
-      type: 'pdf',
-      uploadedAt: DateTime(2026, 1, 15),
-    ),
-    DocumentEntity(
-      id: 'mock_3',
-      name: 'Driver_License_Front.jpg',
-      category: 'ID Proofs',
-      size: '840 KB',
-      type: 'jpg',
-      uploadedAt: DateTime(2026, 1, 16),
-    ),
-    DocumentEntity(
-      id: 'mock_4',
-      name: 'First_Aid_Certificate.pdf',
-      category: 'Certificates',
-      size: '1.1 MB',
-      type: 'pdf',
-      uploadedAt: DateTime(2026, 3, 12),
-    ),
-  ];
 
   List<DocumentEntity> get _sortedDocuments {
     final list = List<DocumentEntity>.from(_documents ?? []);
@@ -115,7 +81,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
     final cat = doc.category.toLowerCase();
     if (cat.contains('contract')) return LucideIcons.file_text;
     if (cat.contains('certificate')) return LucideIcons.award;
-    if (cat.contains('id proof')) {
+    if (cat.contains('id_proof')) {
       if (name.endsWith('.pdf')) return LucideIcons.file_x;
       return LucideIcons.image;
     }
@@ -128,7 +94,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
     final cat = doc.category.toLowerCase();
     if (cat.contains('contract')) return const Color(0xFF2563EB);
     if (cat.contains('certificate')) return const Color(0xFFEA580C);
-    if (cat.contains('id proof')) {
+    if (cat.contains('id_proof')) {
       if (name.endsWith('.pdf')) return const Color.fromARGB(255, 255, 16, 16);
       return const Color(0xFF0D9488);
     }
@@ -141,7 +107,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
     final cat = doc.category.toLowerCase();
     if (cat.contains('contract')) return const Color(0xFFEFF6FF);
     if (cat.contains('certificate')) return const Color(0xFFFFF7ED);
-    if (cat.contains('id proof')) {
+    if (cat.contains('id_proof')) {
       if (name.endsWith('.pdf')) {
         return const Color.fromARGB(255, 255, 241, 241);
       }
@@ -151,67 +117,86 @@ class _DocumentsViewState extends State<_DocumentsView> {
     return const Color(0xFFE6FFFA);
   }
 
-  String _getStatus(DocumentEntity doc) {
-    if (doc.id == 'mock_2' || doc.name == 'Passport_Scan.pdf') {
-      return "Pending";
-    }
-    return "Submitted";
+  // Real upload: file → media flow → POST /app/documents, via the bloc.
+  // The result is handled in the BlocConsumer listener.
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontFamily: 'AirbnbCereal')),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
-  void _simulateUpload(String fileName, String category, String? fileUrl) {
+  // Pick an image (camera/gallery) and upload. Handles cancel + errors.
+  Future<void> _pickImageAndUpload(ImageSource source) async {
+    try {
+      final image = await ImagePicker().pickImage(source: source);
+      debugPrint('[Docs] picked image: ${image?.path}');
+      if (image == null) {
+        _toast('No file selected');
+        return;
+      }
+      _uploadDocument(File(image.path), 'id_proofs');
+    } catch (e) {
+      debugPrint('[Docs] image pick error: $e');
+      _toast('Could not open the picker. Check permissions.');
+    }
+  }
+
+  // Pick a PDF and upload. Handles cancel + errors.
+  Future<void> _pickPdfAndUpload() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      final path = result?.files.single.path;
+      debugPrint('[Docs] picked pdf: $path');
+      if (path == null || path.isEmpty) {
+        _toast('No file selected');
+        return;
+      }
+      _uploadDocument(File(path), 'contracts');
+    } catch (e) {
+      debugPrint('[Docs] pdf pick error: $e');
+      _toast('Could not open the file picker.');
+    }
+  }
+
+  void _uploadDocument(File file, String category) {
     Navigator.pop(context); // Close bottom sheet
+    final fileName = file.path.split('/').last;
+    debugPrint('[Docs] uploading "$fileName" ($category) from ${file.path}');
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
     });
 
-    // Simulate progressive upload
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (!mounted) return false;
-      setState(() {
-        _uploadProgress += 0.25;
-      });
-      if (_uploadProgress >= 1.0) {
-        setState(() {
-          _isUploading = false;
-          final isPdf = fileName.endsWith('.pdf');
-          final newDoc = DocumentEntity(
-            id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-            name: fileName,
-            category: category,
-            size: '1.2 MB',
-            type: isPdf ? 'pdf' : 'jpg',
-            fileUrl: fileUrl,
-            uploadedAt: DateTime.now(),
-          );
-          _documents?.insert(0, newDoc);
-        });
+    UploadProgressNotifier.instance.startUpload(
+      taskId: 'doc_upload',
+      title: fileName,
+      progressTitle: 'Uploading document',
+    );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.cloud_done, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '$fileName uploaded successfully!',
-                    style: const TextStyle(fontFamily: 'AirbnbCereal'),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: colorEmployeeGreen1,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+    context.read<DocumentsBloc>().add(
+          UploadDocument(file: file, name: fileName, category: category),
         );
-        return false;
-      }
-      return true;
+
+    _animateUploadProgress();
+  }
+
+  // Cosmetic progress while the real upload runs (a single POST gives no % ).
+  void _animateUploadProgress() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (!mounted || !_isUploading) return false;
+      setState(() {
+        _uploadProgress = (_uploadProgress + 0.08).clamp(0.0, 0.9);
+      });
+      UploadProgressNotifier.instance.updateProgress(_uploadProgress);
+      return _isUploading && _uploadProgress < 0.9;
     });
   }
 
@@ -264,15 +249,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                 children: [
                   Expanded(
                     child: InkWell(
-                      onTap: () async {
-                        final picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(
-                          source: ImageSource.camera,
-                        );
-                        if (image != null) {
-                          _simulateUpload(image.name, "ID Proofs", image.path);
-                        }
-                      },
+                      onTap: () => _pickImageAndUpload(ImageSource.camera),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -317,15 +294,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: InkWell(
-                      onTap: () async {
-                        final picker = ImagePicker();
-                        final XFile? image = await picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
-                        if (image != null) {
-                          _simulateUpload(image.name, "ID Proofs", image.path);
-                        }
-                      },
+                      onTap: () => _pickImageAndUpload(ImageSource.gallery),
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -371,20 +340,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
               ),
               const SizedBox(height: 16),
               InkWell(
-                onTap: () async {
-                  FilePickerResult? result = await FilePicker.platform
-                      .pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['pdf'],
-                      );
-                  if (result != null && result.files.single.name.isNotEmpty) {
-                    _simulateUpload(
-                      result.files.single.name,
-                      "Contracts",
-                      result.files.single.path,
-                    );
-                  }
-                },
+                onTap: _pickPdfAndUpload,
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -439,6 +395,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
   }
 
   void _showDocumentActions(DocumentEntity doc) {
+    final bloc = context.read<DocumentsBloc>();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -501,9 +458,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    setState(() {
-                      _documents?.remove(doc);
-                    });
+                    bloc.add(DeleteDocument(doc.id));
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text("${doc.name} deleted."),
@@ -538,30 +493,48 @@ class _DocumentsViewState extends State<_DocumentsView> {
           children: [
             BlocConsumer<DocumentsBloc, DocumentsState>(
               listener: (context, state) {
-                if (state is DocumentsLoaded && !_hasInitialized) {
-                  final fetched = state.documents;
+                if (state is DocumentUploadSuccess) {
                   setState(() {
-                    _documents = [
-                      ...fetched,
-                      ..._defaultMockDocuments.where(
-                        (mock) => !fetched.any((f) => f.name == mock.name),
+                    _documents = state.documents;
+                    _isUploading = false;
+                  });
+                  UploadProgressNotifier.instance.completeUpload(
+                    title: 'Upload complete',
+                    body: '${state.document.name} uploaded successfully!',
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${state.document.name} uploaded successfully!',
+                        style: const TextStyle(fontFamily: 'AirbnbCereal'),
                       ),
-                    ];
-                    _hasInitialized = true;
-                  });
-                } else if (state is DocumentsError && !_hasInitialized) {
+                      backgroundColor: colorEmployeeGreen1,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else if (state is DocumentActionFailure) {
                   setState(() {
-                    _documents = List.from(_defaultMockDocuments);
-                    _hasInitialized = true;
+                    _documents = state.documents;
+                    _isUploading = false;
                   });
+                  UploadProgressNotifier.instance.failUpload();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.errorMessage),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else if (state is DocumentsLoaded) {
+                  setState(() => _documents = state.documents);
                 }
               },
               builder: (context, state) {
-                if (state is DocumentsLoading && !_hasInitialized) {
+                if (state is DocumentsLoading && _documents == null) {
                   return const LoadingWidget();
                 }
 
-                final docsList = _documents ?? _defaultMockDocuments;
+                final docsList = _documents ?? const <DocumentEntity>[];
 
                 return RefreshIndicator(
                   color: colorEmployeeGreen1,
@@ -726,7 +699,8 @@ class _DocumentsViewState extends State<_DocumentsView> {
                         )
                       else
                         ..._sortedDocuments.map((doc) {
-                          final statusStr = _getStatus(doc);
+                          final statusStr =
+                              doc.status == 'pending' ? 'Pending' : 'Submitted';
                           return InkWell(
                             onTap: () {
                               context.push(
@@ -796,7 +770,7 @@ class _DocumentsViewState extends State<_DocumentsView> {
                                         ),
                                         SizedBox(height: size.width * numD01),
                                         Text(
-                                          "${doc.category}  •  ${doc.size ?? 'Unknown'}  •  ${doc.uploadedAt != null ? DateFormat('dd MMM yyyy').format(doc.uploadedAt!) : 'Unknown'}",
+                                          "${doc.categoryLabel}  •  ${(doc.size ?? '').isEmpty ? 'Unknown' : doc.size}  •  ${doc.uploadedAt != null ? DateFormat('dd MMM yyyy').format(doc.uploadedAt!) : 'Unknown'}",
                                           style: TextStyle(
                                             fontSize: size.width * numD028,
                                             color: Colors.grey.shade500,

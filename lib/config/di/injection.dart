@@ -61,6 +61,12 @@ import '../../features/duties/data/repositories/duties_repository_impl.dart';
 import '../../features/duties/domain/repositories/duties_repository.dart';
 import '../../features/duties/presentation/bloc/duties_bloc.dart';
 
+// Claims
+import '../../features/claims/data/datasources/claims_remote_datasource.dart';
+import '../../features/claims/data/repositories/claims_repository_impl.dart';
+import '../../features/claims/domain/repositories/claims_repository.dart';
+import '../../features/claims/presentation/bloc/claims_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -135,4 +141,10 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<DutiesRepository>(
       () => DutiesRepositoryImpl(getIt()));
   getIt.registerFactory(() => DutiesBloc(getIt()));
+
+  // Claims
+  getIt.registerLazySingleton(() => ClaimsRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<ClaimsRepository>(
+      () => ClaimsRepositoryImpl(getIt()));
+  getIt.registerFactory(() => ClaimsBloc(getIt()));
 }
