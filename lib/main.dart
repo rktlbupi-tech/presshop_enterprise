@@ -136,33 +136,39 @@ class _PresshopEnterpriseAppState extends State<PresshopEnterpriseApp>
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) {
-            return ForceUpdateWidget(
-              navigatorKey: navigatorKey,
-              forceUpdateClient: ForceUpdateClient(
-                fetchRequiredVersion: () async {
-                  try {
-                    final force =
-                        await ForceUpdateRepository.checkForceUpdate();
-                    if (force) return "999.0.0";
-                    final info = await PackageInfo.fromPlatform();
-                    return info.version;
-                  } catch (e) {
-                    debugPrint("Force update check failed: $e");
-                    final info = await PackageInfo.fromPlatform();
-                    return info.version;
-                  }
-                },
-                iosAppStoreId: '6744651614',
+            final mediaQueryData = MediaQuery.of(context);
+            return MediaQuery(
+              data: mediaQueryData.copyWith(
+                textScaleFactor: mediaQueryData.textScaleFactor.clamp(0.8, 1.0),
               ),
-              allowCancel: false,
-              showForceUpdateAlert: (context, allowCancel) {
-                return ForceUpdateManager.showForceUpdateAlertGlobal(
-                  context,
-                  allowCancel,
-                );
-              },
-              showStoreListing: (Uri storeUrl) async {},
-              child: child ?? const SizedBox.shrink(),
+              child: ForceUpdateWidget(
+                navigatorKey: navigatorKey,
+                forceUpdateClient: ForceUpdateClient(
+                  fetchRequiredVersion: () async {
+                    try {
+                      final force =
+                          await ForceUpdateRepository.checkForceUpdate();
+                      if (force) return "999.0.0";
+                      final info = await PackageInfo.fromPlatform();
+                      return info.version;
+                    } catch (e) {
+                      debugPrint("Force update check failed: $e");
+                      final info = await PackageInfo.fromPlatform();
+                      return info.version;
+                    }
+                  },
+                  iosAppStoreId: '6744651614',
+                ),
+                allowCancel: false,
+                showForceUpdateAlert: (context, allowCancel) {
+                  return ForceUpdateManager.showForceUpdateAlertGlobal(
+                    context,
+                    allowCancel,
+                  );
+                },
+                showStoreListing: (Uri storeUrl) async {},
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
         );

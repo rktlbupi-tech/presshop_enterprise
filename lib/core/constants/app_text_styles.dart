@@ -1,34 +1,46 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'app_colors.dart';
+import 'app_dimensions.dart';
 
 class AppTextStyles {
   AppTextStyles._();
 
+  static double get _screenWidth {
+    try {
+      final view = ui.PlatformDispatcher.instance.views.first;
+      final width = view.physicalSize.width / view.devicePixelRatio;
+
+      return width.clamp(360.0, 440.0);
+    } catch (_) {
+      return 390.0;
+    }
+  }
+
   // ── Headings ─────────────────────────────────────────────
   static TextStyle get h1 => TextStyle(
-    fontSize: 28.sp,
+    fontSize: _screenWidth * AppDimensions.numD072,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get h2 => TextStyle(
-    fontSize: 24.sp,
+    fontSize: _screenWidth * AppDimensions.headerFontSize,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get h3 => TextStyle(
-    fontSize: 20.sp,
+    fontSize: _screenWidth * AppDimensions.appBarHeadingFontSizeNew,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get h4 => TextStyle(
-    fontSize: 18.sp,
+    fontSize: _screenWidth * AppDimensions.appBarHeadingFontSize,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
@@ -36,21 +48,27 @@ class AppTextStyles {
 
   // ── Body ─────────────────────────────────────────────────
   static TextStyle get bodyLarge => TextStyle(
-    fontSize: 16.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeLarge,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get bodyMedium => TextStyle(
-    fontSize: 14.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeMedium,
+    fontWeight: FontWeight.w400,
+    color: AppColors.textPrimary,
+    fontFamily: 'AirbnbCereal',
+  );
+  static TextStyle get bodyMedium2 => TextStyle(
+    fontSize: _screenWidth * AppDimensions.fontSizeMedium2,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get bodySmall => TextStyle(
-    fontSize: 12.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeSmall,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
     fontFamily: 'AirbnbCereal',
@@ -58,21 +76,21 @@ class AppTextStyles {
 
   // ── Label ────────────────────────────────────────────────
   static TextStyle get labelLarge => TextStyle(
-    fontSize: 14.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeMedium,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get labelMedium => TextStyle(
-    fontSize: 12.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeSmall,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get labelSmall => TextStyle(
-    fontSize: 10.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeXS,
     fontWeight: FontWeight.w500,
     color: AppColors.textHint,
     fontFamily: 'AirbnbCereal',
@@ -80,7 +98,7 @@ class AppTextStyles {
 
   // ── Button ───────────────────────────────────────────────
   static TextStyle get button => TextStyle(
-    fontSize: 16.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeLarge,
     fontWeight: FontWeight.w600,
     color: AppColors.textOnPrimary,
     fontFamily: 'AirbnbCereal',
@@ -89,21 +107,21 @@ class AppTextStyles {
 
   // ── Input ────────────────────────────────────────────────
   static TextStyle get input => TextStyle(
-    fontSize: 14.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeMedium,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get inputHint => TextStyle(
-    fontSize: 14.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeMedium,
     fontWeight: FontWeight.w400,
     color: AppColors.textHint,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get inputLabel => TextStyle(
-    fontSize: 12.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeSmall,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
     fontFamily: 'AirbnbCereal',
@@ -111,14 +129,14 @@ class AppTextStyles {
 
   // ── Caption ──────────────────────────────────────────────
   static TextStyle get caption => TextStyle(
-    fontSize: 11.sp,
+    fontSize: _screenWidth * AppDimensions.numD028,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
     fontFamily: 'AirbnbCereal',
   );
 
   static TextStyle get overline => TextStyle(
-    fontSize: 10.sp,
+    fontSize: _screenWidth * AppDimensions.fontSizeXS,
     fontWeight: FontWeight.w500,
     color: AppColors.textHint,
     fontFamily: 'AirbnbCereal',

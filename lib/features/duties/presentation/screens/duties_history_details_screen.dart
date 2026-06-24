@@ -46,26 +46,38 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
 
             // Time & Duration Card
             _buildTimelineCard(context),
-            SizedBox(height: 16.h),
 
-            // Location & Supervisor Card
-            _buildLocationSupervisorCard(context),
-            SizedBox(height: 16.h),
+            // Location & Supervisor Card (only when we have those details)
+            if (shift.locationAddress.isNotEmpty ||
+                shift.supervisorName.isNotEmpty) ...[
+              SizedBox(height: 16.h),
+              _buildLocationSupervisorCard(context),
+            ],
 
             // Selfie Verification Card
-            _buildSelfieVerificationCard(context),
-            SizedBox(height: 16.h),
+            if (shift.checkInSelfie.isNotEmpty ||
+                shift.checkOutSelfie.isNotEmpty) ...[
+              SizedBox(height: 16.h),
+              _buildSelfieVerificationCard(context),
+            ],
 
             // Uniform Validation Card
-            _buildUniformChecklistCard(),
-            SizedBox(height: 16.h),
+            if (shift.uniformStatus.isNotEmpty) ...[
+              SizedBox(height: 16.h),
+              _buildUniformChecklistCard(),
+            ],
 
             // Tasks Completed Card
-            _buildCompletedTasksCard(),
-            SizedBox(height: 16.h),
+            if (shift.completedTasks.isNotEmpty) ...[
+              SizedBox(height: 16.h),
+              _buildCompletedTasksCard(),
+            ],
 
             // Handover / Shift Notes Card
-            _buildNotesCard(),
+            if (shift.notes.isNotEmpty) ...[
+              SizedBox(height: 16.h),
+              _buildNotesCard(),
+            ],
             SizedBox(height: 24.h),
           ],
         ),
@@ -103,15 +115,16 @@ class DutiesHistoryDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                shift.id,
-                style: TextStyle(
-                  color: const Color(0xFF9AA2B1),
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'AirbnbCereal',
+              if (shift.id.isNotEmpty)
+                Text(
+                  shift.id,
+                  style: TextStyle(
+                    color: const Color(0xFF9AA2B1),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'AirbnbCereal',
+                  ),
                 ),
-              ),
             ],
           ),
           SizedBox(height: 10.h),

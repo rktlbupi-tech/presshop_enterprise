@@ -1,29 +1,48 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/features/map/core/map_constants.dart';
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/empty_state.dart';
+import '../../../../common/widgets/loading_widget.dart';
+import '../../../../config/di/injection.dart';
+import '../../domain/entities/duty_entities.dart';
+import '../bloc/duties_bloc.dart';
 
-class DutiesScreen extends StatefulWidget {
+class DutiesScreen extends StatelessWidget {
   const DutiesScreen({super.key});
 
   @override
-  State<DutiesScreen> createState() => _DutiesScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<DutiesBloc>()..add(const FetchDutiesOverview()),
+      child: const _DutiesView(),
+    );
+  }
 }
 
-class _DutiesScreenState extends State<DutiesScreen> {
+class _DutiesView extends StatefulWidget {
+  const _DutiesView();
+
+  @override
+  State<_DutiesView> createState() => _DutiesViewState();
+}
+
+class _DutiesViewState extends State<_DutiesView> {
   final bool _isOnDuty = true;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    // Drives the live "remaining duty time" countdown (computed client-side).
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     });
   }
 
@@ -33,52 +52,20 @@ class _DutiesScreenState extends State<DutiesScreen> {
     super.dispose();
   }
 
-  String _getRemainingTime() {
+  /// Remaining time until the shift end, computed from `shift.end_minute`.
+  String _getRemainingTime(DutyShiftEntity? shift) {
+    if (shift == null) return "--";
     final now = DateTime.now();
-    final shiftEnd = DateTime(now.year, now.month, now.day, 18, 0); // 06:00 PM
-    if (now.isAfter(shiftEnd)) {
-      return "03h 45m 00s";
-    }
-    final difference = shiftEnd.difference(now);
-    final hours = difference.inHours;
-    final minutes = difference.inMinutes % 60;
-    final seconds = difference.inSeconds % 60;
+    final midnight = DateTime(now.year, now.month, now.day);
+    final shiftEnd = midnight.add(Duration(minutes: shift.endMinute));
+    if (!now.isBefore(shiftEnd)) return "00h 00m 00s";
 
-    final hoursStr = hours.toString().padLeft(2, '0');
-    final minutesStr = minutes.toString().padLeft(2, '0');
-    final secondsStr = seconds.toString().padLeft(2, '0');
-    return "${hoursStr}h ${minutesStr}m ${secondsStr}s";
+    final diff = shiftEnd.difference(now);
+    final h = diff.inHours.toString().padLeft(2, '0');
+    final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    return "${h}h ${m}m ${s}s";
   }
-
-  final List<Map<String, dynamic>> _ongoingTasks = [
-    {'name': 'Log on at site', 'done': true, 'statusText': 'Completed'},
-    {'name': 'Complete first patrol', 'done': false, 'statusText': 'Pending'},
-    {'name': 'Upload site photos', 'done': false, 'statusText': 'Pending'},
-    {
-      'name': 'Submit end-of-shift report',
-      'done': false,
-      'statusText': 'Pending',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _scheduledDuties = [
-    {
-      'id': 'DUTY-8493',
-      'title': 'Night Shift',
-      'date': '10',
-      'month': 'Jun',
-      'time': '10:00 PM – 06:00 AM',
-      'location': 'XYZ Warehouse',
-    },
-    {
-      'id': 'DUTY-8499',
-      'title': 'Morning Shift',
-      'date': '12',
-      'month': 'Jun',
-      'time': '08:00 AM – 04:00 PM',
-      'location': 'City Mall',
-    },
-  ];
 
   void _showToast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -92,6 +79,19 @@ class _DutiesScreenState extends State<DutiesScreen> {
     );
   }
 
+  Future<void> _callSupervisor(String? phone) async {
+    if (phone == null || phone.trim().isEmpty) {
+      _showToast("No supervisor phone number available");
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone.trim());
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      _showToast("Could not open the dialer");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,38 +103,71 @@ class _DutiesScreenState extends State<DutiesScreen> {
         titleSpacing: 0,
         showBack: true,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                children: [
-                  _buildStatusGradientCard(),
-                  const SizedBox(height: 20),
-                  _buildTasksSection(),
-                  const SizedBox(height: 20),
-                  _buildUpcomingDutiesSection(),
-                  const SizedBox(height: 20),
-                  _buildCurrentAssignmentCard(),
-                  const SizedBox(height: 20),
-                  _buildThisMonthSection(),
-                  const SizedBox(height: 20),
-                  _buildHistoryCard(),
-                  const SizedBox(height: 20),
-                ],
-              ),
+      body: BlocConsumer<DutiesBloc, DutiesState>(
+        listenWhen: (prev, curr) =>
+            curr is HandoverSubmitSuccess || curr is HandoverSubmitFailure,
+        listener: (context, state) {
+          if (state is HandoverSubmitSuccess) {
+            _showToast("Handover report submitted to your supervisor.");
+          } else if (state is HandoverSubmitFailure) {
+            _showToast(state.errorMessage);
+          }
+        },
+        builder: (context, state) {
+          if (state is DutiesLoading || state is DutiesInitial) {
+            return const Center(child: LoadingWidget());
+          }
+          if (state is DutiesError) {
+            return EmptyState(
+              icon: Icons.error_outline,
+              title: state.message,
+              buttonLabel: 'Retry',
+              onButtonTap: () =>
+                  context.read<DutiesBloc>().add(const FetchDutiesOverview()),
+            );
+          }
+
+          final loaded =
+              state is DutiesOverviewLoaded ? state : null;
+          if (loaded == null) {
+            return const Center(child: LoadingWidget());
+          }
+
+          final current = loaded.current;
+
+          return SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                _buildStatusGradientCard(current),
+                const SizedBox(height: 20),
+                _buildTasksSection(loaded.todayTasks),
+                const SizedBox(height: 20),
+                _buildUpcomingDutiesSection(loaded.upcoming),
+                const SizedBox(height: 20),
+                _buildCurrentAssignmentCard(current),
+                const SizedBox(height: 20),
+                _buildThisMonthSection(current?.thisMonth),
+                const SizedBox(height: 20),
+                _buildHistoryCard(),
+                const SizedBox(height: 20),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatusGradientCard() {
+  Widget _buildStatusGradientCard(DutyCurrentEntity? current) {
+    final shift = current?.shift;
+    final site = current?.site;
+    final shiftLabel = shift != null ? "${shift.start} – ${shift.end}" : "No active shift";
+    final dutyDays =
+        (shift?.dutyDays.isNotEmpty ?? false) ? shift!.dutyDays.join(", ") : "—";
+    final offDays =
+        (shift?.offDays.isNotEmpty ?? false) ? shift!.offDays.join(", ") : "—";
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -154,9 +187,9 @@ class _DutiesScreenState extends State<DutiesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "09:00 AM – 06:00 PM",
-                  style: TextStyle(
+                Text(
+                  shiftLabel,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -165,9 +198,9 @@ class _DutiesScreenState extends State<DutiesScreen> {
                 ),
                 const SizedBox(height: 4),
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     text: "Duty days : ",
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -175,8 +208,8 @@ class _DutiesScreenState extends State<DutiesScreen> {
                     ),
                     children: [
                       TextSpan(
-                        text: "Mon, Tue, Wed, Thurs, Fri",
-                        style: TextStyle(
+                        text: dutyDays,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.normal,
                         ),
@@ -186,9 +219,9 @@ class _DutiesScreenState extends State<DutiesScreen> {
                 ),
                 const SizedBox(height: 4),
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     text: "Off days     : ",
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.yellowAccent,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -196,8 +229,8 @@ class _DutiesScreenState extends State<DutiesScreen> {
                     ),
                     children: [
                       TextSpan(
-                        text: "Sat, Sun",
-                        style: TextStyle(
+                        text: offDays,
+                        style: const TextStyle(
                           color: Colors.yellow,
                           fontWeight: FontWeight.bold,
                         ),
@@ -226,20 +259,20 @@ class _DutiesScreenState extends State<DutiesScreen> {
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "ABC Corporate Office",
-                            style: TextStyle(
+                            site?.name ?? "No site assigned",
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'AirbnbCereal',
                             ),
                           ),
-                          SizedBox(height: 1),
+                          const SizedBox(height: 1),
                           Text(
-                            "Sector 62, Noida",
-                            style: TextStyle(
+                            site?.address ?? "",
+                            style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 10,
                               fontFamily: 'AirbnbCereal',
@@ -279,7 +312,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _getRemainingTime(),
+                    _getRemainingTime(shift),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 19,
@@ -296,23 +329,18 @@ class _DutiesScreenState extends State<DutiesScreen> {
     );
   }
 
-  Widget _buildTasksSection() {
+  Widget _buildTasksSection(List<TodayTaskEntity> tasks) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
-              "Today’s Tasks",
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'AirbnbCereal',
-              ),
-            ),
-          ],
+        const Text(
+          "Today’s Tasks",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'AirbnbCereal',
+          ),
         ),
         const SizedBox(height: 12),
         Container(
@@ -322,108 +350,130 @@ class _DutiesScreenState extends State<DutiesScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.grey.shade100),
           ),
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _ongoingTasks.length,
-            itemBuilder: (context, index) {
-              final task = _ongoingTasks[index];
-              final isLast = index == _ongoingTasks.length - 1;
-              final isCompleted = task['done'] == true;
+          child: tasks.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(
+                    "No tasks for today",
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 13,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    final isLast = index == tasks.length - 1;
+                    final isCompleted = task.isCompleted;
 
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      children: [
-                        isCompleted
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: colorEmployeeGreen1,
-                                size: 22,
-                              )
-                            : Container(
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey.shade400,
-                                    width: 1.5,
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Column(
+                            children: [
+                              isCompleted
+                                  ? const Icon(
+                                      Icons.check_circle,
+                                      color: colorEmployeeGreen1,
+                                      size: 22,
+                                    )
+                                  : Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.grey.shade400,
+                                          width: 1.5,
+                                        ),
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                              if (!isLast)
+                                Expanded(
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                    child: Column(
+                                      children: List.generate(4, (i) {
+                                        return Expanded(
+                                          child: Container(
+                                            width: 1.5,
+                                            margin: const EdgeInsets.symmetric(
+                                              vertical: 2.5,
+                                            ),
+                                            color: isCompleted
+                                                ? colorEmployeeGreen1
+                                                : Colors.grey.shade300,
+                                          ),
+                                        );
+                                      }),
+                                    ),
                                   ),
-                                  color: Colors.white,
                                 ),
-                              ),
-                        if (!isLast)
+                            ],
+                          ),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Column(
-                                children: List.generate(4, (i) {
-                                  return Expanded(
-                                    child: Container(
-                                      width: 1.5,
-                                      margin: const EdgeInsets.symmetric(
-                                        vertical: 2.5,
+                              padding: const EdgeInsets.only(
+                                  top: 2.0, bottom: 20.0),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      task.title,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                        fontWeight: isCompleted
+                                            ? FontWeight.w500
+                                            : FontWeight.normal,
+                                        fontFamily: 'AirbnbCereal',
                                       ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isCompleted ? "Completed" : "Pending",
+                                    style: TextStyle(
+                                      fontSize: 12,
                                       color: isCompleted
                                           ? colorEmployeeGreen1
-                                          : Colors.grey.shade300,
+                                          : Colors.grey.shade500,
+                                      fontWeight: isCompleted
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      fontFamily: 'AirbnbCereal',
                                     ),
-                                  );
-                                }),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 2.0, bottom: 20.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              task['name'],
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                                fontWeight: isCompleted
-                                    ? FontWeight.w500
-                                    : FontWeight.normal,
-                                fontFamily: 'AirbnbCereal',
-                              ),
-                            ),
-                            Text(
-                              task['statusText'],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isCompleted
-                                    ? colorEmployeeGreen1
-                                    : Colors.grey.shade500,
-                                fontWeight: isCompleted
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                fontFamily: 'AirbnbCereal',
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
   }
 
-  Widget _buildCurrentAssignmentCard() {
+  Widget _buildCurrentAssignmentCard(DutyCurrentEntity? current) {
+    final site = current?.site;
+    final supervisor = current?.supervisor;
+    final shift = current?.shift;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -469,9 +519,9 @@ class _DutiesScreenState extends State<DutiesScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "ABC Corporate Office",
-                            style: TextStyle(
+                          Text(
+                            site?.name ?? "No site assigned",
+                            style: const TextStyle(
                               color: Colors.black,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -480,7 +530,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            "Sector 62, Noida",
+                            site?.address ?? "",
                             style: TextStyle(
                               color: Colors.grey.shade600,
                               fontSize: 12.5,
@@ -496,10 +546,10 @@ class _DutiesScreenState extends State<DutiesScreen> {
                                 fontSize: 12,
                                 fontFamily: 'AirbnbCereal',
                               ),
-                              children: const [
+                              children: [
                                 TextSpan(
-                                  text: "Rahul Sharma",
-                                  style: TextStyle(
+                                  text: supervisor?.name ?? "—",
+                                  style: const TextStyle(
                                     color: Color(0xFF1877F2),
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -507,15 +557,17 @@ class _DutiesScreenState extends State<DutiesScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            "Shift: Morning (09:00 AM – 06:00 PM)",
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 12,
-                              fontFamily: 'AirbnbCereal',
+                          if (shift != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              "Shift: ${shift.start} – ${shift.end}",
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                                fontFamily: 'AirbnbCereal',
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -583,7 +635,7 @@ class _DutiesScreenState extends State<DutiesScreen> {
                   Container(width: 1, height: 30, color: Colors.grey.shade200),
                   Expanded(
                     child: TextButton.icon(
-                      onPressed: () => _showToast("Calling Supervisor..."),
+                      onPressed: () => _callSupervisor(supervisor?.phone),
                       icon: const Icon(
                         LucideIcons.phone,
                         size: 16,
@@ -609,7 +661,14 @@ class _DutiesScreenState extends State<DutiesScreen> {
               SizedBox(
                 width: double.infinity,
                 child: TextButton.icon(
-                  onPressed: () => _showHandoverReportDialog(context),
+                  onPressed: () => _showHandoverReportDialog(
+                    context,
+                    site == null
+                        ? ""
+                        : [site.name, site.address]
+                            .where((s) => s.isNotEmpty)
+                            .join(", "),
+                  ),
                   icon: const Icon(
                     LucideIcons.triangle_alert,
                     size: 16,
@@ -636,153 +695,184 @@ class _DutiesScreenState extends State<DutiesScreen> {
     );
   }
 
-  Widget _buildUpcomingDutiesSection() {
+  Widget _buildUpcomingDutiesSection(List<UpcomingShiftEntity> upcoming) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text(
-              "Upcoming Tasks",
+        const Text(
+          "Upcoming Tasks",
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'AirbnbCereal',
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (upcoming.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Text(
+              "No upcoming shifts",
               style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade500,
+                fontSize: 13,
                 fontFamily: 'AirbnbCereal',
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _scheduledDuties.length,
-          itemBuilder: (context, index) {
-            final duty = _scheduledDuties[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEEF2FF),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          duty['date']!,
-                          style: const TextStyle(
-                            color: Color(0xFF1877F2),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                        Text(
-                          duty['month']!,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          duty['title']!,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              LucideIcons.map_pin,
-                              size: 13,
-                              color: Colors.grey.shade500,
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: upcoming.length,
+            itemBuilder: (context, index) {
+              final duty = upcoming[index];
+              final day =
+                  duty.date != null ? duty.date!.day.toString() : "--";
+              final month = duty.date != null
+                  ? DateFormat('MMM').format(duty.date!)
+                  : "";
+              final timeRange = "${duty.start} – ${duty.end}";
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade100),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            day,
+                            style: const TextStyle(
+                              color: Color(0xFF1877F2),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'AirbnbCereal',
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              duty['location']!,
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
-                                fontFamily: 'AirbnbCereal',
+                          ),
+                          Text(
+                            month,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 11,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            duty.name,
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                LucideIcons.map_pin,
+                                size: 13,
+                                color: Colors.grey.shade500,
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        duty['time']!,
-                        style: const TextStyle(
-                          color: Color(0xFF1877F2),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'AirbnbCereal',
-                        ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  duty.site,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                    fontFamily: 'AirbnbCereal',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          "Upcoming",
-                          style: TextStyle(
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          timeRange,
+                          style: const TextStyle(
                             color: Color(0xFF1877F2),
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'AirbnbCereal',
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEF2FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            "Upcoming",
+                            style: TextStyle(
+                              color: Color(0xFF1877F2),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'AirbnbCereal',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
       ],
     );
   }
 
-  Widget _buildThisMonthSection() {
+  Widget _buildThisMonthSection(DutyMonthSummaryEntity? month) {
+    final daysCompleted = month?.daysCompleted.toString() ?? "--";
+    final totalHours = month != null
+        ? (month.totalHours % 1 == 0
+            ? month.totalHours.toStringAsFixed(0)
+            : month.totalHours.toStringAsFixed(1))
+        : "--";
+    final attendance =
+        month != null ? "${month.attendanceRate.toStringAsFixed(0)}%" : "--";
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -793,162 +883,48 @@ class _DutiesScreenState extends State<DutiesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "This Month's Summery",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'AirbnbCereal',
-                ),
-              ),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(
-                  LucideIcons.calendar,
-                  color: Color(0xFF1877F2),
-                  size: 20,
-                ),
-                onPressed: () => _showToast("Calendar filter clicked"),
-              ),
-            ],
+          const Text(
+            "This Month's Summary",
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'AirbnbCereal',
+            ),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE8F8F0),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        LucideIcons.calendar_check,
-                        color: Color(0xFF2DC78A),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "18",
-                            style: TextStyle(
-                              color: Color(0xFF2DC78A),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                          Text(
-                            "Days Compoeted",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _buildMonthStat(
+                  icon: LucideIcons.calendar_check,
+                  iconBg: const Color(0xFFE8F8F0),
+                  iconColor: const Color(0xFF2DC78A),
+                  value: daysCompleted,
+                  valueColor: const Color(0xFF2DC78A),
+                  label: "Days Completed",
                 ),
               ),
               const SizedBox(width: 4),
               Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEF2FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        LucideIcons.clock,
-                        color: Color(0xFF1877F2),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "162",
-                            style: TextStyle(
-                              color: Color(0xFF1877F2),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                          Text(
-                            "Total Hours",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _buildMonthStat(
+                  icon: LucideIcons.clock,
+                  iconBg: const Color(0xFFEEF2FF),
+                  iconColor: const Color(0xFF1877F2),
+                  value: totalHours,
+                  valueColor: const Color(0xFF1877F2),
+                  label: "Total Hours",
                 ),
               ),
               const SizedBox(width: 4),
               Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF3E8FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.trending_up,
-                        color: Color(0xFF9333EA),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "96%",
-                            style: TextStyle(
-                              color: Color(0xFF9333EA),
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                          Text(
-                            "Attendance",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
-                              fontFamily: 'AirbnbCereal',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: _buildMonthStat(
+                  icon: Icons.trending_up,
+                  iconBg: const Color(0xFFF3E8FF),
+                  iconColor: const Color(0xFF9333EA),
+                  value: attendance,
+                  valueColor: const Color(0xFF9333EA),
+                  label: "Attendance",
                 ),
               ),
             ],
@@ -958,216 +934,226 @@ class _DutiesScreenState extends State<DutiesScreen> {
     );
   }
 
-  void _showHandoverReportDialog(BuildContext context) {
-    final locationController = TextEditingController(
-      text: "ABC Corporate Office, Sector 62, Noida",
+  Widget _buildMonthStat({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String value,
+    required Color valueColor,
+    required String label,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+          child: Icon(icon, color: iconColor, size: 18),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 10,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  void _showHandoverReportDialog(BuildContext context, String siteName) {
+    final bloc = context.read<DutiesBloc>();
+    final locationController = TextEditingController(text: siteName);
     final detailsController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) {
-        bool isSubmitting = false;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: const [
+              Icon(LucideIcons.triangle_alert, color: Color(0xFFFF3B30)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Report Handover Issue",
+                  style: TextStyle(
+                    fontFamily: 'AirbnbCereal',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
               ),
-              title: Row(
-                children: const [
-                  Icon(LucideIcons.triangle_alert, color: Color(0xFFFF3B30)),
-                  SizedBox(width: 8),
-                  Text(
-                    "Report Handover Issue",
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Notify your supervisor if the next shift guard has not arrived or if there is a handover delay.",
                     style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 13,
                       fontFamily: 'AirbnbCereal',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Location / Site Name",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.black87,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: locationController,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Enter location name",
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Report Details / Comments",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.black87,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: detailsController,
+                    maxLines: 4,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'AirbnbCereal',
+                    ),
+                    decoration: InputDecoration(
+                      hintText:
+                          "Describe the issue (e.g. Relief guard has not arrived yet, shift ended but relief not here, etc.)",
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 12.5,
+                        fontFamily: 'AirbnbCereal',
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return "Please enter report details";
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Notify your supervisor if the next shift guard has not arrived or if there is a handover delay.",
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Location / Site Name",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Colors.black87,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: locationController,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                        decoration: InputDecoration(
-                          hintText: "Enter location name",
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return "Location cannot be empty";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Report Details / Comments",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Colors.black87,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: detailsController,
-                        maxLines: 4,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontFamily: 'AirbnbCereal',
-                        ),
-                        decoration: InputDecoration(
-                          hintText:
-                              "Describe the issue (e.g. Relief guard has not arrived yet, shift ended but relief not here, etc.)",
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 12.5,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return "Please enter report details";
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'AirbnbCereal',
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'AirbnbCereal',
-                    ),
-                  ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  bloc.add(SubmitHandoverReport(
+                    siteName: locationController.text.trim(),
+                    details: detailsController.text.trim(),
+                  ));
+                  Navigator.pop(dialogContext);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF3B30),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                ElevatedButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          if (formKey.currentState?.validate() ?? false) {
-                            setDialogState(() {
-                              isSubmitting = true;
-                            });
-
-                            // Simulate submission
-                            await Future.delayed(
-                              const Duration(milliseconds: 1500),
-                            );
-
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              _showToast(
-                                "Handover report submitted successfully.",
-                              );
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF3B30),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Text(
-                          "Submit Report",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'AirbnbCereal',
-                          ),
-                        ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ],
-            );
-          },
+              ),
+              child: const Text(
+                "Submit Report",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+            ),
+          ],
         );
       },
     );

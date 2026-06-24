@@ -55,6 +55,12 @@ import '../../features/sos/data/repositories/sos_repository_impl.dart';
 import '../../features/sos/domain/repositories/sos_repository.dart';
 import '../../features/sos/presentation/bloc/sos_bloc.dart';
 
+// Duties
+import '../../features/duties/data/datasources/duties_remote_datasource.dart';
+import '../../features/duties/data/repositories/duties_repository_impl.dart';
+import '../../features/duties/domain/repositories/duties_repository.dart';
+import '../../features/duties/presentation/bloc/duties_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -123,4 +129,10 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton(() => SosRemoteDataSource(getIt()));
   getIt.registerLazySingleton<SosRepository>(() => SosRepositoryImpl(getIt()));
   getIt.registerFactory(() => SosBloc(getIt()));
+
+  // Duties
+  getIt.registerLazySingleton(() => DutiesRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<DutiesRepository>(
+      () => DutiesRepositoryImpl(getIt()));
+  getIt.registerFactory(() => DutiesBloc(getIt()));
 }

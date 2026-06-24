@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import '../../../../common/widgets/employee_app_bar.dart';
+import '../../../../core/constants/app_text_styles.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../controllers/task_schedule_controller.dart';
 import '../widgets/month_header.dart';
@@ -115,10 +116,8 @@ class _TaskScheduleScreenState extends State<TaskScheduleScreen> {
             child: Center(
               child: Text(
                 day,
-                style: TextStyle(
-                  fontSize: size.width * 0.032,
+                style: AppTextStyles.labelMedium.copyWith(
                   fontWeight: FontWeight.w700,
-                  fontFamily: "AirbnbCereal",
                   color: isSat || isSun
                       ? Colors.grey.shade300
                       : Colors.grey.shade500,

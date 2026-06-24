@@ -204,3 +204,10 @@ The worker's own attendance history (most recent first). `days` defaults to 28.
 - Tip: you can pre-check distance on the device using `posting.geofence` so the worker
   sees "you're too far" before tapping, but the **server decision is final**.
 - One posting per worker (no site picker needed in v1).
+
+
+
+/////////////
+1. leave management should be there  a page should be 
+2. show monthy everywhere
+3. Payslip have to give year filter and month filter for that year 

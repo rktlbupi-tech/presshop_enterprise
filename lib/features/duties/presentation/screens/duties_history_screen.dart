@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
@@ -7,73 +8,105 @@ import 'package:presshop_enterprise/config/routes/app_router.dart';
 import 'package:presshop_enterprise/core/constants/app_colors.dart';
 import 'package:presshop_enterprise/features/duties/data/models/duty_shift_model.dart';
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
+import '../../../../common/widgets/empty_state.dart';
+import '../../../../common/widgets/loading_widget.dart';
+import '../../../../config/di/injection.dart';
+import '../../domain/entities/duty_entities.dart';
+import '../bloc/duties_bloc.dart';
 
-class DutiesHistoryScreen extends StatefulWidget {
+class DutiesHistoryScreen extends StatelessWidget {
   const DutiesHistoryScreen({super.key});
 
   @override
-  State<DutiesHistoryScreen> createState() => _DutiesHistoryScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<DutiesBloc>()
+        ..add(const FetchDutyHistory(range: DutyHistoryRange.lastYear)),
+      child: const _DutiesHistoryView(),
+    );
+  }
 }
 
-class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
-  final List<DutyShiftHistory> _allShifts = DutyShiftHistory.getMockShifts();
-  String _selectedRange = 'Last 1 Year';
+class _DutiesHistoryView extends StatefulWidget {
+  const _DutiesHistoryView();
 
-  final List<String> _rangeOptions = [
-    'Last 30 Days',
-    'Last 3 Months',
-    'Last 6 Months',
-    'Last 1 Year',
-  ];
+  @override
+  State<_DutiesHistoryView> createState() => _DutiesHistoryViewState();
+}
 
-  List<DutyShiftHistory> get _filteredShifts {
-    // Current time context is June 19, 2026
-    final refDate = DateTime(2026, 6, 19, 23, 59, 59);
-    DateTime cutOffDate;
+class _DutiesHistoryViewState extends State<_DutiesHistoryView> {
+  DutyHistoryRange _selectedRange = DutyHistoryRange.lastYear;
 
-    switch (_selectedRange) {
-      case 'Last 30 Days':
-        cutOffDate = refDate.subtract(const Duration(days: 30));
-        break;
-      case 'Last 3 Months':
-        cutOffDate = refDate.subtract(const Duration(days: 90));
-        break;
-      case 'Last 6 Months':
-        cutOffDate = refDate.subtract(const Duration(days: 180));
-        break;
-      case 'Last 1 Year':
+  String _fmtMinutes(int m) {
+    if (m <= 0) return "0h 0m";
+    return "${m ~/ 60}h ${m % 60}m";
+  }
+
+  String _fmtTime(DateTime? d) =>
+      d == null ? '--' : DateFormat('h:mm a').format(d.toLocal());
+
+  String _fmtHours(double h) =>
+      h == h.roundToDouble() ? "${h.round()}h" : "${h.toStringAsFixed(1)}h";
+
+  // The detail screen consumes the legacy DutyShiftHistory; build one from the
+  // lean API row (fields the API doesn't provide are left empty and the detail
+  // screen hides them).
+  DutyShiftHistory _rowToHistory(DutyHistoryRowEntity r) => DutyShiftHistory(
+        id: '',
+        date: r.date ?? DateTime.now(),
+        checkInTime: _fmtTime(r.start),
+        checkOutTime: _fmtTime(r.end),
+        duration: _fmtMinutes(r.durationMinutes),
+        durationHours: r.durationMinutes / 60.0,
+        locationName: r.site,
+        locationAddress: '',
+        supervisorName: '',
+        supervisorPhone: '',
+        uniformStatus: '',
+        completedTasks: const [],
+        checkInSelfie: '',
+        checkOutSelfie: '',
+        notes: '',
+      );
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'late':
+        return const Color(0xFF9A6411);
+      case 'present':
+        return AppColors.primary;
+      case 'completed':
       default:
-        cutOffDate = refDate.subtract(const Duration(days: 365));
-        break;
+        return const Color(0xFF127A45);
     }
-
-    return _allShifts.where((s) => s.date.isAfter(cutOffDate)).toList();
   }
 
-  String _calculateAverageShift(List<DutyShiftHistory> shifts) {
-    if (shifts.isEmpty) return "0h 0m";
-    double total = shifts.fold(0.0, (sum, s) => sum + s.durationHours);
-    double avg = total / shifts.length;
-    int hours = avg.floor();
-    int minutes = ((avg - hours) * 60).round();
-    return "${hours}h ${minutes}m";
+  Color _statusBg(String status) {
+    switch (status) {
+      case 'late':
+        return const Color(0xFFFDF3E2);
+      case 'present':
+        return const Color(0xFFEAF1FE);
+      case 'completed':
+      default:
+        return const Color(0xFFEAF5EE);
+    }
   }
 
-  String _calculateTotalHours(List<DutyShiftHistory> shifts) {
-    double total = shifts.fold(0.0, (sum, s) => sum + s.durationHours);
-    if (total == total.roundToDouble()) {
-      return "${total.round()}h";
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'late':
+        return 'Late';
+      case 'present':
+        return 'On Duty';
+      case 'completed':
+      default:
+        return 'Completed';
     }
-    return "${total.toStringAsFixed(1)}h";
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredList = _filteredShifts;
-    final avgShift = _calculateAverageShift(filteredList);
-    final totalHrs = _calculateTotalHours(filteredList);
-    final shiftsDone = filteredList.length.toString();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       appBar: const AppAppBar(
@@ -84,27 +117,52 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
         showBack: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Filter and Stats Card Header
-            _buildStatsCard(avgShift, totalHrs, shiftsDone),
+        child: BlocBuilder<DutiesBloc, DutiesState>(
+          builder: (context, state) {
+            if (state is DutiesHistoryLoading || state is DutiesInitial) {
+              return const Center(child: LoadingWidget());
+            }
+            if (state is DutiesHistoryError) {
+              return EmptyState(
+                icon: Icons.error_outline,
+                title: state.message,
+                buttonLabel: 'Retry',
+                onButtonTap: () => context
+                    .read<DutiesBloc>()
+                    .add(FetchDutyHistory(range: _selectedRange)),
+              );
+            }
 
-            Expanded(
-              child: filteredList.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 10.h,
-                      ),
-                      itemCount: filteredList.length,
-                      itemBuilder: (context, index) {
-                        final shift = filteredList[index];
-                        return _buildHistoryItem(shift);
-                      },
-                    ),
-            ),
-          ],
+            final history =
+                state is DutiesHistoryLoaded ? state.history : null;
+            final summary = history?.summary;
+            final rows = history?.rows ?? const <DutyHistoryRowEntity>[];
+
+            final avgShift =
+                summary != null ? _fmtMinutes(summary.avgShiftMinutes) : "0h 0m";
+            final totalHrs =
+                summary != null ? _fmtHours(summary.totalHours) : "0h";
+            final shiftsDone = (summary?.shiftsDone ?? rows.length).toString();
+
+            return Column(
+              children: [
+                _buildStatsCard(avgShift, totalHrs, shiftsDone),
+                Expanded(
+                  child: rows.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 10.h,
+                          ),
+                          itemCount: rows.length,
+                          itemBuilder: (context, index) =>
+                              _buildHistoryItem(rows[index]),
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -189,7 +247,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                   ],
                 ),
                 child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
+                  child: DropdownButton<DutyHistoryRange>(
                     value: _selectedRange,
                     dropdownColor: Colors.white,
                     isDense: true,
@@ -204,18 +262,18 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                       fontWeight: FontWeight.w800,
                       fontFamily: 'AirbnbCereal',
                     ),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedRange = newValue;
-                        });
+                    onChanged: (DutyHistoryRange? newValue) {
+                      if (newValue != null && newValue != _selectedRange) {
+                        setState(() => _selectedRange = newValue);
+                        context
+                            .read<DutiesBloc>()
+                            .add(FetchDutyHistory(range: newValue));
                       }
                     },
-                    items: _rangeOptions.map<DropdownMenuItem<String>>((
-                      String value,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: value,
+                    items: DutyHistoryRange.values
+                        .map<DropdownMenuItem<DutyHistoryRange>>((range) {
+                      return DropdownMenuItem<DutyHistoryRange>(
+                        value: range,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -226,7 +284,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                             ),
                             SizedBox(width: 6.w),
                             Text(
-                              value,
+                              range.label,
                               style: TextStyle(
                                 color: const Color(0xFF0B0F1A),
                                 fontSize: 11.5.sp,
@@ -285,9 +343,9 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
     );
   }
 
-  Widget _buildHistoryItem(DutyShiftHistory shift) {
-    // Wait, let's make it look correct. E.g. "Mon, Jun 16"
-    final formattedDate = DateFormat('EEE, MMM d').format(shift.date);
+  Widget _buildHistoryItem(DutyHistoryRowEntity shift) {
+    final formattedDate =
+        shift.date != null ? DateFormat('EEE, MMM d').format(shift.date!) : '--';
 
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
@@ -303,7 +361,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
           borderRadius: BorderRadius.circular(14.r),
           onTap: () => context.push(
             AppRoutes.dutiesHistoryDetails,
-            extra: shift,
+            extra: _rowToHistory(shift),
           ),
           child: Padding(
             padding: EdgeInsets.all(12.w),
@@ -338,7 +396,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                       ),
                       SizedBox(height: 3.h),
                       Text(
-                        '${shift.checkInTime} – ${shift.checkOutTime}',
+                        '${_fmtTime(shift.start)} – ${_fmtTime(shift.end)}',
                         style: TextStyle(
                           color: const Color(0xFF9AA2B1),
                           fontSize: 10.5.sp,
@@ -356,7 +414,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                           SizedBox(width: 4.w),
                           Expanded(
                             child: Text(
-                              shift.locationName,
+                              shift.site,
                               style: TextStyle(
                                 color: const Color(0xFF5A6373),
                                 fontSize: 10.5.sp,
@@ -384,7 +442,7 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(
-                        shift.duration,
+                        _fmtMinutes(shift.durationMinutes),
                         style: TextStyle(
                           color: const Color(0xFF5A6373),
                           fontSize: 10.sp,
@@ -400,13 +458,13 @@ class _DutiesHistoryScreenState extends State<DutiesHistoryScreen> {
                         vertical: 3.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEAF5EE),
+                        color: _statusBg(shift.status),
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(
-                        "Completed",
+                        _statusLabel(shift.status),
                         style: TextStyle(
-                          color: const Color(0xFF127A45),
+                          color: _statusColor(shift.status),
                           fontSize: 9.sp,
                           fontWeight: FontWeight.w700,
                           fontFamily: 'AirbnbCereal',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_text_styles.dart';
 import '../controllers/task_schedule_controller.dart';
 
 class MonthHeader extends StatelessWidget {
@@ -28,11 +29,9 @@ class MonthHeader extends StatelessWidget {
           if (controller.calendarFormat == 'Month') ...[
             Text(
               controller.monthLabel,
-              style: TextStyle(
+              style: AppTextStyles.h4.copyWith(
                 color: const Color(0xFF1877F2), // Brand primary blue
                 fontWeight: FontWeight.w800,
-                fontSize: size.width * 0.045,
-                fontFamily: "AirbnbCereal",
               ),
             ),
           ] else ...[
@@ -42,19 +41,15 @@ class MonthHeader extends StatelessWidget {
               children: [
                 Text(
                   "${controller.selectedDay.day} ${TaskScheduleController.months[controller.selectedDay.month - 1]} ${controller.selectedDay.year}",
-                  style: TextStyle(
-                    fontFamily: "AirbnbCereal",
+                  style: AppTextStyles.h4.copyWith(
                     fontWeight: FontWeight.w800,
-                    fontSize: size.width * 0.042,
                     color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 1),
                 Text(
                   "${controller.getTasksFor(controller.selectedDay).length} tasks scheduled",
-                  style: TextStyle(
-                    fontFamily: "AirbnbCereal",
-                    fontSize: size.width * 0.028,
+                  style: AppTextStyles.caption.copyWith(
                     fontWeight: FontWeight.w500,
                     color: Colors.grey.shade500,
                   ),
@@ -70,7 +65,9 @@ class MonthHeader extends StatelessWidget {
             offset: const Offset(0, 40),
             elevation: 4,
             shadowColor: Colors.black12,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
@@ -90,7 +87,11 @@ class MonthHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.black45),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 16,
+                    color: Colors.black45,
+                  ),
                 ],
               ),
             ),
@@ -101,9 +102,15 @@ class MonthHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 14),
-          _chevron(Icons.chevron_left, () => controller.previousMonth(monthPageController)),
+          _chevron(
+            Icons.chevron_left,
+            () => controller.previousMonth(monthPageController),
+          ),
           const SizedBox(width: 6),
-          _chevron(Icons.chevron_right, () => controller.nextMonth(monthPageController)),
+          _chevron(
+            Icons.chevron_right,
+            () => controller.nextMonth(monthPageController),
+          ),
         ],
       ),
     );
@@ -136,11 +143,11 @@ class MonthHeader extends StatelessWidget {
   }
 
   Widget _chevron(IconData icon, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(icon, color: Colors.grey.shade400, size: 24),
-        ),
-      );
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(20),
+    child: Padding(
+      padding: const EdgeInsets.all(4),
+      child: Icon(icon, color: Colors.grey.shade400, size: 24),
+    ),
+  );
 }

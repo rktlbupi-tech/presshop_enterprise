@@ -43,6 +43,7 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
   late final AnimationController _rotateController;
   late final AnimationController _scanLineController;
   late final Animation<double> _scanLineAnimation;
+  late final Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
     )..repeat(reverse: true);
 
     _scanLineAnimation = Tween<double>(begin: 0.15, end: 0.85).animate(
+      CurvedAnimation(parent: _scanLineController, curve: Curves.easeInOut),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.94, end: 1.06).animate(
       CurvedAnimation(parent: _scanLineController, curve: Curves.easeInOut),
     );
 
@@ -534,19 +539,19 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
                     ),
                   ),
                   // Center icon
-                  Container(
-                    width: 80.w,
-                    height: 80.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF12163A),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF2E66FF).withValues(alpha: 0.3),
-                        width: 1.5,
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Container(
+                      width: 80.w,
+                      height: 80.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF12163A),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF2E66FF).withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
                       ),
-                    ),
-                    child: RotationTransition(
-                      turns: _rotateController,
                       child: Icon(
                         LucideIcons.scan_face,
                         color: const Color(0xFF4A8EFF),
@@ -572,6 +577,8 @@ class _UniformVerificationScreenState extends State<UniformVerificationScreen>
             SizedBox(height: 8.h),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
+              layoutBuilder: (currentChild, previousChildren) =>
+                  currentChild ?? const SizedBox.shrink(),
               child: Text(
                 currentMsg,
                 key: ValueKey(currentMsg),

@@ -1,5 +1,3 @@
-// ignore_for_file: unused_field
-
 import 'dart:io';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,8 +11,25 @@ abstract class AttendanceEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+/// Loads the whole screen: stat cards (summary), log list, and issues.
 class FetchAttendanceLog extends AttendanceEvent {
   const FetchAttendanceLog();
+}
+
+/// Refreshes just the issues list (after raising one).
+class FetchIssues extends AttendanceEvent {
+  const FetchIssues();
+}
+
+/// Raises an attendance issue. [type] is the API value (e.g. missing_clock_out),
+/// [date] is YYYY-MM-DD (or null for today).
+class RaiseIssue extends AttendanceEvent {
+  final String type;
+  final String? date;
+  final String details;
+  const RaiseIssue({required this.type, this.date, required this.details});
+  @override
+  List<Object?> get props => [type, date, details];
 }
 
 class CheckInRequested extends AttendanceEvent {
@@ -60,14 +75,74 @@ class AttendanceLoading extends AttendanceState {
 class AttendanceLoaded extends AttendanceState {
   final List<AttendanceLogEntity> logs;
   final AttendanceSummaryEntity? summary;
+  final List<AttendanceIssueEntity> issues;
   final bool isCheckedIn;
+
+  /// True while a `RaiseIssue` request is in flight (drives the submit spinner).
+  final bool isSubmittingIssue;
+
   const AttendanceLoaded({
     required this.logs,
     this.summary,
+    this.issues = const [],
     this.isCheckedIn = false,
+    this.isSubmittingIssue = false,
+  });
+
+  AttendanceLoaded copyWith({
+    List<AttendanceLogEntity>? logs,
+    AttendanceSummaryEntity? summary,
+    List<AttendanceIssueEntity>? issues,
+    bool? isCheckedIn,
+    bool? isSubmittingIssue,
+  }) {
+    return AttendanceLoaded(
+      logs: logs ?? this.logs,
+      summary: summary ?? this.summary,
+      issues: issues ?? this.issues,
+      isCheckedIn: isCheckedIn ?? this.isCheckedIn,
+      isSubmittingIssue: isSubmittingIssue ?? this.isSubmittingIssue,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    logs,
+    summary,
+    issues,
+    isCheckedIn,
+    isSubmittingIssue,
+  ];
+}
+
+/// Emitted once after a successful `RaiseIssue`. Extends [AttendanceLoaded] so
+/// the screen keeps rendering its data while a listener shows a snackbar.
+class AttendanceIssueSubmitSuccess extends AttendanceLoaded {
+  final AttendanceIssueEntity issue;
+  const AttendanceIssueSubmitSuccess(
+    this.issue, {
+    required super.logs,
+    super.summary,
+    super.issues,
+    super.isCheckedIn,
   });
   @override
-  List<Object?> get props => [logs, summary, isCheckedIn];
+  List<Object?> get props => [...super.props, issue];
+}
+
+/// Emitted once after a failed `RaiseIssue`. Extends [AttendanceLoaded] so the
+/// list stays on screen while a listener shows the error.
+class AttendanceIssueSubmitFailure extends AttendanceLoaded {
+  final String errorMessage;
+  const AttendanceIssueSubmitFailure(
+    this.errorMessage, {
+    required super.logs,
+    super.summary,
+    super.issues,
+    super.isCheckedIn,
+  });
+  @override
+  List<Object?> get props => [...super.props, errorMessage];
 }
 
 class AttendanceActionSuccess extends AttendanceState {
@@ -90,97 +165,106 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   final AttendanceRepository _repo;
   bool _isCheckedIn = false;
 
+  List<AttendanceLogEntity> _logs = const [];
+  AttendanceSummaryEntity? _summary;
+  List<AttendanceIssueEntity> _issues = const [];
+
   AttendanceBloc(this._repo) : super(const AttendanceInitial()) {
     on<FetchAttendanceLog>(_onFetch);
+    on<FetchIssues>(_onFetchIssues);
+    on<RaiseIssue>(_onRaiseIssue);
     on<CheckInRequested>(_onCheckIn);
     on<CheckOutRequested>(_onCheckOut);
   }
+
+  AttendanceLoaded get _loaded => AttendanceLoaded(
+    logs: _logs,
+    summary: _summary,
+    issues: _issues,
+    isCheckedIn: _isCheckedIn,
+  );
 
   Future<void> _onFetch(
     FetchAttendanceLog e,
     Emitter<AttendanceState> emit,
   ) async {
     emit(const AttendanceLoading());
-    await Future.delayed(const Duration(milliseconds: 300));
 
-    final now = DateTime.now();
-    final List<AttendanceLogEntity> dummyLogs = [];
+    final results = await Future.wait([
+      _repo.fetchLog(),
+      _repo.fetchSummary(),
+      _repo.fetchIssues(),
+    ]);
 
-    for (int i = 0; i < 15; i++) {
-      final logDate = now.subtract(Duration(days: i));
-      if (logDate.weekday == DateTime.sunday) continue;
+    final (logs, logErr) = results[0] as (List<AttendanceLogEntity>, dynamic);
+    final (summary, _) = results[1] as (AttendanceSummaryEntity?, dynamic);
+    final (issues, _) = results[2] as (List<AttendanceIssueEntity>, dynamic);
 
-      String status = 'present';
-      double workedHours = 8.5;
-      DateTime checkInTime = DateTime(
-        logDate.year,
-        logDate.month,
-        logDate.day,
-        9,
-        15,
-      );
-      DateTime? checkOutTime = DateTime(
-        logDate.year,
-        logDate.month,
-        logDate.day,
-        17,
-        45,
-      );
-
-      if (i == 2) {
-        status = 'late';
-        workedHours = 7.0;
-        checkInTime = DateTime(
-          logDate.year,
-          logDate.month,
-          logDate.day,
-          10,
-          45,
-        );
-      } else if (i == 5) {
-        status = 'absent';
-        workedHours = 0.0;
-        checkInTime = DateTime(logDate.year, logDate.month, logDate.day, 0, 0);
-        checkOutTime = null;
-      } else if (i == 9) {
-        status = 'late';
-        workedHours = 7.5;
-        checkInTime = DateTime(
-          logDate.year,
-          logDate.month,
-          logDate.day,
-          10,
-          15,
-        );
-      }
-
-      dummyLogs.add(
-        AttendanceLogEntity(
-          id: 'dummy_$i',
-          date: logDate,
-          checkIn: status == 'absent' ? null : checkInTime,
-          checkOut: checkOutTime,
-          status: status,
-          workedHours: workedHours,
+    // Only the log call is fatal for the screen; summary/issues degrade
+    // gracefully to their empty state.
+    if (logErr != null && logs.isEmpty) {
+      emit(
+        AttendanceError(
+          logErr.message as String? ?? 'Unable to load attendance.',
         ),
       );
+      return;
     }
 
-    const dummySummary = AttendanceSummaryEntity(
-      present: 13,
-      absent: 1,
-      late: 2,
-      leaves: 0,
-      totalDays: 16,
+    _logs = logs;
+    _summary = summary;
+    _issues = issues;
+    emit(_loaded);
+  }
+
+  Future<void> _onFetchIssues(
+    FetchIssues e,
+    Emitter<AttendanceState> emit,
+  ) async {
+    final (issues, err) = await _repo.fetchIssues();
+    if (err == null) {
+      _issues = issues;
+      emit(_loaded);
+    }
+  }
+
+  Future<void> _onRaiseIssue(
+    RaiseIssue e,
+    Emitter<AttendanceState> emit,
+  ) async {
+    emit(_loaded.copyWith(isSubmittingIssue: true));
+
+    final (issue, err) = await _repo.raiseIssue(
+      type: e.type,
+      date: e.date,
+      details: e.details,
     );
 
-    emit(
-      AttendanceLoaded(
-        logs: dummyLogs,
-        summary: dummySummary,
-        isCheckedIn: _isCheckedIn,
-      ),
-    );
+    if (issue != null) {
+      _issues = [issue, ..._issues];
+      emit(
+        AttendanceIssueSubmitSuccess(
+          issue,
+          logs: _logs,
+          summary: _summary,
+          issues: _issues,
+          isCheckedIn: _isCheckedIn,
+        ),
+      );
+      // Settle back to a plain loaded state.
+      emit(_loaded);
+    } else {
+      emit(
+        AttendanceIssueSubmitFailure(
+          err?.message ?? 'Unable to submit issue.',
+          logs: _logs,
+          summary: _summary,
+          issues: _issues,
+          isCheckedIn: _isCheckedIn,
+        ),
+      );
+      emit(_loaded);
+    }
   }
 
   Future<void> _onCheckIn(
@@ -209,12 +293,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
     if (ok) {
       _isCheckedIn = true;
-      emit(
-        const AttendanceActionSuccess(
-          'Logged on duty',
-          isCheckedIn: true,
-        ),
-      );
+      emit(const AttendanceActionSuccess('Logged on duty', isCheckedIn: true));
     } else {
       emit(AttendanceError(err?.message ?? 'Unable to log on duty.'));
     }

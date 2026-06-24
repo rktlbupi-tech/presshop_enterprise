@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_text_styles.dart';
 import '../controllers/task_schedule_controller.dart';
 
 class WeekStrip extends StatelessWidget {
@@ -52,29 +53,25 @@ class WeekStrip extends StatelessWidget {
                     children: [
                       Text(
                         TaskScheduleController.weekDays[i],
-                        style: TextStyle(
-                          fontSize: size.width * 0.028,
+                        style: AppTextStyles.caption.copyWith(
                           color: isSelected
                               ? Colors.white.withOpacity(0.85)
                               : isSatOrSun
                                   ? Colors.grey.shade300
                                   : Colors.grey.shade500,
                           fontWeight: FontWeight.w500,
-                          fontFamily: "AirbnbCereal",
                         ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         "${day.day}",
-                        style: TextStyle(
-                          fontSize: size.width * 0.042,
+                        style: AppTextStyles.bodyLarge.copyWith(
                           color: isSelected
                               ? Colors.white
                               : isToday
                                   ? const Color(0xFF1877F2)
                                   : Colors.black,
                           fontWeight: FontWeight.w800,
-                          fontFamily: "AirbnbCereal",
                         ),
                       ),
                       const SizedBox(height: 3),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:go_router/go_router.dart';
+import 'package:presshop_enterprise/features/onboarding/presentation/screens/onboarding_screen_v2.dart';
 import 'package:presshop_enterprise/features/settings/presentation/screens/account_delete_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -10,8 +11,6 @@ import '../../config/di/injection.dart';
 
 // Splash & Onboarding
 import '../../features/splash/presentation/screens/splash_screen.dart';
-import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
-
 // Auth
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
@@ -162,7 +161,7 @@ GoRouter createRouter(SharedPreferences prefs) {
       ),
       GoRoute(
         path: AppRoutes.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
+        builder: (context, state) => const OnboardingScreenV2(),
       ),
       GoRoute(
         path: AppRoutes.login,

@@ -224,8 +224,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 58.w,
-        height: 58.w,
+        width: 62.w,
+        height: 52.h,
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(14.r),
@@ -237,9 +237,12 @@ class DashboardScreenState extends State<DashboardScreen> {
             SizedBox(height: 3.h),
             Text(
               label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 11.sp,
+                fontSize: 10.5.sp,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 fontFamily: 'AirbnbCereal',
               ),

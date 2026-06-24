@@ -54,9 +54,9 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   }
 
   @override
-  Future<(List<AttendanceLogEntity>, Failure?)> fetchLog() async {
+  Future<(List<AttendanceLogEntity>, Failure?)> fetchLog({int days = 30}) async {
     try {
-      final models = await _ds.fetchLog();
+      final models = await _ds.fetchLog(days: days);
       return (models.map((m) => m.toEntity()).toList(), null);
     } on NotFoundFailure {
       return (const <AttendanceLogEntity>[], null);
@@ -73,6 +73,42 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
       return ((await _ds.fetchSummary()).toEntity(), null);
     } on NotFoundFailure {
       return (null, null);
+    } on Failure catch (f) {
+      return (null, f);
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(List<AttendanceIssueEntity>, Failure?)> fetchIssues({
+    int limit = 50,
+  }) async {
+    try {
+      final models = await _ds.fetchIssues(limit: limit);
+      return (models.map((m) => m.toEntity()).toList(), null);
+    } on NotFoundFailure {
+      return (const <AttendanceIssueEntity>[], null);
+    } on Failure catch (f) {
+      return (<AttendanceIssueEntity>[], f);
+    } catch (e) {
+      return (<AttendanceIssueEntity>[], UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<(AttendanceIssueEntity?, Failure?)> raiseIssue({
+    required String type,
+    String? date,
+    required String details,
+  }) async {
+    try {
+      final model = await _ds.raiseIssue(
+        type: type,
+        date: date,
+        details: details,
+      );
+      return (model.toEntity(), null);
     } on Failure catch (f) {
       return (null, f);
     } catch (e) {

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:presshop_enterprise/common/widgets/app_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_text_styles.dart';
 import '../../../../common/widgets/employee_app_bar.dart';
 import '../../../../common/widgets/loading_widget.dart';
 import '../../../../config/di/injection.dart';
@@ -514,7 +515,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 2,
-                                    childAspectRatio: 0.72,
+                                    childAspectRatio: 0.69,
                                     mainAxisSpacing: 16.w,
                                     crossAxisSpacing: 16.w,
                                   ),
@@ -593,10 +594,9 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
             item.task.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12.sp,
+            style: AppTextStyles.bodyMedium.copyWith(
               color: Colors.black,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
             ),
           ),
           if (description.isNotEmpty) ...[
@@ -605,8 +605,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
               description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10.sp,
+              style: AppTextStyles.caption.copyWith(
                 color: Colors.black,
                 fontWeight: FontWeight.normal,
               ),
@@ -614,36 +613,46 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
           ],
           const Spacer(),
           if (capturedAt.isNotEmpty)
-            Row(
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 4.h,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Image.asset(
-                  "assets/icons/ic_clock.png",
-                  height: 11.w,
-                  color: Colors.grey[600],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      "assets/icons/ic_clock.png",
+                      height: 11.w,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      _formatTime(capturedAt),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 4.w),
-                Text(
-                  _formatTime(capturedAt),
-                  style: TextStyle(
-                    fontSize: 9.sp,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Image.asset(
-                  "assets/icons/ic_yearly_calendar.png",
-                  height: 11.w,
-                  color: Colors.grey[600],
-                ),
-                SizedBox(width: 4.w),
-                Text(
-                  _formatDate(capturedAt),
-                  style: TextStyle(
-                    fontSize: 9.sp,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.normal,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      "assets/icons/ic_yearly_calendar.png",
+                      height: 11.w,
+                      color: Colors.grey[600],
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      _formatDate(capturedAt),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -662,8 +671,7 @@ class _EvidenceScreenState extends State<EvidenceScreen> {
                     location,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 9.sp,
+                    style: AppTextStyles.labelSmall.copyWith(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.normal,
                     ),

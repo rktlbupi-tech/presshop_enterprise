@@ -26,6 +26,26 @@ class ApiEndpoints {
   static const String attendanceToday = 'enterprise/app/attendance/today';
   static const String attendancePunch = 'enterprise/app/attendance/punch';
 
+  // ── Attendance log screen (worker app — self-scoped) ──────
+  // See docs/api/attendance-log.md
+  static const String attendanceSummary = 'enterprise/app/attendance/summary';
+  static const String attendanceAppLog = 'enterprise/app/attendance/log';
+  static const String attendanceIssues = 'enterprise/app/attendance/issues';
+
+  // ── Duties screen (worker app — self-scoped) ──────────────
+  // See docs/api/duties-screen.md
+  static const String dutiesCurrent = 'enterprise/app/duties/current';
+  static const String dutiesUpcoming = 'enterprise/app/duties/upcoming';
+  static const String dutiesTodayTasks = 'enterprise/app/duties/today-tasks';
+  static const String dutiesHistory = 'enterprise/app/duties/history';
+  static const String dutiesHandoverReport =
+      'enterprise/app/duties/handover-report';
+
+  // ── Claim expenses screen (worker app — self-scoped) ──────
+  // See docs/api/claim-expenses.md
+  static const String claimsSummary = 'enterprise/app/claims/summary';
+  static const String claims = 'enterprise/app/claims';
+
   // ── Media upload (returns a hosted file URL) ──────────────
   static const String uploadUserMedia = 'hopper/uploadUserMedia';
 

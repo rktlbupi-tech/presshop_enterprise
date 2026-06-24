@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+/Users/rajesh/Documents/PresshopComplete/Presshop+/presshop_enterprise/pubspec

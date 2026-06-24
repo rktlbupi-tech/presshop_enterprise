@@ -75,14 +75,50 @@ class AttendanceRemoteDatasource {
     return res.data['success'] == true;
   }
 
-  Future<List<AttendanceLogModel>> fetchLog() async {
-    final res = await _client.get(ApiEndpoints.attendanceLog);
+  /// Per-day history, newest first. [days] defaults to 30 (max 92).
+  Future<List<AttendanceLogModel>> fetchLog({int days = 30}) async {
+    final res = await _client.get(
+      ApiEndpoints.attendanceAppLog,
+      queryParameters: {'days': days},
+    );
     final data = res.data['data'] as List<dynamic>? ?? [];
-    return data.map((e) => AttendanceLogModel.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => AttendanceLogModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
+  /// The four stat cards. See `GET enterprise/app/attendance/summary`.
   Future<AttendanceSummaryModel> fetchSummary() async {
-    final res = await _client.get(ApiEndpoints.attendanceLog, queryParameters: {'summary': true});
-    return AttendanceSummaryModel.fromJson(res.data['summary'] as Map<String, dynamic>? ?? {});
+    final res = await _client.get(ApiEndpoints.attendanceSummary);
+    return AttendanceSummaryModel.fromJson(
+        res.data['data'] as Map<String, dynamic>? ?? {});
+  }
+
+  /// My raised issues, newest first. [limit] defaults to 50 (max 100).
+  Future<List<AttendanceIssueModel>> fetchIssues({int limit = 50}) async {
+    final res = await _client.get(
+      ApiEndpoints.attendanceIssues,
+      queryParameters: {'limit': limit},
+    );
+    final data = res.data['data'] as List<dynamic>? ?? [];
+    return data
+        .map((e) => AttendanceIssueModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Raise an attendance issue. [date] is YYYY-MM-DD (defaults to today on the
+  /// server when omitted). Returns the created issue.
+  Future<AttendanceIssueModel> raiseIssue({
+    required String type,
+    String? date,
+    required String details,
+  }) async {
+    final res = await _client.post(ApiEndpoints.attendanceIssues, data: {
+      'type': type,
+      if (date != null) 'date': date,
+      'details': details,
+    });
+    return AttendanceIssueModel.fromJson(
+        res.data['data'] as Map<String, dynamic>? ?? {});
   }
 }

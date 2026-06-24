@@ -12,6 +12,8 @@ import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../../common/widgets/employee_app_bar.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/constants/app_dimensions.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen3 extends StatefulWidget {
@@ -249,12 +251,10 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     SizedBox(width: 6.w),
                     Text(
                       isOnline ? 'ON DUTY' : 'OFF DUTY',
-                      style: TextStyle(
+                      style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.white,
-                        fontSize: 10.sp,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
-                        fontFamily: 'AirbnbCereal',
                       ),
                     ),
                   ],
@@ -264,11 +264,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   children: [
                     Text(
                       'SHIFT 9:00–18:00',
-                      style: TextStyle(
+                      style: AppTextStyles.labelSmall.copyWith(
                         color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 10.sp,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'AirbnbCereal',
                       ),
                     ),
                     SizedBox(width: 6.w),
@@ -319,8 +317,8 @@ class _HomeScreen3State extends State<HomeScreen3> {
                           ),
                         ),
                         Container(
-                          width: 66.w,
-                          height: 66.w,
+                          width: 68.w,
+                          height: 68.w,
                           decoration: const BoxDecoration(
                             color: Color(0xFF1742C7),
                             shape: BoxShape.circle,
@@ -332,21 +330,21 @@ class _HomeScreen3State extends State<HomeScreen3> {
                                 isOnline
                                     ? _formatDuration(remaining)
                                     : '08:00:00',
-                                style: TextStyle(
+                                maxLines: 1,
+                                softWrap: false,
+                                style: AppTextStyles.bodyMedium.copyWith(
                                   color: Colors.white,
-                                  fontSize: 14.sp,
                                   fontWeight: FontWeight.w800,
-                                  fontFamily: 'AirbnbCereal',
                                 ),
                               ),
                               Text(
                                 isOnline ? 'ON DUTY' : 'OFF DUTY',
-                                style: TextStyle(
+                                style: AppTextStyles.labelSmall.copyWith(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 7.sp,
+                                  fontSize:
+                                      7.0, // Constrained small font size for gauge label
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.5,
-                                  fontFamily: 'AirbnbCereal',
                                 ),
                               ),
                             ],
@@ -414,11 +412,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   SizedBox(width: 8.w),
                   Text(
                     isOnline ? 'Log Off Duty' : 'Log On Duty',
-                    style: TextStyle(
+                    style: AppTextStyles.bodyMedium.copyWith(
                       color: const Color(0xFF1540C0),
-                      fontSize: 13.sp,
                       fontWeight: FontWeight.w800,
-                      fontFamily: 'AirbnbCereal',
                     ),
                   ),
                 ],
@@ -436,19 +432,15 @@ class _HomeScreen3State extends State<HomeScreen3> {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.bodySmall.copyWith(
             color: Colors.white.withValues(alpha: 0.7),
-            fontSize: 11.5.sp,
-            fontFamily: 'AirbnbCereal',
           ),
         ),
         Text(
           value,
-          style: TextStyle(
+          style: AppTextStyles.bodySmall.copyWith(
             color: Colors.white,
-            fontSize: 11.5.sp,
             fontWeight: FontWeight.w700,
-            fontFamily: 'AirbnbCereal',
           ),
         ),
       ],
@@ -691,22 +683,19 @@ class _HomeScreen3State extends State<HomeScreen3> {
       children: [
         Text(
           val,
-          style: TextStyle(
+          style: AppTextStyles.h4.copyWith(
             color: color,
-            fontSize: 18.sp,
             fontWeight: FontWeight.w800,
-            fontFamily: 'AirbnbCereal',
           ),
         ),
         SizedBox(height: 2.h),
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.overline.copyWith(
             color: const Color(0xFF5A6373),
-            fontSize: 8.5.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.3,
-            fontFamily: 'AirbnbCereal',
+            fontSize: 8.5,
           ),
         ),
       ],
@@ -727,23 +716,6 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 fontSize: 13.5.sp,
                 fontWeight: FontWeight.w800,
                 fontFamily: 'AirbnbCereal',
-              ),
-            ),
-            GestureDetector(
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cleared attention items locally'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              ),
-              child: Text(
-                'Clear',
-                style: TextStyle(
-                  color: const Color(0xFF1F5BF6),
-                  fontSize: 11.5.sp,
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'AirbnbCereal',
-                ),
               ),
             ),
           ],

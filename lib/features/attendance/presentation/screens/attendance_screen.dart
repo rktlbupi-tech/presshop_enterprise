@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
-import 'package:presshop_enterprise/core/constants/constant_data.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../common/widgets/app_app_bar.dart';
@@ -11,6 +10,7 @@ import '../../../../common/widgets/empty_state.dart';
 import '../../../../common/widgets/loading_widget.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../config/routes/app_router.dart';
+import '../../domain/entities/attendance_entity.dart';
 import '../bloc/attendance_bloc.dart';
 import '../../../../common/widgets/sliding_tabs.dart';
 import '../../../../common/widgets/custom_dropdown.dart';
@@ -40,7 +40,24 @@ class _AttendanceViewState extends State<_AttendanceView>
   final _queryDetailsController = TextEditingController();
   final _queryDateController = TextEditingController();
   DateTime _queryDate = DateTime.now();
-  String _queryType = 'Medical Issue';
+
+  /// API issue types (value sent to the server) paired with their UI labels.
+  /// See docs/api/attendance-log.md §4a.
+  static const List<MapEntry<String, String>> _issueTypes = [
+    MapEntry('medical_issue', 'Medical Issue'),
+    MapEntry('missing_clock_in', 'Missing Clock In'),
+    MapEntry('missing_clock_out', 'Missing Clock Out'),
+    MapEntry('late_arrival', 'Late Arrival'),
+    MapEntry('wrong_time', 'Wrong Time'),
+    MapEntry('other', 'Other'),
+  ];
+
+  static String _issueLabel(String value) => _issueTypes
+      .firstWhere((e) => e.key == value,
+          orElse: () => const MapEntry('other', 'Other'))
+      .value;
+
+  String _queryType = 'medical_issue';
 
   @override
   void initState() {
@@ -63,45 +80,49 @@ class _AttendanceViewState extends State<_AttendanceView>
 
   void _submitQuery() {
     if (_queryFormKey.currentState!.validate()) {
-      setState(() {
-        AppConstantData.queries.insert(0, {
-          'id': 'Q-${(1000 + AppConstantData.queries.length * 17).toString()}',
-          'date': DateFormat('dd MMM yyyy').format(_queryDate),
-          'type': _queryType,
-          'status': 'Pending',
-          'description': _queryDetailsController.text.trim(),
-          'adminComment': '',
-        });
-        _queryDetailsController.clear();
-        _queryDate = DateTime.now();
-        _queryDateController.text = DateFormat(
-          'dd MMM yyyy',
-        ).format(_queryDate);
-        _queryType = 'Medical Issue';
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Attendance issue submitted successfully!',
-                  style: TextStyle(fontFamily: 'AirbnbCereal'),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: AppColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      context.read<AttendanceBloc>().add(
+            RaiseIssue(
+              type: _queryType,
+              date: DateFormat('yyyy-MM-dd').format(_queryDate),
+              details: _queryDetailsController.text.trim(),
+            ),
+          );
     }
+  }
+
+  /// Resets the issue form after a successful submission.
+  void _resetQueryForm() {
+    setState(() {
+      _queryDetailsController.clear();
+      _queryDate = DateTime.now();
+      _queryDateController.text = DateFormat('dd MMM yyyy').format(_queryDate);
+      _queryType = 'medical_issue';
+    });
+  }
+
+  void _showSnack(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(error ? Icons.error_outline : Icons.check_circle,
+                color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontFamily: 'AirbnbCereal'),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: error ? AppColors.error : AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
   }
 
   Future<void> _selectQueryDate(BuildContext context) async {
@@ -236,7 +257,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                     _queryDateController.text = DateFormat(
                       'dd MMM yyyy',
                     ).format(_queryDate);
-                    _queryType = 'Other Reason';
+                    _queryType = 'wrong_time';
                     _queryDetailsController.text =
                         "Issue regarding shift hours on $dateStr. Registered check-in: $checkInStr, check-out: $checkOutStr.";
                   });
@@ -474,7 +495,18 @@ class _AttendanceViewState extends State<_AttendanceView>
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppAppBar(title: 'Attendance log', showBack: true),
-      body: BlocBuilder<AttendanceBloc, AttendanceState>(
+      body: BlocConsumer<AttendanceBloc, AttendanceState>(
+        listenWhen: (prev, curr) =>
+            curr is AttendanceIssueSubmitSuccess ||
+            curr is AttendanceIssueSubmitFailure,
+        listener: (context, state) {
+          if (state is AttendanceIssueSubmitSuccess) {
+            _resetQueryForm();
+            _showSnack('Issue ${state.issue.code} submitted successfully!');
+          } else if (state is AttendanceIssueSubmitFailure) {
+            _showSnack(state.errorMessage, error: true);
+          }
+        },
         builder: (context, state) {
           if (state is AttendanceLoading) {
             return const Center(child: LoadingWidget());
@@ -491,24 +523,24 @@ class _AttendanceViewState extends State<_AttendanceView>
           }
 
           // Safe extract of state data
-          final logs = state is AttendanceLoaded ? state.logs : [];
-          final summary = state is AttendanceLoaded ? state.summary : null;
-          final isCheckedIn = state is AttendanceLoaded
-              ? state.isCheckedIn
-              : false;
+          final loaded = state is AttendanceLoaded ? state : null;
+          final logs = loaded?.logs ?? const <AttendanceLogEntity>[];
+          final summary = loaded?.summary;
+          final issues = loaded?.issues ?? const <AttendanceIssueEntity>[];
+          final isCheckedIn = loaded?.isCheckedIn ?? false;
+          final isSubmittingIssue = loaded?.isSubmittingIssue ?? false;
 
-          final hoursWeek = logs.isNotEmpty
-              ? '${logs.map((e) => e.workedHours ?? 0.0).fold(0.0, (a, b) => a + b).toStringAsFixed(1)} / 40h'
-              : '34.5 / 40h';
-          final attRate = summary != null && summary.totalDays > 0
-              ? '${(summary.present / summary.totalDays * 100).toStringAsFixed(1)}%'
-              : '96.08%';
-          final lateCount = summary != null
-              ? '${summary.late} arrivals'
-              : '11.2h';
+          final hoursWeek = summary != null
+              ? '${summary.hoursWorked.toStringAsFixed(1)} / ${summary.hoursTarget.toStringAsFixed(0)}h'
+              : '-- / --';
+          final attRate = summary != null
+              ? '${summary.attendanceRate.toStringAsFixed(1)}%'
+              : '--';
+          final lateCount =
+              summary != null ? '${summary.lateArrivals} arrivals' : '--';
           final dutyDays = summary != null
-              ? '${summary.present} / ${summary.totalDays}d'
-              : '24 / 26d';
+              ? '${summary.dutyDaysPresent} / ${summary.dutyDaysTotal}d'
+              : '--';
 
           return NestedScrollView(
             headerSliverBuilder:
@@ -632,7 +664,7 @@ class _AttendanceViewState extends State<_AttendanceView>
               controller: _tabController,
               children: [
                 _buildAttendanceLogTab(size, isCheckedIn, logs),
-                _buildQueriesTab(size),
+                _buildQueriesTab(size, issues, isSubmittingIssue),
               ],
             ),
           );
@@ -689,6 +721,56 @@ class _AttendanceViewState extends State<_AttendanceView>
         ),
       ],
     );
+  }
+
+  // Maps the API `status` enum to a badge colour / label.
+  Color _logStatusColor(String status) {
+    switch (status) {
+      case 'on_time':
+        return AppColors.success;
+      case 'late':
+        return Colors.orange;
+      case 'absent':
+        return Colors.red;
+      case 'present':
+        return AppColors.primary;
+      case 'upcoming':
+        return Colors.blueGrey;
+      case 'off':
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _logStatusLabel(String status) {
+    switch (status) {
+      case 'on_time':
+        return 'On Time';
+      case 'late':
+        return 'Late Arrival';
+      case 'absent':
+        return 'Absent';
+      case 'present':
+        return 'On Duty';
+      case 'upcoming':
+        return 'Upcoming';
+      case 'off':
+        return 'Off Day';
+      default:
+        return status;
+    }
+  }
+
+  Color _issueStatusColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'pending':
+      default:
+        return Colors.amber;
+    }
   }
 
   Widget _buildAttendanceLogTab(
@@ -849,9 +931,7 @@ class _AttendanceViewState extends State<_AttendanceView>
             ? '${log.workedHours} hrs'
             : '0.0 hrs';
 
-        Color statusColor = AppColors.success;
-        if (log.status == 'late') statusColor = Colors.orange;
-        if (log.status == 'absent') statusColor = Colors.red;
+        final statusColor = _logStatusColor(log.status as String);
 
         return Card(
           elevation: 0,
@@ -943,11 +1023,7 @@ class _AttendanceViewState extends State<_AttendanceView>
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              log.status == 'present'
-                                  ? 'On Time'
-                                  : log.status == 'late'
-                                  ? 'Late Arrival'
-                                  : 'Absent',
+                              _logStatusLabel(log.status as String),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -975,7 +1051,11 @@ class _AttendanceViewState extends State<_AttendanceView>
     );
   }
 
-  Widget _buildQueriesTab(Size size) {
+  Widget _buildQueriesTab(
+    Size size,
+    List<AttendanceIssueEntity> issues,
+    bool isSubmitting,
+  ) {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.all(size.width * 0.04),
@@ -1013,14 +1093,14 @@ class _AttendanceViewState extends State<_AttendanceView>
                   const SizedBox(height: 12),
                   CustomDropdown<String>(
                     value: _queryType,
-                    items: AppConstantData.queryTypes,
+                    items: _issueTypes.map((e) => e.key).toList(),
                     width: double.infinity,
                     buttonWidth: size.width * 0.8,
                     buttonColor: Colors.grey.shade50,
                     icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
                     itemBuilder: (val, isSelected) {
                       return Text(
-                        val,
+                        _issueLabel(val),
                         style: const TextStyle(
                           fontFamily: 'AirbnbCereal',
                           fontSize: 13,
@@ -1116,22 +1196,34 @@ class _AttendanceViewState extends State<_AttendanceView>
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _submitQuery,
+                      onPressed: isSubmitting ? null : _submitQuery,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        disabledBackgroundColor: AppColors.primary.withOpacity(
+                          0.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        "Submit",
-                        style: TextStyle(
-                          fontFamily: 'AirbnbCereal',
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              "Submit",
+                              style: TextStyle(
+                                fontFamily: 'AirbnbCereal',
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -1150,132 +1242,166 @@ class _AttendanceViewState extends State<_AttendanceView>
           ),
           const SizedBox(height: 10),
 
-          // Queries List
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: AppConstantData.queries.length,
-            itemBuilder: (context, index) {
-              final query = AppConstantData.queries[index];
-              final isApproved = query['status'] == 'Approved';
-              final isRejected = query['status'] == 'Rejected';
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.015),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(14),
+          // Issues List
+          if (issues.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          query['id'],
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                            fontFamily: "AirbnbCereal",
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isApproved
-                                ? Colors.green.shade50
-                                : isRejected
-                                ? Colors.red.shade50
-                                : Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            query['status'],
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isApproved
-                                  ? Colors.green.shade700
-                                  : isRejected
-                                  ? Colors.red.shade700
-                                  : Colors.amber.shade700,
-                              fontFamily: "AirbnbCereal",
-                            ),
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      LucideIcons.inbox,
+                      color: Colors.grey.shade300,
+                      size: 40,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "${query['type']} • ${query['date']}",
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        fontFamily: "AirbnbCereal",
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      query['description'],
+                      "No attendance issues raised yet",
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
                         fontFamily: "AirbnbCereal",
                       ),
                     ),
-                    if (query['adminComment'].toString().isNotEmpty) ...[
-                      const Divider(height: 20),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade100),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Response from HR/Admin:",
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black54,
-                                fontFamily: "AirbnbCereal",
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              query['adminComment'],
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade800,
-                                fontFamily: "AirbnbCereal",
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: issues.length,
+              itemBuilder: (context, index) {
+                final issue = issues[index];
+                final statusColor = _issueStatusColor(issue.status);
+                final dateStr = issue.date != null
+                    ? DateFormat('dd MMM yyyy').format(issue.date!)
+                    : '--';
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.015),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            issue.code,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              fontFamily: "AirbnbCereal",
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              issue.status[0].toUpperCase() +
+                                  issue.status.substring(1),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: statusColor,
+                                fontFamily: "AirbnbCereal",
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "${_issueLabel(issue.type)} • $dateStr",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          fontFamily: "AirbnbCereal",
+                        ),
+                      ),
+                      if (issue.details.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          issue.details,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontFamily: "AirbnbCereal",
+                          ),
+                        ),
+                      ],
+                      if ((issue.hrResponse ?? '').isNotEmpty) ...[
+                        const Divider(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade100),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Response from HR/Admin:",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black54,
+                                  fontFamily: "AirbnbCereal",
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                issue.hrResponse!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade800,
+                                  fontFamily: "AirbnbCereal",
+                                ),
+                              ),
+                              if ((issue.decidedBy ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  "— ${issue.decidedBy}",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey.shade500,
+                                    fontFamily: "AirbnbCereal",
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../config/di/injection.dart';
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_text_styles.dart';
 import '../../../../common/widgets/employee_app_bar.dart';
 
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
@@ -72,11 +73,9 @@ class _MenuScreenState extends State<MenuScreen> {
                   children: [
                     Text(
                       "You'll be missed!",
-                      style: TextStyle(
+                      style: AppTextStyles.h3.copyWith(
                         color: Colors.black,
-                        fontSize: size.width * 0.05,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'AirbnbCereal',
                       ),
                     ),
                     const Spacer(),
@@ -120,11 +119,9 @@ class _MenuScreenState extends State<MenuScreen> {
                     Expanded(
                       child: Text(
                         'Are you sure you want to logout? We hope to see you back soon.',
-                        style: TextStyle(
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: Colors.black,
-                          fontSize: size.width * 0.035,
                           fontWeight: FontWeight.w500,
-                          fontFamily: 'AirbnbCereal',
                         ),
                       ),
                     ),
@@ -233,19 +230,15 @@ class _MenuScreenState extends State<MenuScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontSize: size.width * 0.036,
-                              color: Colors.black87,
-                              fontFamily: 'AirbnbCereal',
-                              fontWeight: FontWeight.w400,
-                            ),
+                        child: Text.rich(
+                          TextSpan(
+                            style: AppTextStyles.bodyMedium2,
+
                             children: [
                               const TextSpan(text: 'Toggle to go '),
                               TextSpan(
                                 text: _onDuty ? 'Off Duty' : 'On Duty',
-                                style: const TextStyle(
+                                style: AppTextStyles.bodyMedium2.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -261,11 +254,9 @@ class _MenuScreenState extends State<MenuScreen> {
                             padding: const EdgeInsets.only(bottom: 4, right: 2),
                             child: Text(
                               _onDuty ? 'Online' : 'Offline',
-                              style: TextStyle(
+                              style: AppTextStyles.labelSmall.copyWith(
                                 fontWeight: FontWeight.w500,
-                                fontSize: size.width * 0.026,
                                 color: Colors.grey.shade500,
-                                fontFamily: 'AirbnbCereal',
                               ),
                             ),
                           ),
@@ -552,11 +543,9 @@ class _MenuScreenState extends State<MenuScreen> {
           padding: EdgeInsets.only(left: 4, bottom: size.width * 0.01),
           child: Text(
             title,
-            style: TextStyle(
-              fontSize: size.width * 0.028,
+            style: AppTextStyles.caption.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade500,
-              fontFamily: 'AirbnbCereal',
               letterSpacing: 0.5,
             ),
           ),
@@ -621,11 +610,9 @@ class _MenuScreenState extends State<MenuScreen> {
                           SizedBox(width: size.width * 0.025),
                           Text(
                             item.name,
-                            style: TextStyle(
-                              fontSize: size.width * 0.035,
+                            style: AppTextStyles.bodyMedium2.copyWith(
                               color: Colors.black,
-                              fontFamily: 'AirbnbCereal',
-                              fontWeight: FontWeight.normal,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                           const Spacer(),
