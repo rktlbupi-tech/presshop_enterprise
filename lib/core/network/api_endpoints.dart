@@ -46,6 +46,12 @@ class ApiEndpoints {
   static const String claimsSummary = 'enterprise/app/claims/summary';
   static const String claims = 'enterprise/app/claims';
 
+  // ── Track mileage screen (worker app — self-scoped) ───────
+  // See docs/api/track-mileage.md
+  static const String mileageSummary = 'enterprise/app/mileage/summary';
+  static const String mileageTrips = 'enterprise/app/mileage/trips';
+  static const String mileageTrip = 'enterprise/app/mileage/trip';
+
   // ── Media upload (returns a hosted file URL) ──────────────
   static const String uploadUserMedia = 'hopper/uploadUserMedia';
 
@@ -57,8 +63,21 @@ class ApiEndpoints {
   // See docs/api/my-documents.md
   static const String documents = 'enterprise/app/documents';
 
-  // ── Earnings ─────────────────────────────────────────────
-  static const String earnings = 'enterprise/earnings';
+  // ── Earnings & Payslips (worker app — self-scoped) ───────
+  // See docs/api/payslip-earnings.md
+  static const String earnings = 'enterprise/app/earnings';
+  static const String payslips = 'enterprise/app/payslips'; // + /:id for detail
+
+  // ── Leave (worker app — self-scoped) ─────────────────────
+  // See docs/api/leave.md
+  static const String leaveTypes = 'enterprise/app/leave/types';
+  static const String leaveBalances = 'enterprise/app/leave/balances';
+  static const String leave = 'enterprise/app/leave'; // POST apply / GET list / + /:id / + /:id/cancel
+  static const String leaveCalendar = 'enterprise/app/leave/calendar';
+
+  // ── Home (worker app — single aggregate endpoint) ────────
+  // See docs/api/home.md
+  static const String home = 'enterprise/app/home';
 
   // ── Map / Heatmap ────────────────────────────────────────
   static const String heatmapLocation = 'enterprise/heatmap/location';

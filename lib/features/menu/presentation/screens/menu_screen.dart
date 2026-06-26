@@ -650,6 +650,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   extra: {'type': 'privacy_policy'},
                 ),
               ),
+
               // _MenuGroupItem(
               //   name: 'Contact Us',
               //   iconPath: '${_iconsPath}ic_contact_us.png',
@@ -666,14 +667,6 @@ class _MenuScreenState extends State<MenuScreen> {
               //   iconSize: size.width * 0.055,
               //   onTap: () => _open(const ChangePasswordScreen()),
               // ),
-              _MenuGroupItem(
-                name: 'Account settings',
-                iconPath: '${_iconsPath}ic_alert.png',
-                iconColor: const Color(0xFF10B981),
-                iconBgColor: const Color(0xFFD1FAE5),
-                iconSize: size.width * 0.075,
-                onTap: () => _open(AppRoutes.deleteAccount),
-              ),
               _MenuGroupItem(
                 name: 'Logout',
                 iconPath: '${_iconsPath}ic_logout.png',

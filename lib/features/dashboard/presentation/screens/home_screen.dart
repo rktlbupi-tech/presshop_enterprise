@@ -11,9 +11,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../attendance/presentation/bloc/attendance_bloc.dart';
 import '../../../../common/widgets/employee_app_bar.dart';
+import '../../../../config/di/injection.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/constants/app_dimensions.dart';
+import '../bloc/home_bloc.dart';
+import '../../domain/entities/home_entities.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen3 extends StatefulWidget {
@@ -27,6 +29,10 @@ class _HomeScreen3State extends State<HomeScreen3> {
   DateTime? _localCheckInTime;
 
   Stream<int>? _dutyTimerStream;
+
+  // Home aggregate (GET /app/home). Null until the first load completes.
+  late final HomeBloc _homeBloc;
+  HomeData? _home;
 
   String _formatDistance(double value) {
     final isInt = value == value.roundToDouble();
@@ -91,13 +97,62 @@ class _HomeScreen3State extends State<HomeScreen3> {
     super.initState();
     _loadCheckInTime();
     context.read<AttendanceBloc>().add(const FetchAttendanceLog());
+    _homeBloc = getIt<HomeBloc>()..add(const FetchHome());
+  }
+
+  @override
+  void dispose() {
+    _homeBloc.close();
+    super.dispose();
+  }
+
+  String _num(num v) =>
+      v == v.toDouble().roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+  String _hm(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
+  ({String label, Color color, Color bg}) _taskStatusVisual(String status) {
+    switch (status) {
+      case 'completed':
+        return (
+          label: 'Completed',
+          color: const Color(0xFF127A45),
+          bg: const Color(0xFFEAF5EE)
+        );
+      case 'in_progress':
+      case 'accepted':
+        return (
+          label: 'In Progress',
+          color: const Color(0xFF1F5BF6),
+          bg: const Color(0xFFEAF1FE)
+        );
+      default:
+        return (
+          label: status.isEmpty
+              ? 'Pending'
+              : status[0].toUpperCase() + status.substring(1),
+          color: const Color(0xFF9A6411),
+          bg: const Color(0xFFFDF3E2)
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<AttendanceBloc, AttendanceState>(
+    return BlocProvider.value(
+      value: _homeBloc,
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<HomeBloc, HomeState>(
+            listener: (context, state) {
+              if (state is HomeLoaded) setState(() => _home = state.data);
+            },
+          ),
+          BlocListener<AttendanceBloc, AttendanceState>(
           listener: (context, state) {
             if (state is AttendanceActionSuccess) {
               if (state.isCheckedIn) {
@@ -153,10 +208,13 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       _localCheckInTime ?? latestLog?.checkIn ?? DateTime.now(),
                     )
                   : '09:03 AM';
-              final siteStr = profile?.currentLocation?.isNotEmpty == true
-                  ? profile!.currentLocation!
-                  : 'MG Road, Bengaluru';
-              final mileageStr = _formatDistance(isCheckedIn ? 18.0 : 0.0);
+              final siteStr = _home?.duty.site?.isNotEmpty == true
+                  ? _home!.duty.site!
+                  : (profile?.currentLocation?.isNotEmpty == true
+                      ? profile!.currentLocation!
+                      : 'MG Road, Bengaluru');
+              final mileageStr =
+                  _formatDistance(_home?.duty.mileageToday ?? 0.0);
 
               return Scaffold(
                 backgroundColor: const Color(0xFFF2F4F8),
@@ -164,15 +222,27 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   onProfileTap: () => _navigateToTab(4),
                   isOnline: isCheckedIn,
                 ),
-                body: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.only(
-                    left: 16.w,
-                    right: 16.w,
-                    top: 16.h,
-                    bottom: 96.h,
-                  ),
-                  child: Column(
+                body: RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () async {
+                    _homeBloc.add(const FetchHome());
+                    context
+                        .read<AttendanceBloc>()
+                        .add(const FetchAttendanceLog());
+                    await Future<void>.delayed(
+                        const Duration(milliseconds: 600));
+                  },
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    padding: EdgeInsets.only(
+                      left: 16.w,
+                      right: 16.w,
+                      top: 16.h,
+                      bottom: 96.h,
+                    ),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildDutyCard(
@@ -199,11 +269,13 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       _buildAttentionSection(),
                     ],
                   ),
+                  ),
                 ),
               );
             },
           );
         },
+      ),
       ),
     );
   }
@@ -492,7 +564,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      'This month · 8 assigned',
+                      'This month · ${_home?.tasks.assigned ?? 0} assigned',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,
@@ -514,13 +586,17 @@ class _HomeScreen3State extends State<HomeScreen3> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildTaskStatColumn('8', 'ACCEPTED', const Color(0xFF1F5BF6)),
+              _buildTaskStatColumn('${_home?.tasks.assigned ?? 0}', 'ACCEPTED',
+                  const Color(0xFF1F5BF6)),
               Container(width: 1, height: 24.h, color: const Color(0xFFE5E8EE)),
-              _buildTaskStatColumn('5', 'COMPLETED', const Color(0xFF127A45)),
+              _buildTaskStatColumn('${_home?.tasks.completed ?? 0}',
+                  'COMPLETED', const Color(0xFF127A45)),
               Container(width: 1, height: 24.h, color: const Color(0xFFE5E8EE)),
-              _buildTaskStatColumn('3', 'PENDING', const Color(0xFF9A6411)),
+              _buildTaskStatColumn('${_home?.tasks.pending ?? 0}', 'PENDING',
+                  const Color(0xFF9A6411)),
               Container(width: 1, height: 24.h, color: const Color(0xFFE5E8EE)),
-              _buildTaskStatColumn('92%', 'ON TIME', const Color(0xFF0B0F1A)),
+              _buildTaskStatColumn('${_home?.tasks.onTimePct ?? 0}%', 'ON TIME',
+                  const Color(0xFF0B0F1A)),
             ],
           ),
           SizedBox(height: 16.h),
@@ -530,7 +606,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
               height: 7.h,
               width: double.infinity,
               child: LinearProgressIndicator(
-                value: 5 / 8,
+                value: (_home != null && _home!.tasks.assigned > 0)
+                    ? _home!.tasks.completed / _home!.tasks.assigned
+                    : 0,
                 backgroundColor: const Color(0xFFE5E8EE),
                 valueColor: const AlwaysStoppedAnimation<Color>(
                   Color(0xFF1F5BF6),
@@ -553,21 +631,29 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
           ),
           SizedBox(height: 10.h),
-          _buildRecentTaskRow(
-            title: 'Site Visit – MG Road',
-            time: 'Today · 10:00 AM',
-            status: 'In Progress',
-            statusColor: const Color(0xFF1F5BF6),
-            statusBg: const Color(0xFFEAF1FE),
-          ),
-          SizedBox(height: 8.h),
-          _buildRecentTaskRow(
-            title: 'Photo Assignment – Andheri',
-            time: 'Yesterday · 2:30 PM',
-            status: 'Completed',
-            statusColor: const Color(0xFF127A45),
-            statusBg: const Color(0xFFEAF5EE),
-          ),
+          if ((_home?.tasks.recent ?? const []).isEmpty)
+            Text(
+              'No active tasks',
+              style: TextStyle(
+                color: const Color(0xFF9AA2B1),
+                fontSize: 11.sp,
+                fontFamily: 'AirbnbCereal',
+              ),
+            )
+          else
+            ...(_home!.tasks.recent.take(2).map((t) {
+              final v = _taskStatusVisual(t.status);
+              return Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: _buildRecentTaskRow(
+                  title: t.title,
+                  time: v.label,
+                  status: v.label,
+                  statusColor: v.color,
+                  statusBg: v.bg,
+                ),
+              );
+            })),
 
           SizedBox(height: 10.h),
           Row(
@@ -659,7 +745,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                     ),
                     SizedBox(width: 10.w),
                     Text(
-                      _formatItemsCount(14),
+                      _formatItemsCount(_home?.tasks.evidenceCount ?? 0),
                       style: TextStyle(
                         decoration: TextDecoration.underline,
                         color: const Color(0xFF0B0F1A),
@@ -703,6 +789,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
   }
 
   Widget _buildAttentionSection() {
+    final na = _home?.needsAttention;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -735,10 +822,10 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 iconBgColor: const Color(0xFFFAF1E2),
                 iconBorderColor: const Color(0xFFF0E2C6),
                 title: 'Leave approval pending',
-                subtitle: 'Casual · Jun 18–19 · awaiting Priya K.',
-                badgeText: '1',
+                subtitle: na?.leavePending.summary ?? 'No pending leave',
+                badgeText: '${na?.leavePending.count ?? 0}',
                 badgeColor: const Color(0xFF9A6411),
-                onTap: () => _navigateToTab(4),
+                onTap: () => context.push(AppRoutes.leave),
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14.w),
@@ -750,8 +837,8 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 iconBgColor: const Color(0xFFFAF1E2),
                 iconBorderColor: const Color(0xFFF0E2C6),
                 title: 'Pending claims',
-                subtitle: 'Travel ₹2,400 · fuel ₹1,150',
-                badgeText: '2',
+                subtitle: na?.pendingClaims.summary ?? 'No pending claims',
+                badgeText: '${na?.pendingClaims.count ?? 0}',
                 badgeColor: const Color(0xFF9A6411),
                 onTap: () => context.push(AppRoutes.claimExpenses),
               ),
@@ -764,9 +851,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
                 iconColor: const Color(0xFF1F5BF6),
                 iconBgColor: const Color(0xFFEAF1FE),
                 iconBorderColor: const Color(0xFFD5E2FD),
-                title: 'Missed notifications',
-                subtitle: 'New task broadcast · roster update',
-                badgeText: '3',
+                title: 'Unread notifications',
+                subtitle: 'Tap to view your notifications',
+                badgeText: '${na?.notificationsUnread ?? 0}',
                 badgeColor: const Color(0xFF1F5BF6),
                 onTap: () => context.push(AppRoutes.notifications),
               ),
@@ -1050,7 +1137,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      'This month · 22 shifts',
+                      'This month · ${_home?.duties.shiftsDone ?? 0} shifts',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,
@@ -1072,11 +1159,11 @@ class _HomeScreen3State extends State<HomeScreen3> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildDutyStat('9h 28m', 'Avg Shift'),
+              _buildDutyStat(_hm(_home?.duties.avgShiftMinutes ?? 0), 'Avg Shift'),
               Container(width: 1, height: 24.h, color: const Color(0xFFE5E8EE)),
-              _buildDutyStat('208h', 'Total Hrs'),
+              _buildDutyStat('${_num(_home?.duties.totalHours ?? 0)}h', 'Total Hrs'),
               Container(width: 1, height: 24.h, color: const Color(0xFFE5E8EE)),
-              _buildDutyStat('22', 'Shifts Done'),
+              _buildDutyStat('${_home?.duties.shiftsDone ?? 0}', 'Shifts Done'),
             ],
           ),
           SizedBox(height: 14.h),
@@ -1113,20 +1200,56 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ],
           ),
           SizedBox(height: 10.h),
-          Builder(
-            builder: (context) {
-              final mockShifts = DutyShiftHistory.getMockShifts();
-              return Column(
-                children: [
-                  _buildDutyLogRow(mockShifts[0], isToday: true),
-                  SizedBox(height: 8.h),
-                  _buildDutyLogRow(mockShifts[1]),
-                  SizedBox(height: 8.h),
-                  _buildDutyLogRow(mockShifts[2]),
-                ],
-              );
-            },
-          ),
+          if ((_home?.duties.recent ?? const []).isEmpty)
+            Text(
+              'No recent shifts',
+              style: TextStyle(
+                color: const Color(0xFF9AA2B1),
+                fontSize: 11.sp,
+                fontFamily: 'AirbnbCereal',
+              ),
+            )
+          else
+            ...(_home!.duties.recent.take(3).map((d) => Padding(
+                  padding: EdgeInsets.only(bottom: 8.h),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28.w,
+                        height: 28.w,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F5F9),
+                          borderRadius: BorderRadius.circular(9.r),
+                        ),
+                        child: Icon(LucideIcons.clock,
+                            color: const Color(0xFF9AA2B1), size: 13.sp),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Text(
+                          d.date != null
+                              ? DateFormat('EEE, MMM d').format(d.date!)
+                              : '—',
+                          style: TextStyle(
+                            color: const Color(0xFF0B0F1A),
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'AirbnbCereal',
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _hm(d.workedMinutes),
+                        style: TextStyle(
+                          color: const Color(0xFF5A6373),
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                    ],
+                  ),
+                ))),
         ],
       ),
     );
@@ -1158,6 +1281,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildDutyLogRow(DutyShiftHistory shift, {bool isToday = false}) {
     final formattedDate = DateFormat('EEE, MMM d').format(shift.date);
     return GestureDetector(
@@ -1299,8 +1423,13 @@ class _HomeScreen3State extends State<HomeScreen3> {
   }
 
   Widget _buildRecentAttendanceCard() {
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    const statuses = ['P', 'P', 'L', 'P', 'P', 'P', 'H'];
+    final week = _home?.attendanceWeek.days ?? const [];
+    final List<String> days = week.isNotEmpty
+        ? week.map((d) => d.day.isNotEmpty ? d.day[0] : '-').toList()
+        : const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final List<String> statuses = week.isNotEmpty
+        ? week.map((d) => d.code).toList()
+        : const ['P', 'P', 'L', 'P', 'P', 'P', 'H'];
 
     Color bgFor(String s) => switch (s) {
       'P' => const Color(0xFFEAF5EE),
@@ -1379,7 +1508,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
           SizedBox(height: 16.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
+            children: List.generate(statuses.length, (i) {
               final s = statuses[i];
               return Column(
                 children: [
@@ -1422,13 +1551,17 @@ class _HomeScreen3State extends State<HomeScreen3> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildAttendanceStat('22', 'Present', const Color(0xFF127A45)),
+              _buildAttendanceStat('${_home?.attendanceWeek.present ?? 0}',
+                  'Present', const Color(0xFF127A45)),
               Container(width: 1, height: 20.h, color: const Color(0xFFE5E8EE)),
-              _buildAttendanceStat('1', 'Late', const Color(0xFF9A6411)),
+              _buildAttendanceStat('${_home?.attendanceWeek.late ?? 0}', 'Late',
+                  const Color(0xFF9A6411)),
               Container(width: 1, height: 20.h, color: const Color(0xFFE5E8EE)),
-              _buildAttendanceStat('0', 'Absent', const Color(0xFFC23B36)),
+              _buildAttendanceStat('${_home?.attendanceWeek.absent ?? 0}',
+                  'Absent', const Color(0xFFC23B36)),
               Container(width: 1, height: 20.h, color: const Color(0xFFE5E8EE)),
-              _buildAttendanceStat('2', 'Holiday', const Color(0xFF5A6373)),
+              _buildAttendanceStat('${_home?.attendanceWeek.holiday ?? 0}',
+                  'Holiday', const Color(0xFF5A6373)),
             ],
           ),
         ],
@@ -1463,11 +1596,16 @@ class _HomeScreen3State extends State<HomeScreen3> {
   }
 
   Widget _buildRecentEarningsCard() {
-    final entries = [
-      ('Jun 15', 'Content Payout', '+₹2,400'),
-      ('Jun 12', 'Expense Reimb.', '+₹1,150'),
-      ('Jun 10', 'Task Bonus', '+₹800'),
-    ];
+    final p = _home?.latestPayslip;
+    final entries = p == null
+        ? <(String, String, String)>[]
+        : [
+            (
+              p.payDate ?? '',
+              p.monthLabel,
+              '₹${NumberFormat('#,##0').format(p.netPay)}'
+            )
+          ];
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -1517,7 +1655,9 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      'Last 3 transctions · June',
+                      _home?.latestPayslip != null
+                          ? 'Latest payslip · ${_home!.latestPayslip!.monthLabel}'
+                          : 'Latest payslip',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,
@@ -1536,6 +1676,18 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
           ),
           SizedBox(height: 14.h),
+          if (entries.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.h),
+              child: Text(
+                'No payslip published yet',
+                style: TextStyle(
+                  color: const Color(0xFF9AA2B1),
+                  fontSize: 11.sp,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+            ),
           ...List.generate(entries.length, (i) {
             final e = entries[i];
             return Column(
@@ -1600,11 +1752,21 @@ class _HomeScreen3State extends State<HomeScreen3> {
   }
 
   Widget _buildRecentMileageCard() {
-    final trips = [
-      ('Jun 16', 'Office → MG Road', '18 mi', '₹180'),
-      ('Jun 15', 'MG Road → Andheri', '22 mi', '₹220'),
-      ('Jun 14', 'Office → Bandra', '14 mi', '₹140'),
-    ];
+    final m = _home?.mileage;
+    final v = m?.vehicle;
+    final trips = (m?.recentTrips ?? const [])
+        .take(3)
+        .map((t) => (
+              t.date != null ? DateFormat('MMM d').format(t.date!) : '',
+              (t.fromLabel != null && t.toLabel != null)
+                  ? '${t.fromLabel} → ${t.toLabel}'
+                  : (t.date != null
+                      ? DateFormat('EEE, MMM d').format(t.date!)
+                      : 'Trip'),
+              '${_num(t.miles)} mi',
+              '₹${NumberFormat('#,##0').format(t.amount)}',
+            ))
+        .toList();
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -1649,7 +1811,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                       ),
                     ),
                     Text(
-                      '${_formatDistance(248.0)} total · June',
+                      '${_formatDistance(m?.monthTotalMiles ?? 0)} total · this month',
                       style: TextStyle(
                         color: const Color(0xFF5A6373),
                         fontSize: 10.5.sp,
@@ -1695,7 +1857,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                   width: 120.w,
                   height: 96.h,
                   child: Image.network(
-                    'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=200&fit=crop',
+                    v?.photoUrl ?? '',
                     fit: BoxFit.cover,
                     errorBuilder: (ctx, err, st) => Container(
                       color: const Color(0xFFEAF1FE),
@@ -1721,7 +1883,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Honda City',
+                                v?.name ?? 'No vehicle assigned',
                                 style: TextStyle(
                                   color: const Color(0xFF0B0F1A),
                                   fontSize: 13.sp,
@@ -1730,25 +1892,26 @@ class _HomeScreen3State extends State<HomeScreen3> {
                                 ),
                               ),
                             ),
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 6.w,
-                                vertical: 2.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEAF5EE),
-                                borderRadius: BorderRadius.circular(5.r),
-                              ),
-                              child: Text(
-                                'Assigned',
-                                style: TextStyle(
-                                  color: const Color(0xFF127A45),
-                                  fontSize: 8.5.sp,
-                                  fontWeight: FontWeight.w700,
-                                  fontFamily: 'AirbnbCereal',
+                            if (v != null)
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEAF5EE),
+                                  borderRadius: BorderRadius.circular(5.r),
+                                ),
+                                child: Text(
+                                  v.status,
+                                  style: TextStyle(
+                                    color: const Color(0xFF127A45),
+                                    fontSize: 8.5.sp,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'AirbnbCereal',
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         SizedBox(height: 5.h),
@@ -1761,7 +1924,7 @@ class _HomeScreen3State extends State<HomeScreen3> {
                             ),
                             SizedBox(width: 3.w),
                             Text(
-                              'MH 02 AB 1234',
+                              v?.registration ?? '—',
                               style: TextStyle(
                                 color: const Color(0xFF5A6373),
                                 fontSize: 10.5.sp,
@@ -1775,11 +1938,13 @@ class _HomeScreen3State extends State<HomeScreen3> {
                         SizedBox(height: 7.h),
                         Row(
                           children: [
-                            _buildVehicleChip('Sedan'),
-                            SizedBox(width: 5.w),
-                            _buildVehicleChip('Petrol'),
-                            SizedBox(width: 5.w),
-                            _buildVehicleChip('White'),
+                            if ((v?.fuelType ?? '').isNotEmpty)
+                              _buildVehicleChip(v!.fuelType!),
+                            if ((v?.fuelType ?? '').isNotEmpty &&
+                                (v?.color ?? '').isNotEmpty)
+                              SizedBox(width: 5.w),
+                            if ((v?.color ?? '').isNotEmpty)
+                              _buildVehicleChip(v!.color!),
                           ],
                         ),
                       ],
@@ -1805,6 +1970,18 @@ class _HomeScreen3State extends State<HomeScreen3> {
             ),
           ),
           SizedBox(height: 10.h),
+          if (trips.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 6.h),
+              child: Text(
+                'No trips this month',
+                style: TextStyle(
+                  color: const Color(0xFF9AA2B1),
+                  fontSize: 11.sp,
+                  fontFamily: 'AirbnbCereal',
+                ),
+              ),
+            ),
           ...List.generate(trips.length, (i) {
             final t = trips[i];
             return Column(

@@ -494,7 +494,26 @@ class _AttendanceViewState extends State<_AttendanceView>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-      appBar: AppAppBar(title: 'Attendance log', showBack: true),
+      appBar: AppAppBar(
+        title: 'Attendance log',
+        showBack: true,
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.push(AppRoutes.leave),
+            icon: const Icon(LucideIcons.plane_takeoff,
+                size: 16, color: AppColors.primary),
+            label: const Text(
+              'Leave',
+              style: TextStyle(
+                fontFamily: 'AirbnbCereal',
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: BlocConsumer<AttendanceBloc, AttendanceState>(
         listenWhen: (prev, curr) =>
             curr is AttendanceIssueSubmitSuccess ||

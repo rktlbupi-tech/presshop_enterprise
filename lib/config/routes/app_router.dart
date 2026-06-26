@@ -4,7 +4,6 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:go_router/go_router.dart';
 import 'package:presshop_enterprise/features/onboarding/presentation/screens/onboarding_screen_v2.dart';
 import 'package:presshop_enterprise/features/settings/presentation/screens/account_delete_screen.dart';
-import 'package:presshop_enterprise/features/team_chat/presentation/screens/team_chat_screen_v2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:presshop_enterprise/main.dart';
@@ -57,6 +56,7 @@ import '../../features/duties/data/models/duty_shift_model.dart';
 
 // Attendance
 import '../../features/attendance/presentation/screens/attendance_screen.dart';
+import '../../features/leave/presentation/screens/leave_screen.dart';
 import '../../features/attendance/presentation/screens/uniform_verification_screen.dart';
 import '../../features/attendance/presentation/screens/check_in_out_screen.dart';
 import '../../features/attendance/presentation/bloc/attendance_bloc.dart';
@@ -103,6 +103,7 @@ class AppRoutes {
   static const String claimExpenses = '/claim-expenses';
   static const String duties = '/duties';
   static const String attendance = '/attendance';
+  static const String leave = '/leave';
   static const String payslip = '/payslip';
   static const String earnings = '/earnings';
   static const String documents = '/documents';
@@ -248,6 +249,10 @@ GoRouter createRouter(SharedPreferences prefs) {
         builder: (context, state) => const AttendanceScreen(),
       ),
       GoRoute(
+        path: AppRoutes.leave,
+        builder: (context, state) => const LeaveScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.payslip,
         builder: (context, state) => const PayslipScreen(),
       ),
@@ -261,7 +266,7 @@ GoRouter createRouter(SharedPreferences prefs) {
       ),
       GoRoute(
         path: AppRoutes.teamChatList,
-        builder: (context, state) => const TeamChatScreenV2(),
+        builder: (context, state) => const TeamChatListPage(),
       ),
       GoRoute(
         path: AppRoutes.faq,

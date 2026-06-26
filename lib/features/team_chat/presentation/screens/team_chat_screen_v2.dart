@@ -436,7 +436,7 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
               padding: EdgeInsets.only(bottom: 16.h),
               children: [
                 if (_showCompany) ...[
-                  const _SectionHeader(title: 'Default company chat'),
+                  const _SectionHeader(title: 'Default team chat'),
                   _buildCompanyCard(),
                 ],
                 if (_filteredGroups.isNotEmpty) ...[
@@ -539,8 +539,11 @@ class _TeamChatScreenV2State extends State<TeamChatScreenV2> {
                   ),
                   child: hasLogo
                       ? null
-                      : Icon(Icons.business_rounded,
-                          color: _kPrimary, size: 20.sp),
+                      : Icon(
+                          Icons.business_rounded,
+                          color: _kPrimary,
+                          size: 20.sp,
+                        ),
                 ),
                 SizedBox(width: 10.w),
                 Expanded(

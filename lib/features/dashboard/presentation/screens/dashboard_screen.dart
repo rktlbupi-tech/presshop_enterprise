@@ -14,6 +14,7 @@ import '../../../map/presentation/bloc/map_cubit.dart';
 import '../../../map/presentation/bloc/employee_map_cubit.dart';
 import '../../../menu/presentation/screens/menu_screen.dart';
 import '../../../../config/di/injection.dart';
+import '../../../../core/utils/location_permission_helper.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int initialIndex;
@@ -64,6 +65,11 @@ class DashboardScreenState extends State<DashboardScreen> {
       child: const HomeScreen3(),
     );
     _menuScreen = const MenuScreen();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        LocationPermissionHelper.checkAndRequestLocationPermission(context);
+      }
+    });
   }
 
   @override

@@ -69,7 +69,5 @@
 	<string>This app requires access to motion data for activity tracking.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>This app requires speech recognition for hands-free operations.</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>This app requires tracking to provide personalized task recommendations.</string>
 </dict>
 </plist>

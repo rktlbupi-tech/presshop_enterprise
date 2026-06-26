@@ -307,7 +307,12 @@ class _TeamMapScreenState extends State<TeamMapScreen>
   Future<void> _initLocation() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      // if (mounted) {
+      //   final accepted = await LocationPermissionHelper.showDisclosureDialog(context);
+      //   if (accepted) {
       permission = await Geolocator.requestPermission();
+      //   }
+      // }
     }
 
     if (permission == LocationPermission.denied ||

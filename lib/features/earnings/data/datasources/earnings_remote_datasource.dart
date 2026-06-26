@@ -6,14 +6,12 @@ class EarningsRemoteDatasource {
   final ApiClient _client;
   EarningsRemoteDatasource(this._client);
 
-  Future<List<EarningModel>> fetchEarnings() async {
-    final res = await _client.get(ApiEndpoints.earnings);
-    final data = res.data['data'] as List<dynamic>? ?? [];
-    return data.map((e) => EarningModel.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<double> fetchYtd() async {
-    final res = await _client.get(ApiEndpoints.earnings, queryParameters: {'ytd': true});
-    return (res.data['ytd'] as num?)?.toDouble() ?? 0;
+  Future<YearlyEarningsModel> fetchEarnings({int? year}) async {
+    final res = await _client.get(
+      ApiEndpoints.earnings,
+      queryParameters: {if (year != null) 'year': year},
+    );
+    return YearlyEarningsModel.fromJson(
+        res.data['data'] as Map<String, dynamic>? ?? {});
   }
 }

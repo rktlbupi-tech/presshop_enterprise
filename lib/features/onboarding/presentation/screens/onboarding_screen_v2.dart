@@ -1,14 +1,3 @@
-// Onboarding V2 — full-screen app-screenshot walkthrough.
-//
-// Each slide shows a real app screenshot edge-to-edge (BoxFit.cover, aligned to
-// the top so the screen header stays visible). A dark gradient scrim fades up
-// from the bottom so the heading, body copy, dot indicators and the
-// Next / Get started button stay legible over any screenshot. A top-right Skip
-// (and a back chevron after the first slide) sit in small translucent pills.
-//
-// Screenshots are read from assets/images/ (already registered in pubspec).
-// Until the PNGs are added a labelled placeholder renders in their place.
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../config/routes/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Palette
@@ -32,19 +22,10 @@ const String _kFont = 'AirbnbCereal';
 //  Slide model
 // ─────────────────────────────────────────────────────────────────────────────
 class OnboardSlide {
-  /// Section pill text, e.g. "01 · YOUR DAY". Null hides the chip.
   final String? chip;
-
-  /// Full heading text.
   final String heading;
-
-  /// Substrings within [heading] rendered in the highlight colour.
   final List<String> highlights;
-
-  /// Supporting paragraph.
   final String body;
-
-  /// Asset path of the full-screen app screenshot.
   final String image;
 
   const OnboardSlide({
@@ -70,8 +51,6 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
   final PageController _controller = PageController();
   int _index = 0;
 
-  // Drop the three screenshots at these paths (assets/images/ is already
-  // registered in pubspec.yaml). Until then a labelled placeholder is shown.
   static const List<OnboardSlide> _slides = [
     OnboardSlide(
       chip: '01 · YOUR DAY',
@@ -79,7 +58,7 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
       highlights: ['single view'],
       body:
           'Shifts, tasks, mileage and live duty status — everything you need the moment you log on.',
-      image: 'assets/images/onboard_1.png',
+      image: AppIcons.onboard1,
     ),
     OnboardSlide(
       chip: '02 · LIVE',
@@ -87,7 +66,7 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
       highlights: ['real time'],
       body:
           'See teammates live, share alerts, start a chat, or trigger SOS — stay connected wherever the day takes you.',
-      image: 'assets/images/onboard_2.png',
+      image: AppIcons.onboard2,
     ),
     OnboardSlide(
       chip: '03 · EVIDENCE',
@@ -95,15 +74,15 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
       highlights: ['manage every task'],
       body:
           'Upload photos, videos, scans and audio from the field, and track every assignment in real time.',
-      image: 'assets/images/onboard_3.png',
+      image: AppIcons.onboard3,
     ),
     OnboardSlide(
-      chip: '04 · MORE',
-      heading: 'Everything else,\nin one place',
-      highlights: ['one place'],
+      chip: '04 · DETAILS',
+      heading: 'Evidence details,\ntrack live updates',
+      highlights: ['track live updates'],
       body:
-          'Mileage, expenses, payslips and your documents — manage it all from a single app.',
-      image: 'assets/images/onboard_4.png',
+          'Tap Manage Tasks to upload photos, videos, scans, audio recordings, and evidence directly from the field. Chat with your office, track live updates, and stay connected to every assignment in real time.',
+      image: AppIcons.onboard4,
     ),
   ];
 
@@ -143,9 +122,10 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      // Screenshots are light at the top → dark status-bar icons read best.
-      value: SystemUiOverlayStyle.dark.copyWith(
+      value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // Android
+        statusBarBrightness: Brightness.dark, // iOS
       ),
       child: Scaffold(
         backgroundColor: _kScrim,
@@ -271,6 +251,7 @@ class _OnboardingScreenV2State extends State<OnboardingScreenV2> {
 // ─────────────────────────────────────────────────────────────────────────────
 class _SlideView extends StatelessWidget {
   final OnboardSlide slide;
+
   const _SlideView({required this.slide});
 
   @override
@@ -280,27 +261,102 @@ class _SlideView extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // The screenshot with a small inset so it doesn't bleed into the
-        // screen edges / status bar. Top corners rounded for a clean edge.
-        Padding(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 6.h,
-            left: 12.w,
-            right: 12.w,
+        /// Circular Background Vectors (concentric half-circles)
+        Positioned(
+          top: -size.width * 0.5,
+          left: -size.width * 0.3,
+          child: Container(
+            width: size.width * 1.6,
+            height: size.width * 1.6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.03),
+                width: 1.w,
+              ),
+            ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
-            child: Image.asset(
-              slide.image,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              errorBuilder: (context, error, stack) => const _Placeholder(),
+        ),
+        Positioned(
+          top: -size.width * 0.3,
+          left: -size.width * 0.1,
+          child: Container(
+            width: size.width * 1.2,
+            height: size.width * 1.2,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.05),
+                width: 1.5.w,
+              ),
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
         ),
 
-        // Scrim: transparent at the top, solid navy at the bottom so the copy
-        // and buttons stay readable over any screenshot.
+        /// Circular Background Vectors (concentric half-circles - bottom)
+        Positioned(
+          bottom: -size.width * 0.7,
+          left: -size.width * 0.3,
+          child: Container(
+            width: size.width * 1.6,
+            height: size.width * 1.6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.06),
+                width: 1.5.w,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: -size.width * 0.5,
+          left: -size.width * 0.1,
+          child: Container(
+            width: size.width * 1.2,
+            height: size.width * 1.2,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 2.5.w,
+              ),
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.18),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        /// Image
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 9.h,
+          left: 19.w,
+          right: 19.w,
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+            child: SizedBox(
+              height: size.height * 0.55, // <-- Adjust this value
+              child: Image.asset(
+                slide.image,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (context, error, stack) => const _Placeholder(),
+              ),
+            ),
+          ),
+        ),
+
+        /// Gradient Overlay
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -317,7 +373,7 @@ class _SlideView extends StatelessWidget {
           ),
         ),
 
-        // Text block, sitting just above the fixed bottom controls.
+        /// Bottom Content
         Align(
           alignment: Alignment.bottomCenter,
           child: SafeArea(
@@ -325,19 +381,22 @@ class _SlideView extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 96.h),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (slide.chip != null) ...[
                     _SectionChip(text: slide.chip!),
                     SizedBox(height: 14.h),
                   ],
+
                   _HighlightHeading(
                     text: slide.heading,
                     highlights: slide.highlights,
                     fontSize: size.width * 0.072,
                   ),
+
                   SizedBox(height: 12.h),
+
                   Text(
                     slide.body,
                     style: TextStyle(
@@ -400,8 +459,6 @@ class _Placeholder extends StatelessWidget {
   }
 }
 
-// Small translucent pill used for Skip / back so they read over a light
-// screenshot.
 class _PillButton extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget child;
@@ -451,7 +508,6 @@ class _SectionChip extends StatelessWidget {
   }
 }
 
-// Heading that paints the [highlights] substrings in the accent colour.
 class _HighlightHeading extends StatelessWidget {
   final String text;
   final List<String> highlights;

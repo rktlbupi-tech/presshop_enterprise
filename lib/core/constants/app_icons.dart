@@ -56,8 +56,9 @@ class AppIcons {
   static const String logoWhite = 'assets/images/img_logo_white.png';
   static const String placeholder = 'assets/images/img_placeholder.png';
   static const String avatarPlaceholder = 'assets/images/img_avatar_placeholder.png';
-  static const String onboarding1 = 'assets/images/img_onboarding1.png';
-  static const String onboarding2 = 'assets/images/img_onboarding2.png';
-  static const String onboarding3 = 'assets/images/img_onboarding3.png';
+  static const String onboard1 = 'assets/images/onboard_1.png';
+  static const String onboard2 = 'assets/images/onboard_2.png';
+  static const String onboard3 = 'assets/images/onboard_3.png';
+  static const String onboard4 = 'assets/images/onboard_4.png';
   static const String rabbitLogo = 'assets/images/ic_black_rabbit.png';
 }

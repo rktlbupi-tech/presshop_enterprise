@@ -71,7 +71,10 @@ class _CheckInOutScreenState extends State<CheckInOutScreen> {
       }
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+        // final accepted = await LocationPermissionHelper.showDisclosureDialog(context);
+        // if (accepted) {
+          permission = await Geolocator.requestPermission();
+        // }
         if (permission == LocationPermission.denied) {
           setState(() {
             _currentAddress = 'Location permissions are denied.';

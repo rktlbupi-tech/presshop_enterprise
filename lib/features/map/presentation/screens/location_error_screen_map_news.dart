@@ -6,12 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 
-/// Shown on the Team map when location permission is denied.
-///
-/// Mirrors the old app's UI and flow: requests permission, and if it's still
-/// denied (iOS only prompts once) sends the user to App Settings. The map's
-/// `didChangeAppLifecycleState` re-checks the permission when the user returns,
-/// so granting it in Settings automatically dismisses this screen.
 class LocationErrorScreenMapNews extends StatefulWidget {
   final VoidCallback onTapSettings;
   const LocationErrorScreenMapNews({super.key, required this.onTapSettings});
@@ -31,7 +25,12 @@ class _LocationErrorScreenMapNewsState
       // 1. Check & request permission.
       var status = await Permission.location.status;
       if (!status.isGranted) {
+        // if (mounted) {
+        //   final accepted = await LocationPermissionHelper.showDisclosureDialog(context);
+        //   if (accepted) {
         status = await Permission.location.request();
+        //   }
+        // }
       }
 
       // 2. Still blocked → open App Settings. The map's app-lifecycle handler
@@ -165,8 +164,7 @@ class _LocationErrorScreenMapNewsState
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                         ),
-                        onPressed:
-                            _isFetchingLocation ? null : _enableLocation,
+                        onPressed: _isFetchingLocation ? null : _enableLocation,
                         child: Text(
                           'Enable Location',
                           textAlign: TextAlign.center,

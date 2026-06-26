@@ -8,18 +8,15 @@ class EarningsRepositoryImpl implements EarningsRepository {
   EarningsRepositoryImpl(this._ds);
 
   @override
-  Future<(List<EarningEntity>, Failure?)> fetchEarnings() async {
+  Future<(YearlyEarningsEntity?, Failure?)> fetchEarnings({int? year}) async {
     try {
-      final models = await _ds.fetchEarnings();
-      return (models.map((m) => m.toEntity()).toList(), null);
-    } on Failure catch (f) { return (<EarningEntity>[], f); }
-    catch (e) { return (<EarningEntity>[], UnknownFailure(e.toString())); }
-  }
-
-  @override
-  Future<(double, Failure?)> fetchYtd() async {
-    try { return (await _ds.fetchYtd(), null); }
-    on Failure catch (f) { return (0.0, f); }
-    catch (e) { return (0.0, UnknownFailure(e.toString())); }
+      return ((await _ds.fetchEarnings(year: year)).entity, null);
+    } on NotFoundFailure {
+      return (null, null);
+    } on Failure catch (f) {
+      return (null, f);
+    } catch (e) {
+      return (null, UnknownFailure(e.toString()));
+    }
   }
 }

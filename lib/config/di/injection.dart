@@ -67,6 +67,30 @@ import '../../features/claims/data/repositories/claims_repository_impl.dart';
 import '../../features/claims/domain/repositories/claims_repository.dart';
 import '../../features/claims/presentation/bloc/claims_bloc.dart';
 
+// Mileage
+import '../../features/mileage/data/datasources/mileage_remote_datasource.dart';
+import '../../features/mileage/data/repositories/mileage_repository_impl.dart';
+import '../../features/mileage/domain/repositories/mileage_repository.dart';
+import '../../features/mileage/presentation/bloc/mileage_bloc.dart';
+
+// Payslip
+import '../../features/payslip/data/datasources/payslip_remote_datasource.dart';
+import '../../features/payslip/data/repositories/payslip_repository_impl.dart';
+import '../../features/payslip/domain/repositories/payslip_repository.dart';
+import '../../features/payslip/presentation/bloc/payslip_bloc.dart';
+
+// Leave
+import '../../features/leave/data/datasources/leave_remote_datasource.dart';
+import '../../features/leave/data/repositories/leave_repository_impl.dart';
+import '../../features/leave/domain/repositories/leave_repository.dart';
+import '../../features/leave/presentation/bloc/leave_cubits.dart';
+
+// Home
+import '../../features/dashboard/data/datasources/home_remote_datasource.dart';
+import '../../features/dashboard/data/repositories/home_repository_impl.dart';
+import '../../features/dashboard/domain/repositories/home_repository.dart';
+import '../../features/dashboard/presentation/bloc/home_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> setupDependencies() async {
@@ -147,4 +171,31 @@ Future<void> setupDependencies() async {
   getIt.registerLazySingleton<ClaimsRepository>(
       () => ClaimsRepositoryImpl(getIt()));
   getIt.registerFactory(() => ClaimsBloc(getIt()));
+
+  // Mileage
+  getIt.registerLazySingleton(() => MileageRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<MileageRepository>(
+      () => MileageRepositoryImpl(getIt()));
+  getIt.registerFactory(() => MileageBloc(getIt()));
+
+  // Payslip
+  getIt.registerLazySingleton(() => PayslipRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<PayslipRepository>(
+      () => PayslipRepositoryImpl(getIt()));
+  getIt.registerFactory(() => PayslipBloc(getIt()));
+
+  // Leave
+  getIt.registerLazySingleton(() => LeaveRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<LeaveRepository>(
+      () => LeaveRepositoryImpl(getIt()));
+  getIt.registerFactory(() => LeaveApplyCubit(getIt()));
+  getIt.registerFactory(() => LeaveRequestsCubit(getIt()));
+  getIt.registerFactory(() => LeaveBalancesCubit(getIt()));
+  getIt.registerFactory(() => LeaveCalendarCubit(getIt()));
+
+  // Home
+  getIt.registerLazySingleton(() => HomeRemoteDatasource(getIt()));
+  getIt.registerLazySingleton<HomeRepository>(
+      () => HomeRepositoryImpl(getIt()));
+  getIt.registerFactory(() => HomeBloc(getIt()));
 }
