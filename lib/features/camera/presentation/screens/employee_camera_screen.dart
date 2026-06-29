@@ -6,13 +6,10 @@ import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:camera/camera.dart';
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:record/record.dart';
 import 'package:video_thumbnail/video_thumbnail.dart' as vt;
 import 'package:file_picker/file_picker.dart';
@@ -20,6 +17,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../../main.dart';
 import '../../data/models/camera_data.dart';
 import '../../utils/camera_constants.dart';
+import '../../utils/app_private_gallery_service.dart';
 import 'custom_gallery_screen.dart';
 import 'employee_preview_screen.dart';
 import 'permission_error_screen.dart';
@@ -61,7 +59,7 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
   DateTime? startTime;
   Timer? myTimer;
   Future<void>? cameraValue;
-  List<AssetEntity> _mediaList = [];
+  List<File> _mediaList = [];
   List<CameraData> camListData = [];
   int _pointers = 0;
   late double _minAvailableZoom;
@@ -204,17 +202,9 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
   }
 
   Future<void> _loadRecentGalleryItem() async {
-    final permission = await PhotoManager.requestPermissionExtend();
-    if (!permission.isAuth) return;
-    final albums = await PhotoManager.getAssetPathList(
-      type: RequestType.common,
-      onlyAll: true,
-    );
-    if (albums.isNotEmpty) {
-      final assets = await albums.first.getAssetListPaged(page: 0, size: 1);
-      if (assets.isNotEmpty && mounted) {
-        setState(() => _mediaList = assets);
-      }
+    final files = await AppPrivateGalleryService.instance.getGalleryFiles();
+    if (files.isNotEmpty && mounted) {
+      setState(() => _mediaList = [files.first]);
     }
   }
 
@@ -247,23 +237,18 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
       await cameraController!.setFlashMode(FlashMode.off);
       final picture = await cameraController!.takePicture();
       cameraController!.pausePreview();
-      // Saving to the device gallery must never block the move to the preview
-      // screen. On iOS this throws/hangs when the photo-add permission is
-      // missing, so it is isolated with its own guard + timeout.
+      File finalFile = File(picture.path);
       try {
-        final bytes = await File(picture.path).readAsBytes();
-        await Future.value(
-          ImageGallerySaverPlus.saveImage(
-            Uint8List.fromList(bytes),
-            name: 'captured_image_${DateTime.now().millisecondsSinceEpoch}',
-          ),
-        ).timeout(const Duration(seconds: 3));
+        finalFile = await AppPrivateGalleryService.instance.saveToGallery(finalFile);
+        setState(() {
+          _mediaList = [finalFile];
+        });
       } catch (e) {
-        debugPrint('Gallery save failed (continuing to preview): $e');
+        debugPrint('App gallery save failed: $e');
       }
       camListData.add(
         CameraData(
-          path: picture.path,
+          path: finalFile.path,
           mimeType: 'image',
           videoImagePath: '',
           latitude: sharedPreferences?.getDouble(currentLat)?.toString() ?? '0',
@@ -320,22 +305,25 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
       final newPath =
           '${dir.path}/${DateTime.now().millisecondsSinceEpoch}.mp4';
       final renamed = await File(file.path).rename(newPath);
-      _saveVideoToGallery(renamed.path);
+      final savedPath = await _saveVideoToGallery(renamed.path);
       if (cameraController != null) cameraController!.pausePreview();
-      await _generateThumbnail(renamed.path);
+      await _generateThumbnail(savedPath);
     } catch (e) {
       debugPrint('Error stopping video: $e');
     }
   }
 
-  Future<void> _saveVideoToGallery(String path) async {
+  Future<String> _saveVideoToGallery(String path) async {
     try {
-      final bytes = await File(path).readAsBytes();
-      await ImageGallerySaverPlus.saveImage(
-        Uint8List.fromList(bytes),
-        name: 'captured_video_${DateTime.now().millisecondsSinceEpoch}',
-      );
-    } catch (_) {}
+      final savedFile = await AppPrivateGalleryService.instance.saveToGallery(File(path));
+      setState(() {
+        _mediaList = [savedFile];
+      });
+      return savedFile.path;
+    } catch (e) {
+      debugPrint('App gallery video save failed: $e');
+      return path;
+    }
   }
 
   Future<void> _generateThumbnail(String videoPath) async {
@@ -992,34 +980,42 @@ class _EmployeeCameraScreenState extends State<EmployeeCameraScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(size.width * numD025),
                   child: _mediaList.isNotEmpty
-                      ? FutureBuilder<Uint8List?>(
-                          future: _mediaList.first.thumbnailDataWithSize(
-                            const ThumbnailSize(200, 200),
-                          ),
-                          builder: (_, snap) {
-                            if (snap.hasData) {
-                              return Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  Image.memory(snap.data!, fit: BoxFit.cover),
-                                  if (_mediaList.first.type == AssetType.video)
-                                    const Align(
-                                      alignment: Alignment.bottomRight,
-                                      child: Padding(
-                                        padding: EdgeInsets.all(4),
-                                        child: Icon(
-                                          Icons.videocam,
-                                          color: Colors.white,
-                                          size: 16,
+                      ? (() {
+                          final file = _mediaList.first;
+                          final isVideo = file.path.toLowerCase().endsWith('.mp4') ||
+                              file.path.toLowerCase().endsWith('.mov') ||
+                              file.path.toLowerCase().endsWith('.3gp') ||
+                              file.path.toLowerCase().endsWith('.avi');
+                          if (isVideo) {
+                            return FutureBuilder<String?>(
+                              future: AppPrivateGalleryService.instance.getOrGenerateThumbnail(file),
+                              builder: (_, snap) {
+                                if (snap.hasData && snap.data != null) {
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.file(File(snap.data!), fit: BoxFit.cover),
+                                      const Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(4),
+                                          child: Icon(
+                                            Icons.videocam,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
-                              );
-                            }
-                            return Container(color: Colors.grey[800]);
-                          },
-                        )
+                                    ],
+                                  );
+                                }
+                                return Container(color: Colors.grey[800]);
+                              },
+                            );
+                          } else {
+                            return Image.file(file, fit: BoxFit.cover);
+                          }
+                        })()
                       : Container(
                           color: Colors.grey[800],
                           child: const Icon(

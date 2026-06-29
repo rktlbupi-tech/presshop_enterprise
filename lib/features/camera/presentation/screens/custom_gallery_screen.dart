@@ -1,14 +1,13 @@
-import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mime/mime.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/camera_data.dart';
 import '../../utils/camera_constants.dart';
+import '../../utils/app_private_gallery_service.dart';
 import 'employee_preview_screen.dart';
-import 'permission_error_screen.dart';
 import '../../../../common/widgets/loading_widget.dart';
 
 class CustomGalleryScreen extends StatefulWidget {
@@ -19,59 +18,78 @@ class CustomGalleryScreen extends StatefulWidget {
   State<CustomGalleryScreen> createState() => _CustomGalleryScreenState();
 }
 
-class _CustomGalleryScreenState extends State<CustomGalleryScreen>
-    with WidgetsBindingObserver {
-  List<AssetEntity> _assets = [];
-  final Set<int> _selected = {};
+class _CustomGalleryScreenState extends State<CustomGalleryScreen> {
+  List<File> _files = [];
+  final Set<int> _selectedIndices = {};
   bool _loading = true;
-  bool _permissionDenied = false;
+  bool _isImporting = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadAssets();
+    _loadFiles();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Re-check after the user returns from Settings (same flow as the old app).
-    if (state == AppLifecycleState.resumed && _permissionDenied) {
-      _loadAssets();
+  Future<void> _loadFiles() async {
+    if (mounted) setState(() => _loading = true);
+    final files = await AppPrivateGalleryService.instance.getGalleryFiles();
+    if (mounted) {
+      setState(() {
+        _files = files;
+        _loading = false;
+      });
     }
   }
 
-  Future<void> _loadAssets() async {
-    final permission = await PhotoManager.requestPermissionExtend();
-    if (!permission.isAuth) {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = true;
-          _loading = false;
-        });
+  Future<void> _importFromPhone() async {
+    if (_isImporting) return;
+    setState(() => _isImporting = true);
+
+    try {
+      final picker = ImagePicker();
+      final List<XFile> pickedFiles = await picker.pickMultipleMedia();
+
+      if (pickedFiles.isNotEmpty) {
+        // Show a progress indicator snackbar
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Importing media files...'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+
+        for (final xFile in pickedFiles) {
+          await AppPrivateGalleryService.instance.saveToGallery(File(xFile.path));
+        }
+
+        // Reload the grid
+        await _loadFiles();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully imported ${pickedFiles.length} item(s)'),
+              backgroundColor: colorEmployeeGreen1,
+            ),
+          );
+        }
       }
-      return;
-    }
-    if (mounted && _permissionDenied) setState(() => _permissionDenied = false);
-    final albums = await PhotoManager.getAssetPathList(
-      type: RequestType.common,
-      onlyAll: true,
-    );
-    if (albums.isNotEmpty) {
-      final assets = await albums.first.getAssetListPaged(page: 0, size: 60);
-      if (mounted)
-        setState(() {
-          _assets = assets;
-          _loading = false;
-        });
-    } else {
-      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      debugPrint('Error importing media: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to import media files'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isImporting = false);
+      }
     }
   }
 
@@ -86,21 +104,28 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen>
     final now = DateFormat("HH:mm, dd MMM yyyy").format(DateTime.now());
 
     final List<CameraData> result = [];
-    for (final idx in _selected) {
-      final asset = _assets[idx];
-      final file = await asset.file;
-      if (file == null) continue;
+    for (final idx in _selectedIndices) {
+      if (idx >= _files.length) continue;
+      final file = _files[idx];
       final mimeStr = lookupMimeType(file.path) ?? '';
       String mimeType = 'image';
-      if (mimeStr.startsWith('video/'))
+      String videoThumbnailPath = '';
+
+      if (mimeStr.startsWith('video/')) {
         mimeType = 'video';
-      else if (mimeStr.startsWith('audio/'))
+        // Retrieve the generated video thumbnail path
+        videoThumbnailPath = await AppPrivateGalleryService.instance
+                .getOrGenerateThumbnail(file) ??
+            '';
+      } else if (mimeStr.startsWith('audio/')) {
         mimeType = 'audio';
+      }
+
       result.add(
         CameraData(
           path: file.path,
           mimeType: mimeType,
-          videoImagePath: '',
+          videoImagePath: videoThumbnailPath,
           latitude: lat,
           longitude: lon,
           dateTime: now,
@@ -112,17 +137,16 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen>
         ),
       );
     }
+
     if (!mounted) return;
     if (result.isEmpty) {
       Navigator.pop(context);
       return;
     }
+
     if (widget.picAgain) {
-      // Opened from the preview's "Add More" — return the picks to it.
       Navigator.pop(context, result);
     } else {
-      // First-time selection from the camera — go straight to the preview
-      // screen (same flow as the old app), then on to publish.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -142,20 +166,6 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    // No photo permission → show the same permission screen as the rest of the
-    // app (Open Settings; auto re-checks on app resume).
-    if (_permissionDenied) {
-      return CameraPermissionErrorScreen(
-        permissionsStatus: const {},
-        onPermissionGranted: () {
-          if (mounted) {
-            setState(() => _permissionDenied = false);
-            _loadAssets();
-          }
-        },
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -171,11 +181,16 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen>
           ),
         ),
         actions: [
-          if (_selected.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.white),
+            tooltip: 'Import from Phone',
+            onPressed: _isImporting ? null : _importFromPhone,
+          ),
+          if (_selectedIndices.isNotEmpty)
             TextButton(
               onPressed: _confirm,
               child: Text(
-                'Done (${_selected.length})',
+                'Done (${_selectedIndices.length})',
                 style: const TextStyle(
                   color: colorEmployeeGreen1,
                   fontWeight: FontWeight.w700,
@@ -186,79 +201,155 @@ class _CustomGalleryScreenState extends State<CustomGalleryScreen>
       ),
       body: _loading
           ? const LoadingWidget()
-          : _assets.isEmpty
-          ? Center(
-              child: Text(
-                'No media found',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: size.width * numD04,
-                ),
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(2),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 2,
-                mainAxisSpacing: 2,
-              ),
-              itemCount: _assets.length,
-              itemBuilder: (context, index) {
-                final asset = _assets[index];
-                final isSelected = _selected.contains(index);
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (isSelected) {
-                        _selected.remove(index);
-                      } else {
-                        if (_selected.length < 10) {
-                          _selected.add(index);
-                        }
-                      }
-                    });
-                  },
-                  child: Stack(
-                    fit: StackFit.expand,
+          : _files.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      FutureBuilder<Uint8List?>(
-                        future: asset.thumbnailDataWithSize(
-                          const ThumbnailSize(200, 200),
-                        ),
-                        builder: (context, snap) {
-                          if (snap.hasData) {
-                            return Image.memory(snap.data!, fit: BoxFit.cover);
-                          }
-                          return Container(color: Colors.grey[900]);
-                        },
+                      Icon(
+                        Icons.photo_library_outlined,
+                        color: Colors.white38,
+                        size: size.width * numD22,
                       ),
-                      if (asset.type == AssetType.video)
-                        const Positioned(
-                          right: 4,
-                          bottom: 4,
-                          child: Icon(
-                            Icons.videocam,
-                            color: Colors.white,
-                            size: 18,
+                      SizedBox(height: size.width * numD04),
+                      Text(
+                        'No media found',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: size.width * numD045,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                      SizedBox(height: size.width * numD02),
+                      Text(
+                        'Import photos/videos or capture new ones',
+                        style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: size.width * numD035,
+                          fontFamily: 'AirbnbCereal',
+                        ),
+                      ),
+                      SizedBox(height: size.width * numD06),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorEmployeeGreen1,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: size.width * numD06,
+                            vertical: size.width * numD03,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(size.width * numD02),
                           ),
                         ),
-                      if (isSelected)
-                        Container(
-                          color: colorEmployeeGreen1.withValues(alpha: 0.4),
-                          child: const Center(
-                            child: Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 28,
-                            ),
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        label: const Text(
+                          'Import from Phone',
+                          style: TextStyle(
+                            fontFamily: 'AirbnbCereal',
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
+                        onPressed: _isImporting ? null : _importFromPhone,
+                      ),
                     ],
                   ),
-                );
-              },
-            ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(2),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                  ),
+                  itemCount: _files.length,
+                  itemBuilder: (context, index) {
+                    final file = _files[index];
+                    final isSelected = _selectedIndices.contains(index);
+                    final isVid = file.path.toLowerCase().endsWith('.mp4') ||
+                        file.path.toLowerCase().endsWith('.mov') ||
+                        file.path.toLowerCase().endsWith('.3gp') ||
+                        file.path.toLowerCase().endsWith('.avi');
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedIndices.remove(index);
+                          } else {
+                            if (_selectedIndices.length < 10) {
+                              _selectedIndices.add(index);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('You can select up to 10 items'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          }
+                        });
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (isVid)
+                            FutureBuilder<String?>(
+                              future: AppPrivateGalleryService.instance
+                                  .getOrGenerateThumbnail(file),
+                              builder: (context, snap) {
+                                if (snap.hasData && snap.data != null) {
+                                  return Image.file(File(snap.data!),
+                                      fit: BoxFit.cover);
+                                }
+                                return Container(
+                                  color: Colors.grey[900],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          AlwaysStoppedAnimation(Colors.white30),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          else
+                            Image.file(file, fit: BoxFit.cover),
+                          if (isVid)
+                            const Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: Icon(
+                                Icons.videocam,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          if (isSelected)
+                            Container(
+                              color: colorEmployeeGreen1.withOpacity(0.4),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
+  }
+}
+
+// Small helper class to use p.extension
+class p {
+  static String extension(String path) {
+    return path.substring(path.lastIndexOf('.'));
   }
 }
