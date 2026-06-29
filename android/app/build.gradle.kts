@@ -43,8 +43,8 @@ android {
         applicationId = "com.presshop.enterprise"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 6
+        versionName = "1.0.0"
     }
 
     buildTypes {

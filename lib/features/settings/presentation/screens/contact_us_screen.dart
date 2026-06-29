@@ -19,12 +19,13 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController textController = TextEditingController();
 
-  final SettingsRemoteDatasource _datasource = getIt<SettingsRemoteDatasource>();
+  final SettingsRemoteDatasource _datasource =
+      getIt<SettingsRemoteDatasource>();
   bool isLoading = false;
 
   Future<void> submitContactUs() async {
     if (!formKey.currentState!.validate()) return;
-    
+
     setState(() => isLoading = true);
     try {
       await _datasource.contactUs({
@@ -33,14 +34,21 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
         "subject": subjectController.text.trim(),
         "text": textController.text.trim(),
       });
-      
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request submitted successfully"), backgroundColor: AppColors.success));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Request submitted successfully"),
+            backgroundColor: AppColors.success,
+          ),
+        );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) setState(() => isLoading = false);
@@ -75,7 +83,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
         iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           "Contact us",
-          style: TextStyle(color: Colors.black, fontSize: size.width * 0.05, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: size.width * 0.05,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -90,7 +102,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     SizedBox(height: size.width * 0.02),
                     Text(
                       "Your contact number",
-                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                      style: TextStyle(
+                        fontSize: size.width * 0.035,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                     SizedBox(height: size.width * 0.02),
                     TextFormField(
@@ -98,15 +114,24 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
                         hintText: "Enter contact number",
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                        ),
                       ),
-                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? "Required"
+                          : null,
                     ),
                     SizedBox(height: size.width * 0.06),
 
                     Text(
                       "Your Email id",
-                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                      style: TextStyle(
+                        fontSize: size.width * 0.035,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                     SizedBox(height: size.width * 0.02),
                     TextFormField(
@@ -114,30 +139,48 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
                         hintText: "Enter email id",
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                        ),
                       ),
-                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? "Required"
+                          : null,
                     ),
                     SizedBox(height: size.width * 0.06),
 
                     Text(
                       "Subject",
-                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                      style: TextStyle(
+                        fontSize: size.width * 0.035,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                     SizedBox(height: size.width * 0.02),
                     TextFormField(
                       controller: subjectController,
                       decoration: const InputDecoration(
                         hintText: "Enter subject",
-                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFFE0E0E0))),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                        ),
                       ),
-                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? "Required"
+                          : null,
                     ),
                     SizedBox(height: size.width * 0.06),
 
                     Text(
                       "Leave a message for us",
-                      style: TextStyle(fontSize: size.width * 0.035, color: Colors.black, fontWeight: FontWeight.w400),
+                      style: TextStyle(
+                        fontSize: size.width * 0.035,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
                     SizedBox(height: size.width * 0.02),
                     TextFormField(
@@ -148,27 +191,47 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         filled: true,
                         fillColor: Colors.grey.shade100,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(size.width * 0.03),
+                          borderRadius: BorderRadius.circular(
+                            size.width * 0.03,
+                          ),
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      validator: (value) => value == null || value.trim().isEmpty ? "Required" : null,
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? "Required"
+                          : null,
                     ),
                     SizedBox(height: size.width * 0.1),
 
                     Container(
                       width: size.width,
                       height: size.width * 0.13,
-                      margin: EdgeInsets.symmetric(horizontal: size.width * 0.02),
+                      margin: EdgeInsets.symmetric(
+                        horizontal: size.width * 0.02,
+                      ),
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeColor,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(size.width * 0.03)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              size.width * 0.03,
+                            ),
+                          ),
                         ),
                         onPressed: isLoading ? null : submitContactUs,
-                        child: isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text("Submit", style: TextStyle(color: Colors.white, fontSize: size.width * 0.035, fontWeight: FontWeight.bold)),
+                        child: isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                "Submit",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: size.width * 0.035,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                     SizedBox(height: size.width * 0.1),
@@ -176,13 +239,29 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildSocialIcon("assets/icons/ic_twitter.png", "https://twitter.com/presshop", size),
+                        _buildSocialIcon(
+                          "assets/icons/ic_twitter.png",
+                          "https://twitter.com/presshop",
+                          size,
+                        ),
                         SizedBox(width: size.width * 0.04),
-                        _buildSocialIcon("assets/icons/ic_linkdin.png", "https://linkedin.com/company/presshop", size),
+                        _buildSocialIcon(
+                          "assets/icons/ic_linkdin.png",
+                          "https://linkedin.com/company/presshop",
+                          size,
+                        ),
                         SizedBox(width: size.width * 0.04),
-                        _buildSocialIcon("assets/icons/ic_instagram.png", "https://instagram.com/presshop", size),
+                        _buildSocialIcon(
+                          "assets/icons/ic_instagram.png",
+                          "https://instagram.com/presshop",
+                          size,
+                        ),
                         SizedBox(width: size.width * 0.04),
-                        _buildSocialIcon("assets/icons/ic_facebook.png", "https://facebook.com/presshop", size),
+                        _buildSocialIcon(
+                          "assets/icons/ic_facebook.png",
+                          "https://facebook.com/presshop",
+                          size,
+                        ),
                       ],
                     ),
                     SizedBox(height: size.width * 0.05),
@@ -205,7 +284,11 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
           color: Colors.grey.shade100,
           shape: BoxShape.circle,
         ),
-        child: Image.asset(asset, width: size.width * 0.06, height: size.width * 0.06),
+        child: Image.asset(
+          asset,
+          width: size.width * 0.06,
+          height: size.width * 0.06,
+        ),
       ),
     );
   }
